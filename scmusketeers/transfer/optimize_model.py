@@ -244,6 +244,7 @@ class Workflow:
             logtrans_input=self.logtrans_input,
             use_hvg=self.use_hvg,
             unlabeled_category=self.run_file.unlabeled_category,
+            test_split_key=self.run_file.test_split_key,
             train_test_random_seed=self.train_test_random_seed,
         )
 

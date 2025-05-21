@@ -113,6 +113,7 @@ class Dataset:
         scale_input,
         logtrans_input,
         use_hvg,
+        test_split_key,
         unlabeled_category,
         train_test_random_seed,
     ):
@@ -128,6 +129,7 @@ class Dataset:
         self.scale_input = scale_input
         self.logtrans_input = logtrans_input
         self.use_hvg = use_hvg
+        self.test_split_key = test_split_key
         # if not semi_sup:
         #     self.semi_sup = True # semi_sup defaults to True, especially for scANVI
         self.unlabeled_category = unlabeled_category
@@ -342,57 +344,84 @@ class Dataset:
             "size_factors"
         ].values  # .reshape(-1,1)
 
+    def normalize(self):
+        if self.filter_min_counts:
+            sc.pp.filter_genes(self.adata, min_counts=1)
+            sc.pp.filter_cells(self.adata, min_counts=1)
+        nonzero_genes, _ = sc.pp.filter_genes(self.adata.X, min_counts=1)
+        assert (
+            nonzero_genes.all()
+        ), "Please remove all-zero genes before using DCA."
 
-def process_dataset(workflow):
-    """
-    Used for hyperparameters optimization processes
-    """
-    adata = load_dataset(workflow.run_file.ref_path,
-                         workflow.run_file.query_path,
-                         workflow.run_file.class_key, 
-                         workflow.run_file.unlabeled_category       
-    )
+        if self.size_factor == "raw":  # Computing sf on raw data
+            self.adata.obs["n_counts"] = self.adata.X.sum(axis=1)
+            self.adata.obs["size_factors"] = (
+                self.adata.obs.n_counts / np.median(self.adata.obs.n_counts)
+            )
 
-    workflow.dataset = Dataset(
-        adata=adata,
-        class_key=workflow.run_file.class_key,
-        batch_key=workflow.run_file.batch_key,
-        filter_min_counts=workflow.run_file.filter_min_counts,
-        normalize_size_factors=workflow.run_file.normalize_size_factors,
-        size_factor=workflow.run_file.size_factor,
-        scale_input=workflow.run_file.scale_input,
-        logtrans_input=workflow.run_file.logtrans_input,
-        use_hvg=workflow.run_file.use_hvg,
-        unlabeled_category=workflow.run_file.unlabeled_category,
-        train_test_random_seed=workflow.run_file.train_test_random_seed
-    )
+        if self.use_hvg:
+            self.adata = get_hvg_common(
+                self.adata, n_hvg=self.use_hvg, batch_key=self.batch_key
+            )
 
-    # Processing dataset. Splitting train/test.
-    workflow.dataset.normalize()
+        if (
+            self.normalize_size_factors
+            or self.scale_input
+            or self.logtrans_input
+        ):
+            self.adata.raw = self.adata.copy()
+        else:
+            self.adata.raw = self.adata
 
+        if self.normalize_size_factors:
 
-def split_train_test(workflow):
-    workflow.dataset.test_split(
-        test_obs=workflow.run_file.test_obs,
-        test_index_name=workflow.run_file.test_index_name,
-    )
+            sc.pp.normalize_total(self.adata)
+            self.adata.obs["size_factors"] = (
+                self.adata.obs.n_counts / np.median(self.adata.obs.n_counts)
+            )
 
+        if self.logtrans_input:
+            sc.pp.log1p(self.adata)
 
-def split_train_val(workflow):
-    workflow.dataset.train_split(
-        mode=workflow.run_file.mode,
-        pct_split=workflow.run_file.pct_split,
-        obs_key=workflow.run_file.obs_key,
-        n_keep=workflow.run_file.n_keep,
-        keep_obs=workflow.run_file.keep_obs,
-        split_strategy=workflow.run_file.split_strategy,
-        obs_subsample=workflow.run_file.obs_subsample,
-        train_test_random_seed=workflow.run_file.train_test_random_seed,
-    )
+        if self.scale_input:
+            sc.pp.scale(self.adata)
 
-    print("dataset has been preprocessed")
-    workflow.dataset.create_inputs()
+        if self.size_factor == "default":  # Computing sf on preprocessed data
+            self.adata.obs["n_counts"] = self.adata.X.sum(axis=1)
+            self.adata.obs["size_factors"] = (
+                self.adata.obs.n_counts / np.median(self.adata.obs.n_counts)
+            )
+        elif self.size_factor == "constant":
+            self.adata.obs["size_factors"] = 1.0
+        # print('right after loading')
+        # print(self.adata)
+        # print(self.adata_test)
+        # print(self.adata_train_extended)
+        # print(self.adata_train_extended.obs[self.class_key].value_counts())
+        # self.adata_train = self.adata_train_extended.copy()
 
+    def test_split(self, test_index_name=None, test_obs=None):
+
+        if test_index_name:
+            test_idx = self.adata.obs_names.isin(test_index_name)
+        if test_obs:
+            print(f"test obs :{test_obs}")
+            test_idx = self.adata.obs[self.batch_key].isin(test_obs)
+
+            split = pd.Series(
+                ["train"] * self.adata.n_obs, index=self.adata.obs.index
+            )
+            split[test_idx] = "test"
+            self.adata.obs[self.test_split_key] = split
+
+        # If none of test_index_name or test_obs is defined, defaults to the saved value of self.adata.obs[self.test_split_key]
+        self.adata_test = self.adata[
+            self.adata.obs[self.test_split_key] == "test"
+        ]
+        self.adata_train_extended = self.adata[
+            self.adata.obs[self.test_split_key] == "train"
+        ]
+    
     def train_split(
         self,
         mode=None,
@@ -817,3 +846,57 @@ def split_train_val(workflow):
         self.adata_test = self.adata[
             self.adata.obs["train_split"] == "test"
         ].copy()
+
+
+
+def process_dataset(workflow):
+    """
+    Used for hyperparameters optimization processes
+    """
+    adata = load_dataset(workflow.run_file.ref_path,
+                         workflow.run_file.query_path,
+                         workflow.run_file.class_key, 
+                         workflow.run_file.unlabeled_category       
+    )
+
+    workflow.dataset = Dataset(
+        adata=adata,
+        class_key=workflow.run_file.class_key,
+        batch_key=workflow.run_file.batch_key,
+        filter_min_counts=workflow.run_file.filter_min_counts,
+        normalize_size_factors=workflow.run_file.normalize_size_factors,
+        size_factor=workflow.run_file.size_factor,
+        scale_input=workflow.run_file.scale_input,
+        logtrans_input=workflow.run_file.logtrans_input,
+        use_hvg=workflow.run_file.use_hvg,
+        unlabeled_category=workflow.run_file.unlabeled_category,
+        test_split_key=workflow.run_file.test_split_key,
+        train_test_random_seed=workflow.run_file.train_test_random_seed
+    )
+
+    # Processing dataset. Splitting train/test.
+    workflow.dataset.normalize()
+
+
+def split_train_test(workflow):
+    workflow.dataset.test_split(
+        test_obs=workflow.run_file.test_obs,
+        test_index_name=workflow.run_file.test_index_name,
+    )
+
+
+def split_train_val(workflow):
+    workflow.dataset.train_split(
+        mode=workflow.run_file.mode,
+        pct_split=workflow.run_file.pct_split,
+        obs_key=workflow.run_file.obs_key,
+        n_keep=workflow.run_file.n_keep,
+        keep_obs=workflow.run_file.keep_obs,
+        split_strategy=workflow.run_file.split_strategy,
+        obs_subsample=workflow.run_file.obs_subsample,
+        train_test_random_seed=workflow.run_file.train_test_random_seed,
+    )
+
+    print("dataset has been preprocessed")
+    workflow.dataset.create_inputs()
+

@@ -7,19 +7,6 @@ import argparse
 import functools
 import os
 import sys
-try:
-    from ae_param import AE_PARAM
-    from class_param import CLASS_PARAM
-    from dann_param import DANN_PARAM
-    from dataset import Dataset, load_dataset
-
-    from ..transfer import freeze
-except ImportError:
-    from ..arguments.ae_param import AE_PARAM
-    from ..arguments.class_param import CLASS_PARAM
-    from ..arguments.dann_param import DANN_PARAM
-    from ..transfer.dataset_tf import Dataset, load_dataset
-    from ..transfer import freeze
 
 import keras
 from sklearn.metrics import (accuracy_score, adjusted_mutual_info_score,
@@ -118,13 +105,14 @@ class Workflow:
         """
         run_file : a dictionary outputed by the function load_runfile
         """
-        ### Regroup here all parameters given by run_file
         self.run_file = run_file
-        self.ae_param = AE_PARAM(run_file)
-        self.class_param = CLASS_PARAM(run_file)
-        self.dann_param = DANN_PARAM(run_file)
-        self.training_scheme = self.run_file.training_scheme
+        # dataset identifiers
+        self.class_key = self.run_file.class_key
+        self.batch_key = self.run_file.batch_key
         # normalization parameters
+        self.filter_min_counts = (
+            self.run_file.filter_min_counts
+        )  # TODO :remove, we always want to do that
         self.normalize_size_factors = self.run_file.normalize_size_factors
         self.size_factor = self.run_file.size_factor
         self.scale_input = self.run_file.scale_input
@@ -137,10 +125,13 @@ class Workflow:
         self.learning_rate = self.run_file.learning_rate
         self.n_perm = 1
         self.semi_sup = False  # TODO : Not yet handled by DANN_AE, the case wwhere unlabeled cells are reconstructed as themselves
+        self.unlabeled_category = "UNK"  # TODO : Not yet handled by DANN_AE, the case wwhere unlabeled cells are reconstructed as themselves
+
         # train test split # TODO : Simplify this, or at first only use the case where data is split according to batch
         self.test_split_key = self.run_file.test_split_key
         self.test_obs = self.run_file.test_obs
         self.test_index_name = self.run_file.test_index_name
+
         self.mode = self.run_file.mode
         self.pct_split = self.run_file.pct_split
         self.obs_key = self.run_file.obs_key
@@ -155,51 +146,161 @@ class Workflow:
         self.true_celltype = self.run_file.true_celltype
         self.false_celltype = self.run_file.false_celltype
         self.pct_false = self.run_file.pct_false
+
+        self.working_dir = working_dir
+        self.data_dir = working_dir + "/data"
+
+        self.start_time = time.time()
+        self.stop_time = time.time()
+        # self.runtime_path = self.result_path + '/runtime.txt'
+
+        self.run_done = False
+        self.predict_done = False
+        self.umap_done = False
+
+        self.dataset = None
+        self.model = None
+        self.predictor = None
+
+        self.training_kwds = {}
+        self.network_kwds = {}
+
+        ##### TODO : Add to runfile
+
         self.clas_loss_name = self.run_file.clas_loss_name
+        self.clas_loss_name = default_value(
+            self.clas_loss_name, "categorical_crossentropy"
+        )
         self.balance_classes = self.run_file.balance_classes
         self.dann_loss_name = self.run_file.dann_loss_name
+        self.dann_loss_name = default_value(
+            self.dann_loss_name, "categorical_crossentropy"
+        )
         self.rec_loss_name = self.run_file.rec_loss_name
+        self.rec_loss_name = default_value(self.rec_loss_name, "MSE")
+
+        self.clas_loss_fn = None
+        self.dann_loss_fn = None
+        self.rec_loss_fn = None
+
         self.weight_decay = self.run_file.weight_decay
+        self.weight_decay = default_value(self.clas_loss_name, None)
         self.optimizer_type = self.run_file.optimizer_type
+        self.optimizer_type = default_value(self.optimizer_type, "adam")
+
         self.clas_w = self.run_file.clas_w
         self.dann_w = self.run_file.dann_w
         self.rec_w = self.run_file.rec_w
         self.warmup_epoch = self.run_file.warmup_epoch
-        self.dropout = self.run_file.dropout  # alternate way to give dropout
-        self.layer1 = self.run_file.layer1
-        self.layer2 = self.run_file.layer2
-        self.bottleneck = self.run_file.bottleneck
-        self.training_scheme = self.run_file.training_scheme
 
-        ### Hyperamateres attributes
-        self.hparam_path = self.run_file.hparam_path
-        self.hp_params = None
-        self.opt_metric = default_value(self.run_file.opt_metric, None)
-
-        ### Regroup here all attributes not in run_file
-        self.start_time = time.time()
-        self.stop_time = time.time()
-        self.run_done = False
-        self.predict_done = False
-        self.umap_done = False
-        self.dataset = None
-        self.model = None
-        self.predictor = None
-        self.training_kwds = {}
-        self.network_kwds = {}
-        self.clas_loss_fn = None
-        self.dann_loss_fn = None
-        self.rec_loss_fn = None
         self.num_classes = None
         self.num_batches = None
+
+        self.ae_hidden_size = self.run_file.ae_hidden_size
+        self.ae_hidden_size = default_value(
+            self.ae_hidden_size, (128, 64, 128)
+        )
+        self.ae_hidden_dropout = self.run_file.ae_hidden_dropout
+
+        self.dropout = self.run_file.dropout  # alternate way to give dropout
+        self.layer1 = (
+            self.run_file.layer1
+        )  # alternate way to give model dimensions
+        self.layer2 = self.run_file.layer2
+        self.bottleneck = self.run_file.bottleneck
+
+        # self.ae_hidden_dropout = default_value(self.ae_hidden_dropout , None)
+        self.ae_activation = self.run_file.ae_activation
+        self.ae_activation = default_value(self.ae_activation, "relu")
+        self.ae_bottleneck_activation = self.run_file.ae_bottleneck_activation
+        self.ae_bottleneck_activation = default_value(
+            self.ae_bottleneck_activation, "linear"
+        )
+        self.ae_output_activation = self.run_file.ae_output_activation
+        self.ae_output_activation = default_value(
+            self.ae_output_activation, "relu"
+        )
+        self.ae_init = self.run_file.ae_init
+        self.ae_init = default_value(self.ae_init, "glorot_uniform")
+        self.ae_batchnorm = self.run_file.ae_batchnorm
+        self.ae_batchnorm = default_value(self.ae_batchnorm, True)
+        self.ae_l1_enc_coef = self.run_file.ae_l1_enc_coef
+        self.ae_l1_enc_coef = default_value(self.ae_l1_enc_coef, 0)
+        self.ae_l2_enc_coef = self.run_file.ae_l2_enc_coef
+        self.ae_l2_enc_coef = default_value(self.ae_l2_enc_coef, 0)
+
+        self.class_hidden_size = self.run_file.class_hidden_size
+        self.class_hidden_size = default_value(
+            self.class_hidden_size, None
+        )  # default value will be initialize as [(bottleneck_size + num_classes)/2] once we'll know num_classes
+        self.class_hidden_dropout = self.run_file.class_hidden_dropout
+        self.class_batchnorm = self.run_file.class_batchnorm
+        self.class_batchnorm = default_value(self.class_batchnorm, True)
+        self.class_activation = self.run_file.class_activation
+        self.class_activation = default_value(self.class_activation, "relu")
+        self.class_output_activation = self.run_file.class_output_activation
+        self.class_output_activation = default_value(
+            self.class_output_activation, "softmax"
+        )
+
+        self.dann_hidden_size = self.run_file.dann_hidden_size
+        self.dann_hidden_size = default_value(
+            self.dann_hidden_size, None
+        )  # default value will be initialize as [(bottleneck_size + num_batches)/2] once we'll know num_classes
+        self.dann_hidden_dropout = self.run_file.dann_hidden_dropout
+        self.dann_batchnorm = self.run_file.dann_batchnorm
+        self.dann_batchnorm = default_value(self.dann_batchnorm, True)
+        self.dann_activation = self.run_file.dann_activation
+        self.dann_activation = default_value(self.dann_activation, "relu")
+        self.dann_output_activation = self.run_file.dann_output_activation
+        self.dann_output_activation = default_value(
+            self.dann_output_activation, "softmax"
+        )
+
+        self.dann_ae = None
+
+        self.pred_metrics_list = {
+            "acc": accuracy_score,
+            "mcc": matthews_corrcoef,
+            "f1_score": f1_score,
+            "KPA": cohen_kappa_score,
+            "ARI": adjusted_rand_score,
+            "NMI": normalized_mutual_info_score,
+            "AMI": adjusted_mutual_info_score,
+        }
+
+        self.pred_metrics_list_balanced = {
+            "balanced_acc": balanced_accuracy_score,
+            "balanced_mcc": balanced_matthews_corrcoef,
+            "balanced_f1_score": balanced_f1_score,
+            "balanced_KPA": balanced_cohen_kappa_score,
+        }
+
+        self.clustering_metrics_list = {  #'clisi' : lisi_avg,
+            "db_score": davies_bouldin_score
+        }
+
+        self.batch_metrics_list = {
+            "batch_mixing_entropy": batch_entropy_mixing_score,
+            #'ilisi': lisi_avg
+        }
         self.metrics = []
 
-        # This is a running average : it keeps the previous values in memory when
-        # it's called (ie computes the previous and current values)
-        self.mean_loss_fn = keras.metrics.Mean(name="total loss")
+        self.mean_loss_fn = keras.metrics.Mean(
+            name="total loss"
+        )  # This is a running average : it keeps the previous values in memory when it's called ie computes the previous and current values
         self.mean_clas_loss_fn = keras.metrics.Mean(name="classification loss")
         self.mean_dann_loss_fn = keras.metrics.Mean(name="dann loss")
         self.mean_rec_loss_fn = keras.metrics.Mean(name="reconstruction loss")
+
+        self.training_scheme = self.run_file.training_scheme
+
+        self.log_neptune = self.run_file.log_neptune
+        self.run = None
+
+        self.hparam_path = self.run_file.hparam_path
+        self.hp_params = None
+        self.opt_metric = default_value(self.run_file.opt_metric, None)
 
     def set_hyperparameters(self, params):
 
@@ -222,29 +323,49 @@ class Workflow:
         self.training_scheme = params["training_scheme"]
         self.hp_params = params
 
+    def start_neptune_log(self):
+        if self.log_neptune:
+            self.run = neptune.init_run(
+                project="becavin-lab/benchmark",
+                api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiJiMmRkMWRjNS03ZGUwLTQ1MzQtYTViOS0yNTQ3MThlY2Q5NzUifQ==",
+            )
+            self.run[f"parameters/model"] = "scPermut"
+            for par, val in self.run_file.__dict__.items():
+                self.run[f"parameters/{par}"] = stringify_unsupported(
+                    getattr(self, par)
+                )
+            if (
+                self.hp_params
+            ):  # Overwrites the defaults arguments contained in the runfile
+                for par, val in self.hp_params.items():
+                    self.run[f"parameters/{par}"] = stringify_unsupported(val)
+
+    def add_custom_log(self, name, value):
+        self.run[f"parameters/{name}"] = stringify_unsupported(value)
+
+    def stop_neptune_log(self):
+        self.run.stop()
+
     def process_dataset(self):
         # Loading dataset
         adata = load_dataset(
-            ref_path=self.run_file.ref_path,
-            query_path=self.run_file.query_path,
-            class_key=self.run_file.class_key,
-            unlabeled_category=self.run_file.unlabeled_category,
+            dataset_dir=self.data_dir, dataset_name=self.dataset_name
         )
 
         self.dataset = Dataset(
             adata=adata,
-            class_key=self.run_file.class_key,
-            batch_key=self.run_file.batch_key,
-            filter_min_counts=self.run_file.filter_min_counts,
-            normalize_size_factors=self.run_file.normalize_size_factors,
+            class_key=self.class_key,
+            batch_key=self.batch_key,
+            filter_min_counts=self.filter_min_counts,
+            normalize_size_factors=self.normalize_size_factors,
             size_factor=self.size_factor,
             scale_input=self.scale_input,
             logtrans_input=self.logtrans_input,
             use_hvg=self.use_hvg,
-            unlabeled_category=self.run_file.unlabeled_category,
-            train_test_random_seed=self.train_test_random_seed,
+            test_split_key=self.test_split_key,
+            unlabeled_category=self.unlabeled_category,
         )
-        print("yoyoyoooyoyoyoyoyyoo")
+
         if not "X_pca" in self.dataset.adata.obsm:
             print("Did not find existing PCA, computing it")
             sc.tl.pca(self.dataset.adata)
@@ -254,10 +375,25 @@ class Workflow:
         # Processing dataset. Splitting train/test.
         self.dataset.normalize()
 
-    def train_val_split(self):
-        self.dataset.train_val_split()
-        self.dataset.create_inputs()
+    def split_train_test(self):
+        self.dataset.test_split(
+            test_obs=self.test_obs, test_index_name=self.test_index_name
+        )
 
+    def split_train_val(self):
+        self.dataset.train_split(
+            mode=self.mode,
+            pct_split=self.pct_split,
+            obs_key=self.obs_key,
+            n_keep=self.n_keep,
+            keep_obs=self.keep_obs,
+            split_strategy=self.split_strategy,
+            obs_subsample=self.obs_subsample,
+            train_test_random_seed=self.train_test_random_seed,
+        )
+
+        print("dataset has been preprocessed")
+        self.dataset.create_inputs()
 
     def make_experiment(self):
         self.ae_hidden_size = [

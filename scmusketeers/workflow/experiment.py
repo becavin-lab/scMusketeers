@@ -4,8 +4,8 @@ import pandas as pd
 from ..arguments.neptune_log import (add_custom_log, start_neptune_log,
                                      stop_neptune_log)
 from ..arguments.runfile import set_hyperparameters
-from . import dataset_tf
-from .optimize_model import Workflow
+from ..transfer import dataset_tf
+from .hyperparameters import Workflow
 
 
 class MakeExperiment:
@@ -68,7 +68,7 @@ class MakeExperiment:
             dataset_tf.split_train_test(self.workflow)
             dataset_tf.split_train_val(self.workflow)
             opt_metric = (
-                self.workflow.make_workflow()
+                self.workflow.make_experiment()
             )  # This starts the logging
             add_custom_log(self.workflow, "task", "hp_optim")
             add_custom_log(self.workflow, "total_trial", self.total_trial)
