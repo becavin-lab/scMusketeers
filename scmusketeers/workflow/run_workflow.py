@@ -23,8 +23,8 @@ TOTAL_TRIAL = 10
 RANDOM_SEED = 40
 
 
-def load_json(json_path):
-    with open(json_path, "r") as fichier_json:
+def load_json(hparam_path):
+    with open(hparam_path, "r") as fichier_json:
         dico = json.load(fichier_json)
     return dico
 
@@ -32,7 +32,6 @@ def load_json(json_path):
 def run_workflow(run_file):
     experiment = MakeExperiment(
         run_file=run_file,
-        working_dir=run_file.working_dir,
         total_trial=TOTAL_TRIAL,
         random_seed=RANDOM_SEED,
     )
@@ -45,14 +44,14 @@ def run_workflow(run_file):
     hparams = load_json(hparam_path)
 
     ### Loop API
-    best_parameters, values, experiment, model = optimize(
-        parameters=hparams,
-        evaluation_function=experiment.train,
-        objective_name=run_file.opt_metric,
-        minimize=False,
-        total_trials=experiment.total_trial,
-        random_seed=experiment.random_seed,
-    )
+    # best_parameters, values, experiment, model = optimize(
+    #     parameters=hparams,
+    #     evaluation_function=experiment.train,
+    #     objective_name=run_file.opt_metric,
+    #     minimize=False,
+    #     total_trials=experiment.total_trial,
+    #     random_seed=experiment.random_seed,
+    # )
 
     ### Service API
     ax_client = AxClient()

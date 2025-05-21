@@ -76,8 +76,8 @@ def create_argparser():
         default="manip",
     )
 
-    # Working dir arguments
-    workflow_group = parser.add_argument_group("Worklow parameters")
+    # Workflow arguments
+    workflow_group = parser.add_argument_group("Workflow parameters")
     workflow_group.add_argument(
         "--query_path",
         type=str,
@@ -121,9 +121,6 @@ def create_argparser():
         help="Name of the neptune project : Exemple sc-permut-packaging",
     )
     workflow_group.add_argument(
-        "--hparam_path", type=str, nargs="?", default=None, help=""
-    )
-    workflow_group.add_argument(
         "--opt_metric",
         type=str,
         nargs="?",
@@ -133,6 +130,20 @@ def create_argparser():
     workflow_group.add_argument(
         "--verbose", type=bool, default=True, help=""
     )
+
+    # HP optimization arguments
+    hparam_group = parser.add_argument_group("HP Optimization Parameters")
+    hparam_group.add_argument(
+        "--hparam_path", type=str, nargs="?", default=None, help=""
+    )
+    hparam_group.add_argument(
+        "--working_dir", type=str, nargs="?", default=None, help=""
+    )
+    hparam_group.add_argument(
+        "--dataset_name", type=str, nargs="?", default=None, help=""
+    )
+
+
 
     # Dataset arguments
     dataset_group = parser.add_argument_group("Dataset Parameters")

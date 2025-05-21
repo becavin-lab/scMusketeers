@@ -344,10 +344,13 @@ class Dataset:
 
 
 def process_dataset(workflow):
-    # Loading dataset
-    adata = load_dataset(
-        dataset_dir=workflow.data_dir,
-        dataset_name=workflow.run_file.dataset_name,
+    """
+    Used for hyperparameters optimization processes
+    """
+    adata = load_dataset(workflow.run_file.ref_path,
+                         workflow.run_file.query_path,
+                         workflow.run_file.class_key, 
+                         workflow.run_file.unlabeled_category       
     )
 
     workflow.dataset = Dataset(
@@ -360,7 +363,8 @@ def process_dataset(workflow):
         scale_input=workflow.run_file.scale_input,
         logtrans_input=workflow.run_file.logtrans_input,
         use_hvg=workflow.run_file.use_hvg,
-        unlabeled_category=workflow.unlabeled_category,
+        unlabeled_category=workflow.run_file.unlabeled_category,
+        train_test_random_seed=workflow.run_file.train_test_random_seed
     )
 
     # Processing dataset. Splitting train/test.
