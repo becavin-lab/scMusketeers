@@ -1,3 +1,6 @@
+# Get GPU
+# srun -A cell -p gpu -t 10:00:00 --gres=gpu:1 --pty bash -i
+
 outdir="/workspace/cell/Review_scMusk"
 dataset=${outdir}"/data/Deprez-Lung-unknown-0.2.h5ad"
 outname=Deprez-Lung-unknown-0.2-pred
@@ -18,7 +21,7 @@ fullmodel_epoch=2   # default = 100, help = Number of epoch to train full model
 permonly_epoch=5   # default = 100, help = Number of epoch to train in permutation only mode
 classifier_epoch=2   # default = 50, help = Number of epoch to train te classifier only
 
-log_neptune=False
+log_neptune=0
 neptune_name="sc-musketeers"
 
 ##### Sampling_percentage 20%

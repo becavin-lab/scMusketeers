@@ -10,7 +10,7 @@ sys.path.append(WD_PATH)
 
 from scmusketeers.tools.utils import str2bool, load_json
 print(str2bool('True'))
-from scmusketeers.workflow.hyperparameters import Workflow
+from scmusketeers.hpoptim.hyperparameters import Workflow
 
 test_fold_fixed_list = load_json(WD_PATH + 'experiment_script/benchmark/hp_test_folds.json')
 test_obs_fixed_list = load_json(WD_PATH + 'experiment_script/benchmark/hp_test_obs.json')

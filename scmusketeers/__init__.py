@@ -8,5 +8,3 @@ from . import transfer
 # from . import workflow
 #print("__main__")
 from . import __main__
-#print("run_musk")
-from . import run_musk

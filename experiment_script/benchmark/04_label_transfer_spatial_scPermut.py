@@ -10,7 +10,7 @@ sys.path.append(WD_PATH)
 
 from scmusketeers.tools.utils import str2bool, load_json
 print(str2bool('True'))
-from scmusketeers.workflow.hyperparameters import Workflow
+from scmusketeers.hpoptim.hyperparameters import Workflow
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

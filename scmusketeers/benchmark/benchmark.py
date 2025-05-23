@@ -1,4 +1,10 @@
-# except ImportError:
+##########
+# Deprecated
+###########
+# 
+# 
+# 
+# # except ImportError:
 #     from dataset import Dataset, load_dataset
 #     from scpermut.tools.utils import str2bool
 #     from scpermut.tools.clust_compute import batch_entropy_mixing_score,lisi_avg
@@ -26,7 +32,7 @@ except ImportError:
     from workflow.benchmark_models import (celltypist_model, harmony_svm,
                                            pca_svm, scanvi, scBalance_model,
                                            scmap_cells, scmap_cluster, uce)
-    from workflow.dataset import Dataset, load_dataset
+    from hpoptim.dataset import Dataset, load_dataset
 
 try:
     from ..tools.clust_compute import (balanced_cohen_kappa_score,
@@ -169,24 +175,6 @@ class Workflow:
         self.start_time = 0
         self.stop_time = 0
 
-    def start_neptune_log(self):
-        self.start_time = time.time()
-        if self.log_neptune:
-            self.run = neptune.init_run(
-                project="becavin-lab/benchmark",
-                api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiJiMmRkMWRjNS03ZGUwLTQ1MzQtYTViOS0yNTQ3MThlY2Q5NzUifQ==",
-            )
-
-            for par, val in self.run_file.__dict__.items():
-                self.run[f"parameters/{par}"] = stringify_unsupported(
-                    getattr(self, par)
-                )  # getattr(self, par) in case the parameter changed somehow
-
-    def add_custom_log(self, name, value):
-        self.run[f"parameters/{name}"] = stringify_unsupported(value)
-
-    def stop_neptune_log(self):
-        self.run.stop()
 
     def process_dataset(self):
         # Loading dataset

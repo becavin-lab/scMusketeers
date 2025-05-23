@@ -28,7 +28,7 @@ sys.path.insert(1, os.path.join(sys.path[0], ".."))
 try:
     from .dataset import Dataset, load_dataset
 except ImportError:
-    from workflow.dataset import Dataset, load_dataset
+    from hpoptim.dataset import Dataset, load_dataset
 
 try:
     from ..tools.clust_compute import (balanced_cohen_kappa_score,

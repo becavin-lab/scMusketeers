@@ -10,7 +10,7 @@ sys.path.append(WD_PATH)
 
 from scmusketeers.tools.utils import str2bool,load_json
 print(str2bool('True'))
-from scmusketeers.workflow.benchmark import Workflow
+from scmusketeers.hpoptim.benchmark import Workflow
 
 model_list_cpu = ['scmap_cells', 'scmap_cluster', 'pca_svm','harmony_svm','celltypist','uce']
 model_list_gpu = ['scanvi']

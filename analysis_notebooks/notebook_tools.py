@@ -15,7 +15,7 @@ from scmusketeers.tools.clust_compute import nn_overlap, batch_entropy_mixing_sc
 from sklearn.metrics import accuracy_score,balanced_accuracy_score,matthews_corrcoef, f1_score,cohen_kappa_score, adjusted_rand_score, normalized_mutual_info_score, adjusted_mutual_info_score,davies_bouldin_score,adjusted_rand_score,confusion_matrix
 f1_score = functools.partial(f1_score, average = 'macro')
 
-from scmusketeers.workflow.dataset import load_dataset
+from scmusketeers.hpoptim.dataset import load_dataset
 from scmusketeers.tools.utils import ann_subset, check_raw,save_json, load_json, rgb2hex,hex2rgb, check_dir, df_to_dict,dict_to_df
 from scmusketeers.tools.plot import get_scanpy_cmap
 

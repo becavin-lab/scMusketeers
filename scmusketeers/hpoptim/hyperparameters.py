@@ -1,4 +1,4 @@
-# except ImportError:
+# # except ImportError:
 #     from dataset import Dataset, load_dataset
 #     from scpermut.tools.utils import scanpy_to_input, default_value, str2bool
 #     from scpermut.tools.clust_compute import nn_overlap, batch_entropy_mixing_score,lisi_avg
@@ -21,6 +21,8 @@ except ImportError:
     from ..transfer.dataset_tf import Dataset, load_dataset
     from ..transfer import freeze
 
+from ..arguments.neptune_log import NEPTUNE_INFO
+
 import keras
 from sklearn.metrics import (accuracy_score, adjusted_mutual_info_score,
                              adjusted_rand_score, balanced_accuracy_score,
@@ -41,7 +43,7 @@ sys.path.insert(1, os.path.join(sys.path[0], ".."))
 try:
     from .dataset import Dataset, load_dataset
 except ImportError:
-    from workflow.dataset import Dataset, load_dataset
+    from hpoptim.dataset import Dataset, load_dataset
 
 try:
     from ..tools.clust_compute import (balanced_cohen_kappa_score,
@@ -124,55 +126,21 @@ class Workflow:
         self.class_param = CLASS_PARAM(run_file)
         self.dann_param = DANN_PARAM(run_file)
         self.training_scheme = self.run_file.training_scheme
-        # normalization parameters
-        self.normalize_size_factors = self.run_file.normalize_size_factors
-        self.size_factor = self.run_file.size_factor
-        self.scale_input = self.run_file.scale_input
-        self.logtrans_input = self.run_file.logtrans_input
-        self.use_hvg = self.run_file.use_hvg
-        self.batch_size = self.run_file.batch_size
-        # self.optimizer = self.run_file.optimizer
-        # self.verbose = self.run_file[model_training_spec][verbose] # TODO : not implemented yet for DANN_AE
-        # self.threads = self.run_file[model_training_spec][threads] # TODO : not implemented yet for DANN_AE
-        self.learning_rate = self.run_file.learning_rate
+
+        # get attributes from run_file
+        for par, val_from_runfile in self.run_file.__dict__.items():
+            # print(f"Processing parameter '{par}' from run_file:")
+            # Check if 'self' has an attribute with the same name
+            if not hasattr(self, par):
+                setattr(self, par, val_from_runfile)
+                #print(f"  - '{par}' from run_file DOES NOT exist in 'self'.")
+                #print(f"    - Creating 'self.{par}' with value: {val_from_runfile} (from run_file).")
+                
         self.n_perm = 1
         self.semi_sup = False  # TODO : Not yet handled by DANN_AE, the case wwhere unlabeled cells are reconstructed as themselves
         # train test split # TODO : Simplify this, or at first only use the case where data is split according to batch
-        self.test_split_key = self.run_file.test_split_key
-        self.test_obs = self.run_file.test_obs
-        self.test_index_name = self.run_file.test_index_name
-        self.mode = self.run_file.mode
-        self.pct_split = self.run_file.pct_split
-        self.obs_key = self.run_file.obs_key
-        self.n_keep = self.run_file.n_keep
-        self.split_strategy = self.run_file.split_strategy
-        self.keep_obs = self.run_file.keep_obs
-        self.train_test_random_seed = self.run_file.train_test_random_seed
-        # self.use_TEST = self.run_file[dataset_train_split][use_TEST] # TODO : remove, obsolete in the case of DANN_AE
-        self.obs_subsample = self.run_file.obs_subsample
-        # Create fake annotations
-        self.make_fake = self.run_file.make_fake
-        self.true_celltype = self.run_file.true_celltype
-        self.false_celltype = self.run_file.false_celltype
-        self.pct_false = self.run_file.pct_false
-        self.clas_loss_name = self.run_file.clas_loss_name
-        self.balance_classes = self.run_file.balance_classes
-        self.dann_loss_name = self.run_file.dann_loss_name
-        self.rec_loss_name = self.run_file.rec_loss_name
-        self.weight_decay = self.run_file.weight_decay
-        self.optimizer_type = self.run_file.optimizer_type
-        self.clas_w = self.run_file.clas_w
-        self.dann_w = self.run_file.dann_w
-        self.rec_w = self.run_file.rec_w
-        self.warmup_epoch = self.run_file.warmup_epoch
-        self.dropout = self.run_file.dropout  # alternate way to give dropout
-        self.layer1 = self.run_file.layer1
-        self.layer2 = self.run_file.layer2
-        self.bottleneck = self.run_file.bottleneck
-        self.training_scheme = self.run_file.training_scheme
 
         ### Hyperamateres attributes
-        self.hparam_path = self.run_file.hparam_path
         self.hp_params = None
         self.opt_metric = default_value(self.run_file.opt_metric, None)
 
@@ -194,6 +162,33 @@ class Workflow:
         self.num_batches = None
         self.metrics = []
 
+        self.pred_metrics_list = {
+            "acc": accuracy_score,
+            "mcc": matthews_corrcoef,
+            "f1_score": f1_score,
+            "KPA": cohen_kappa_score,
+            "ARI": adjusted_rand_score,
+            "NMI": normalized_mutual_info_score,
+            "AMI": adjusted_mutual_info_score,
+        }
+
+        self.pred_metrics_list_balanced = {
+            "balanced_acc": balanced_accuracy_score,
+            "balanced_mcc": balanced_matthews_corrcoef,
+            "balanced_f1_score": balanced_f1_score,
+            "balanced_KPA": balanced_cohen_kappa_score,
+        }
+
+        self.clustering_metrics_list = {  #'clisi' : lisi_avg,
+            "db_score": davies_bouldin_score
+        }
+
+        self.batch_metrics_list = {
+            "batch_mixing_entropy": batch_entropy_mixing_score,
+            #'ilisi': lisi_avg
+        }
+        self.metrics = []
+
         # This is a running average : it keeps the previous values in memory when
         # it's called (ie computes the previous and current values)
         self.mean_loss_fn = keras.metrics.Mean(name="total loss")
@@ -204,32 +199,89 @@ class Workflow:
     def set_hyperparameters(self, params):
 
         print(f"setting hparams {params}")
-        self.use_hvg = params["use_hvg"]
-        self.batch_size = params["batch_size"]
-        self.clas_w = params["clas_w"]
-        self.dann_w = params["dann_w"]
-        self.rec_w = params["rec_w"]
-        self.ae_bottleneck_activation = params["ae_bottleneck_activation"]
-        self.clas_loss_name = params["clas_loss_name"]
-        self.size_factor = params["size_factor"]
-        self.weight_decay = params["weight_decay"]
-        self.learning_rate = params["learning_rate"]
-        self.warmup_epoch = params["warmup_epoch"]
-        self.dropout = params["dropout"]
-        self.layer1 = params["layer1"]
-        self.layer2 = params["layer2"]
-        self.bottleneck = params["bottleneck"]
-        self.training_scheme = params["training_scheme"]
+        if "use_hvg" in params:
+            self.use_hvg = params["use_hvg"]
+        if "batch_size" in params:
+            self.batch_size = params["batch_size"]
+        if "clas_w" in params:
+            self.clas_w = params["clas_w"]
+        if "dann_w" in params:
+            self.dann_w = params["dann_w"]
+        if "rec_w" in params:
+            self.rec_w = params["rec_w"]
+        if "ae_bottleneck_activation" in params:
+            self.ae_bottleneck_activation = params["ae_bottleneck_activation"]
+        if "clas_loss_name" in params:
+            self.clas_loss_name = params["clas_loss_name"]
+        if "size_factor" in params:
+            self.size_factor = params["size_factor"]
+        if "weight_decay" in params:
+            self.weight_decay = params["weight_decay"]
+        if "learning_rate" in params:
+            self.learning_rate = params["learning_rate"]
+        if "warmup_epoch" in params:
+            self.warmup_epoch = params["warmup_epoch"]
+        if "dropout" in params:
+            self.dropout = params["dropout"]
+        if "layer1" in params:
+            self.layer1 = params["layer1"]
+        if "layer2" in params:
+            self.layer2 = params["layer2"]
+        if "bottleneck" in params:
+            self.bottleneck = params["bottleneck"]
+        if "training_scheme" in params:
+            self.training_scheme = params["training_scheme"]
         self.hp_params = params
+
+
+    def start_neptune_log(self, neptune_name):
+        if self.run_file.log_neptune:
+            self.run = neptune.init_run(
+                project="becavin-lab/"+neptune_name,
+                api_token=NEPTUNE_INFO[neptune_name],
+            )
+            self.run[f"parameters/model"] = "scMusketeers"
+            for par, val in self.run_file.__dict__.items():
+                self.run[f"parameters/{par}"] = stringify_unsupported(
+                    getattr(self, par)
+                )
+            if (
+                self.hp_params
+            ):  # Overwrites the defaults arguments contained in the runfile
+                for par, val in self.hp_params.items():
+                    self.run[f"parameters/{par}"] = stringify_unsupported(val)
+
+    def add_custom_log(self, name, value):
+        self.run[f"parameters/{name}"] = stringify_unsupported(value)
+
+    def stop_neptune_log(self):
+        self.run.stop()
+
+    def split_train_test(self):
+        self.dataset.test_split(
+            test_obs=self.test_obs,
+            test_index_name=self.test_index_name,
+        )
+
+    def split_train_val(self):
+        self.dataset.train_split(
+            mode=self.mode,
+            pct_split=self.pct_split,
+            obs_key=self.run_file.obs_key,
+            n_keep=self.n_keep,
+            keep_obs=self.keep_obs,
+            split_strategy=self.split_strategy,
+            obs_subsample=self.obs_subsample,
+            train_test_random_seed=self.train_test_random_seed,
+        )
+
+        print("dataset has been preprocessed")
+        self.dataset.create_inputs()
 
     def process_dataset(self):
         # Loading dataset
         adata = load_dataset(
-            ref_path=self.run_file.ref_path,
-            query_path=self.run_file.query_path,
-            class_key=self.run_file.class_key,
-            unlabeled_category=self.run_file.unlabeled_category,
-        )
+            ref_path=self.run_file.ref_path)
 
         self.dataset = Dataset(
             adata=adata,
@@ -242,9 +294,10 @@ class Workflow:
             logtrans_input=self.logtrans_input,
             use_hvg=self.use_hvg,
             unlabeled_category=self.run_file.unlabeled_category,
-            train_test_random_seed=self.train_test_random_seed,
+            test_split_key=self.run_file.test_split_key
+            #train_test_random_seed=self.train_test_random_seed,
         )
-        print("yoyoyoooyoyoyoyoyyoo")
+        
         if not "X_pca" in self.dataset.adata.obsm:
             print("Did not find existing PCA, computing it")
             sc.tl.pca(self.dataset.adata)
@@ -1006,6 +1059,7 @@ class Workflow:
                 clas_loss = tf.reduce_mean(clas_loss_fn(clas_batch, clas))
                 dann_loss = tf.reduce_mean(dann_loss_fn(dann_batch, dann))
                 rec_loss = tf.reduce_mean(rec_loss_fn(rec_batch, rec))
+                
                 if training_strategy in [
                     "full_model",
                     "full_model_pseudolabels",
@@ -1502,7 +1556,7 @@ class Workflow:
 
     def get_losses(self, y_list):
         if self.rec_loss_name == "MSE":
-            self.rec_loss_fn = tf.keras.losses.mean_squared_error
+            self.rec_loss_fn = tf.keras.losses.MSE
         else:
             print(self.rec_loss_name + " loss not supported for rec")
 

@@ -4,7 +4,7 @@ from scmusketeers.tools.utils import str2bool
 
 """Parses command-line arguments for a workflow involving model training and hyperparameter optimization."""
 
-PROCESS_TYPE = ["transfer", "optim"]
+PROCESS_TYPE = ["transfer", "hp_optim", "benchmark"]
 
 
 def get_runfile():
@@ -50,7 +50,7 @@ def create_argparser():
     parser.add_argument(
         "process",
         type=str,
-        help="Type of process to run : Training, Hyperparameter optimization"
+        help="Type of process to run : Cell type Transfer (transfer), Hyperparameter optimization (hp_optim), Benchmark models (benchmark)"
         f" among {PROCESS_TYPE}",
         default="",
     )
@@ -110,8 +110,7 @@ def create_argparser():
         "--log_neptune",
         type=bool,
         nargs="?",
-        const=True,
-        default=False,
+        default=True,
         help="",
     )
     workflow_group.add_argument(
@@ -156,7 +155,7 @@ def create_argparser():
     )
     dataset_group.add_argument(
         "--filter_min_counts",
-        type=bool,
+        type=str,
         nargs="?",
         const=True,
         default=True,

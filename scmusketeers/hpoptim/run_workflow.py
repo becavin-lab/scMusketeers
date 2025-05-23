@@ -5,8 +5,7 @@ from scmusketeers.arguments.neptune_log import (start_neptune_log,
                                                 stop_neptune_log)
 from scmusketeers.arguments.runfile import (PROCESS_TYPE, create_argparser,
                                             get_default_param, get_runfile)
-from scmusketeers.workflow.experiment import MakeExperiment
-from scmusketeers.workflow.hyperparameters import Workflow
+from scmusketeers.hpoptim.experiment import MakeExperiment
 
 try:
     from ax.service.ax_client import AxClient, ObjectiveProperties
@@ -33,7 +32,7 @@ def run_workflow(run_file):
     experiment = MakeExperiment(
         run_file=run_file,
         total_trial=TOTAL_TRIAL,
-        random_seed=RANDOM_SEED,
+        random_seed=RANDOM_SEED
     )
 
     if not run_file.hparam_path:
@@ -60,7 +59,7 @@ def run_workflow(run_file):
         parameters=hparams,
         objectives={"opt_metric": ObjectiveProperties(minimize=False)},
     )
-    for i in range(experiment.total_trial):
+    for i in range(TOTAL_TRIAL):
         parameterization, trial_index = ax_client.get_next_trial()
         # Local evaluation here can be replaced with deployment to external system.
         ax_client.complete_trial(
@@ -70,3 +69,4 @@ def run_workflow(run_file):
 
     best_parameters, values = ax_client.get_best_parameters()
     print(best_parameters)
+    
