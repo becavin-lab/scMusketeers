@@ -200,5 +200,32 @@ def get_training_scheme(training_scheme, run_file):
         training_scheme = [
             ("no_decoder", 100, False),
         ]
+
+    if training_scheme == "training_scheme_26":
+        training_scheme = [
+            (
+                "warmup_dann",
+                workflow.warmup_epoch,
+                False,
+            ),  # Permutating with pseudo labels during warmup
+            ("full_model", 100, False),
+            ("classifier_branch", 50, False),
+            (
+                "full_model_pseudolabels",
+                100,
+                False,
+            ),  # using permutations on plabels for full training
+            ("classifier_branch", 50, False),
+        ]
+
+    if training_scheme == "training_scheme_debug_1":
+        training_scheme = [
+            ("classifier_branch", 50, False),
+        ]
+
+    if training_scheme == "training_scheme_debug_2":
+        training_scheme = [
+            ("encoder_classifier", 50, False),
+        ]
     
     return training_scheme
