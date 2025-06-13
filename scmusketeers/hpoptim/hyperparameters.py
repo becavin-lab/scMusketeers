@@ -7,83 +7,8 @@ import argparse
 import functools
 import os
 import sys
-try:
-
-    from ..arguments.ae_param import AE_PARAM
-    from ..arguments.class_param import CLASS_PARAM
-    from ..arguments.dann_param import DANN_PARAM
-    from .dataset import Dataset, load_dataset
-    from ..transfer import freeze
-    from ..tools.training_scheme import get_training_scheme
-    
-    from arguments.ae_param import AE_PARAM
-    from arguments.class_param import CLASS_PARAM
-    from arguments.dann_param import DANN_PARAM
-    from dataset import Dataset, load_dataset
-
-    from scmustransfer import freeze
-    from training_scheme import get_training_scheme
-except ImportError:
-    from arguments.ae_param import AE_PARAM
-    from arguments.class_param import CLASS_PARAM
-    from arguments.dann_param import DANN_PARAM
-    from dataset import Dataset, load_dataset
-
-    from scmusketeers.transfer import freeze
-    from scmusketeers.tools.training_scheme import get_training_scheme
-    
-
-from ..arguments.neptune_log import NEPTUNE_INFO
-
-import keras
-from sklearn.metrics import (accuracy_score, adjusted_mutual_info_score,
-                             adjusted_rand_score, balanced_accuracy_score,
-                             cohen_kappa_score, confusion_matrix,
-                             davies_bouldin_score, f1_score, matthews_corrcoef,
-                             normalized_mutual_info_score)
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.utils import compute_class_weight
-
-# try :
-#     from .dataset import Dataset, load_dataset
-#     from ..tools.utils import scanpy_to_input, default_value, str2bool
-#     from ..tools.clust_compute import nn_overlap, batch_entropy_mixing_score,lisi_avg
-
-
-sys.path.insert(1, os.path.join(sys.path[0], ".."))
-
-try:
-    from .dataset import Dataset, load_dataset
-except ImportError:
-    from hpoptim.dataset import Dataset, load_dataset
-
-try:
-    from ..tools.clust_compute import (balanced_cohen_kappa_score,
-                                       balanced_f1_score,
-                                       balanced_matthews_corrcoef,
-                                       batch_entropy_mixing_score, lisi_avg,
-                                       nn_overlap)
-    from ..tools.models import DANN_AE
-    from ..tools.permutation import batch_generator_training_permuted
-    from ..tools.utils import (check_dir, default_value, nan_to_0,
-                               scanpy_to_input, str2bool)
-
-except ImportError:
-    from tools.clust_compute import (balanced_cohen_kappa_score,
-                                     balanced_f1_score,
-                                     balanced_matthews_corrcoef,
-                                     batch_entropy_mixing_score, lisi_avg,
-                                     nn_overlap)
-    from tools.models import DANN_AE
-    from tools.permutation import batch_generator_training_permuted
-    from tools.utils import (check_dir, default_value, nan_to_0,
-                             scanpy_to_input, str2bool)
-
-
-f1_score = functools.partial(f1_score, average="macro")
 import gc
 import json
-import os
 import subprocess
 import sys
 import time
@@ -95,12 +20,59 @@ import pandas as pd
 import scanpy as sc
 import seaborn as sns
 import tensorflow as tf
+
 from ax.service.managed_loop import optimize
-# from numba import cuda
 from neptune.utils import stringify_unsupported
-
 # from ax import RangeParameter, SearchSpace, ParameterType, FixedParameter, ChoiceParameter
+import keras
+from sklearn.metrics import (accuracy_score, adjusted_mutual_info_score,
+                             adjusted_rand_score, balanced_accuracy_score,
+                             cohen_kappa_score, confusion_matrix,
+                             davies_bouldin_score, f1_score, matthews_corrcoef,
+                             normalized_mutual_info_score)
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.utils import compute_class_weight
 
+# Import scmusketeers library
+try:
+    from ..arguments.neptune_log import NEPTUNE_INFO
+    from ..arguments.ae_param import AE_PARAM
+    from ..arguments.class_param import CLASS_PARAM
+    from ..arguments.dann_param import DANN_PARAM
+    from .dataset import Dataset, load_dataset
+    from ..transfer import freeze
+    from ..tools.training_scheme import get_training_scheme
+    from ..tools.clust_compute import (balanced_cohen_kappa_score,
+                                       balanced_f1_score,
+                                       balanced_matthews_corrcoef,
+                                       batch_entropy_mixing_score, lisi_avg,
+                                       nn_overlap)
+    from ..tools.models import DANN_AE
+    from ..tools.permutation import batch_generator_training_permuted
+    from ..tools.utils import (check_dir, default_value, nan_to_0,
+                               scanpy_to_input, str2bool)
+except ImportError:
+    from scmusketeers.arguments.neptune_log import NEPTUNE_INFO
+    from scmusketeers.arguments.ae_param import AE_PARAM
+    from scmusketeers.arguments.class_param import CLASS_PARAM
+    from scmusketeers.arguments.dann_param import DANN_PARAM
+    from scmusketeers.hpoptim.dataset import Dataset, load_dataset
+    from scmusketeers.transfer import freeze
+    from scmusketeers.tools.training_scheme import get_training_scheme
+    from scmusketeers.tools.clust_compute import (balanced_cohen_kappa_score,
+                                     balanced_f1_score,
+                                     balanced_matthews_corrcoef,
+                                     batch_entropy_mixing_score, lisi_avg,
+                                     nn_overlap)
+    from scmusketeers.tools.models import DANN_AE
+    from scmusketeers.tools.permutation import batch_generator_training_permuted
+    from scmusketeers.tools.utils import (check_dir, default_value, nan_to_0,
+                             scanpy_to_input, str2bool)
+
+
+
+# Setup settings
+f1_score = functools.partial(f1_score, average="macro")
 physical_devices = tf.config.list_physical_devices("GPU")
 for gpu_instance in physical_devices:
     tf.config.experimental.set_memory_growth(gpu_instance, True)

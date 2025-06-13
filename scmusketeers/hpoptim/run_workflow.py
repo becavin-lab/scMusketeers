@@ -1,12 +1,19 @@
 import json
 import os
 
-from scmusketeers.arguments.neptune_log import (start_neptune_log,
-                                                stop_neptune_log)
-from scmusketeers.arguments.runfile import (PROCESS_TYPE, create_argparser,
-                                            get_default_param, get_runfile)
-from scmusketeers.hpoptim.experiment import MakeExperiment
-
+try:
+    from ..arguments.neptune_log import (start_neptune_log,
+                                                    stop_neptune_log)
+    from ..arguments.runfile import (PROCESS_TYPE, create_argparser,
+                                                get_default_param, get_runfile)
+    from ..hpoptim.experiment import MakeExperiment
+except ImportError:
+    from scmusketeers.arguments.neptune_log import (start_neptune_log,
+                                                    stop_neptune_log)
+    from scmusketeers.arguments.runfile import (PROCESS_TYPE, create_argparser,
+                                                get_default_param, get_runfile)
+    from scmusketeers.hpoptim.experiment import MakeExperiment
+    
 try:
     from ax.service.ax_client import AxClient, ObjectiveProperties
 except ImportError:
