@@ -19,9 +19,9 @@ classifier_epoch=2   # default = 50, help = Number of epoch to train te classifi
 training_scheme="training_scheme_1"
 
 python ${python_path} hp_optim ${dataset} --log_neptune=${log_neptune} --neptune_name=${neptune_name} --working_dir ${working_dir} \
---warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} \
 --classifier_epoch=${classifier_epoch} --hparam_path ${hparam_path} --dataset_name ${dataset_name} \
 --class_key Original_annotation --batch_key batch --mode entire_condition --obs_key batch \
---keep_obs AN1 AN11 AN12 AN13 AN3 AN6 AN7 --training_scheme=${training_scheme} --test_split_key TRAIN_TEST_split_batch 
+--keep_obs AN1 AN11 AN12 AN13 AN3 AN6 AN7 --training_scheme=${training_scheme} --test_split_key TRAIN_TEST_split_batch \
+--warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch}
 
 
