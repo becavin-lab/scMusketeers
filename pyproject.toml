@@ -13,7 +13,6 @@ repository = "https://github.com/AntoineCollin/scMusketeers/"
 [tool.poetry.dependencies]
 python = "^3.10"
 poetry = "^1.8.1"
-numpy = "^1.23"
 keras = "^3.3.3"
 scanpy = "^1.10.1"
 neptune = "^1.10.4"

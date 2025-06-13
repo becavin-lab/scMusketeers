@@ -1,12 +1,23 @@
 ### From run_hp.py
 # import neptune
 import pandas as pd
-
-from ..arguments.neptune_log import NEPTUNE_INFO
-from ..arguments.runfile import set_hyperparameters
-from .dataset import Dataset, load_dataset
-from .hyperparameters import Workflow
+import sys
+import os
 import neptune
+
+sys.path.insert(1, os.path.join(sys.path[0], ".."))
+
+try:
+    from ..arguments.neptune_log import NEPTUNE_INFO
+    from ..arguments.runfile import set_hyperparameters
+    from .dataset import Dataset, load_dataset
+    from .hyperparameters import Workflow
+except ImportError:
+    from scmusketeers.arguments.neptune_log import NEPTUNE_INFO
+    from scmusketeers.arguments.runfile import set_hyperparameters
+    from scmusketeers.hpoptim.dataset import Dataset, load_dataset
+    from scmusketeers.hpoptim.hyperparameters import Workflow
+
 
 def load_json(json_path):
     with open(json_path, "r") as fichier_json:

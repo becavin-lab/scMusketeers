@@ -8,20 +8,30 @@ import functools
 import os
 import sys
 try:
-    from ae_param import AE_PARAM
-    from class_param import CLASS_PARAM
-    from dann_param import DANN_PARAM
-    from dataset import Dataset, load_dataset
 
-    from ..transfer import freeze
-    from training_scheme import get_training_scheme
-except ImportError:
     from ..arguments.ae_param import AE_PARAM
     from ..arguments.class_param import CLASS_PARAM
     from ..arguments.dann_param import DANN_PARAM
-    from ..transfer.dataset_tf import Dataset, load_dataset
+    from .dataset import Dataset, load_dataset
     from ..transfer import freeze
     from ..tools.training_scheme import get_training_scheme
+    
+    from arguments.ae_param import AE_PARAM
+    from arguments.class_param import CLASS_PARAM
+    from arguments.dann_param import DANN_PARAM
+    from dataset import Dataset, load_dataset
+
+    from scmustransfer import freeze
+    from training_scheme import get_training_scheme
+except ImportError:
+    from arguments.ae_param import AE_PARAM
+    from arguments.class_param import CLASS_PARAM
+    from arguments.dann_param import DANN_PARAM
+    from dataset import Dataset, load_dataset
+
+    from scmusketeers.transfer import freeze
+    from scmusketeers.tools.training_scheme import get_training_scheme
+    
 
 from ..arguments.neptune_log import NEPTUNE_INFO
 

@@ -10,7 +10,6 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.utils import shuffle
 
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
-print(sys.path[0])
 try:
     from ..tools.utils import densify
 except ImportError:

@@ -4,7 +4,7 @@ from . import arguments
 from . import tools
 #print("import transfer")
 from . import transfer
-# print("import workflow")
-# from . import workflow
+print("import hptoptim")
+from . import hpoptim
 #print("__main__")
 from . import __main__
