@@ -63,6 +63,13 @@ def create_argparser():
     )
 
     parser.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Print out all debug messages.",
+    )
+    
+    parser.add_argument(
         "--class_key",
         type=str,
         help="Key of the celltype to classify",

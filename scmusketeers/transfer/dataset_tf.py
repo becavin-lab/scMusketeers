@@ -1,6 +1,6 @@
 import os
 import sys
-
+import logging
 import anndata
 import numpy as np
 import pandas as pd
@@ -16,6 +16,7 @@ try:
 except ImportError:
     from tools.utils import densify
 
+logger = logging.getLogger("Sc-Musketeers")
 
 def get_hvg_common(
     adata_, n_hvg=2000, flavor="seurat", batch_key="manip", reduce_adata=True
@@ -39,7 +40,7 @@ def get_hvg_common(
         adata.var["highly_variable_nbatches"] == n_batches
     ]  # Starts with genes hvg for every batches
     dispersion_nbatches = dispersion_nbatches.sort_values(ascending=False)
-    print(f"Searching for highly variable genes in {n_batches} batches")
+    logger.info(f"Searching for highly variable genes in {n_batches} batches")
     if (
         len(dispersion_nbatches) >= n_hvg
     ):  # If there are already enough hvg in every batch, returns them
@@ -48,7 +49,7 @@ def get_hvg_common(
             return adata[:, top_genes]
         else:
             return top_genes
-    print(
+    logger.debug(
         f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches"
     )
     top_genes = list(
@@ -61,7 +62,7 @@ def get_hvg_common(
         n_batches = (
             n_batches - 1
         )  # Looks for genes hvg for one fewer batch at each iteration
-        print(f"Searching for highly variable genes in {n_batches} batches")
+        logger.debug(f"Searching for highly variable genes in {n_batches} batches")
         remaining_genes = n_hvg - len(top_genes)  # nb of genes left to find
         dispersion_nbatches = adata.var["dispersions_norm"][
             adata.var["highly_variable_nbatches"] == n_batches
@@ -70,14 +71,14 @@ def get_hvg_common(
         if (
             len(dispersion_nbatches) > remaining_genes
         ):  # Enough genes to fill in the rest
-            print(
+            logger.debug(
                 f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches. Selecting top {remaining_genes}"
             )
             # print(dispersion_nbatches)
             top_genes += list(dispersion_nbatches[:remaining_genes].index)
             enough = True
         else:
-            print(
+            logger.debug(
                 f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches"
             )
             top_genes += list(dispersion_nbatches.index)
@@ -90,7 +91,7 @@ def get_hvg_common(
 
 def load_dataset(ref_path, query_path, class_key, unlabeled_category):
     if not query_path:
-        print(f"Load {ref_path}")
+        logger.info(f"Load {ref_path}")
         adata = sc.read_h5ad(ref_path)
     else:
         ref = sc.read_h5ad(ref_path)
@@ -239,12 +240,9 @@ class Dataset:
         )
         spl.iloc[val_idx] = "val"
         self.adata_train_extended.obs["train_split"] = spl.values
-        print(self.unlabeled_category)
         test_idx = (
             self.adata.obs[self.class_key] == self.unlabeled_category
         )  # boolean
-        print(self.adata.obs[self.class_key].unique())
-        print(test_idx.sum())
         split = pd.Series(
             ["train"] * self.adata.n_obs, index=self.adata.obs.index
         )
@@ -394,19 +392,13 @@ class Dataset:
             )
         elif self.size_factor == "constant":
             self.adata.obs["size_factors"] = 1.0
-        # print('right after loading')
-        # print(self.adata)
-        # print(self.adata_test)
-        # print(self.adata_train_extended)
-        # print(self.adata_train_extended.obs[self.class_key].value_counts())
-        # self.adata_train = self.adata_train_extended.copy()
 
     def test_split(self, test_index_name=None, test_obs=None):
 
         if test_index_name:
             test_idx = self.adata.obs_names.isin(test_index_name)
         if test_obs:
-            print(f"test obs :{test_obs}")
+            logger.debug(f"test obs :{test_obs}")
             test_idx = self.adata.obs[self.batch_key].isin(test_obs)
 
             split = pd.Series(
@@ -489,7 +481,6 @@ class Dataset:
                 )
         if mode == "percentage":
             self.pct_split = pct_split
-            print(self.adata_train_extended.obs[self.class_key].value_counts())
             if split_strategy == "random" or not split_strategy:
                 # Dirty workaround for celltypes with 1 cell only, which is a rare case
                 stratification = self.adata_train_extended.obs[
@@ -562,7 +553,7 @@ class Dataset:
         elif mode == "entire_condition":
             self.obs_key = obs_key
             self.keep_obs = keep_obs
-            print(
+            logger.debug(
                 f"splitting this adata train/val : {self.adata_train_extended}"
             )
             keep_idx = self.adata_train_extended.obs[obs_key].isin(
@@ -655,7 +646,7 @@ class Dataset:
             to_keep[remove_idx] = "val"
             self.adata_train_extended.obs["train_split"] = to_keep
         else:
-            print(f"{mode} is not a valid splitting mode")
+            logger.error(f"{mode} is not a valid splitting mode")
             return
 
         train_split = self.adata.obs[self.test_split_key].astype(
@@ -666,7 +657,7 @@ class Dataset:
         )
         self.adata.obs["train_split"] = train_split
 
-        print(
+        logger.info(
             f'train, test, val proportions : {self.adata.obs["train_split"].value_counts()}'
         )
 
@@ -898,6 +889,6 @@ def split_train_val(workflow):
         train_test_random_seed=workflow.run_file.train_test_random_seed,
     )
 
-    print("dataset has been preprocessed")
+    logger.debug("dataset has been splitted train/test/val")
     workflow.dataset.create_inputs()
 

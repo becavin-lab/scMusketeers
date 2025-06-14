@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 import anndata
 import numpy as np
 import pandas as pd
@@ -14,6 +15,7 @@ try:
 except ImportError:
     from scmusketeers.tools.utils import densify
 
+logger = logging.getLogger("Sc-Musketeers")
 
 def get_hvg_common(
     adata_, n_hvg=2000, flavor="seurat", batch_key="manip", reduce_adata=True
@@ -21,10 +23,10 @@ def get_hvg_common(
     """
     Computes a list of hvg which are common to the most different batches.
     """
-    print(f'Selecting {n_hvg} HVG')
+    logger.debug(f'Selecting {n_hvg} HVG')
 
     if n_hvg >= adata_.n_vars :
-        print(f'Dataset has less than {n_hvg} genes, keeping every genes')
+        logger.debug(f'Dataset has less than {n_hvg} genes, keeping every genes')
         if reduce_adata:
             return adata_
         else :
@@ -47,7 +49,7 @@ def get_hvg_common(
         adata.var["highly_variable_nbatches"] == n_batches
     ]  # Starts with genes hvg for every batches
     dispersion_nbatches = dispersion_nbatches.sort_values(ascending=False)
-    print(f"Searching for highly variable genes in {n_batches} batches")
+    logger.debug(f"Searching for highly variable genes in {n_batches} batches")
     if (
         len(dispersion_nbatches) >= n_hvg
     ):  # If there are already enough hvg in every batch, returns them
@@ -56,7 +58,7 @@ def get_hvg_common(
             return adata[:, top_genes]
         else:
             return top_genes
-    print(
+    logger.debug(
         f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches"
     )
     top_genes = list(
@@ -69,7 +71,7 @@ def get_hvg_common(
         n_batches = (
             n_batches - 1
         )  # Looks for genes hvg for one fewer batch at each iteration
-        print(f"Searching for highly variable genes in {n_batches} batches")
+        logger.debug(f"Searching for highly variable genes in {n_batches} batches")
         remaining_genes = n_hvg - len(top_genes)  # nb of genes left to find
         dispersion_nbatches = adata.var["dispersions_norm"][
             adata.var["highly_variable_nbatches"] == n_batches
@@ -78,14 +80,14 @@ def get_hvg_common(
         if (
             len(dispersion_nbatches) > remaining_genes
         ):  # Enough genes to fill in the rest
-            print(
+            logger.debug(
                 f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches. Selecting top {remaining_genes}"
             )
             # print(dispersion_nbatches)
             top_genes += list(dispersion_nbatches[:remaining_genes].index)
             enough = True
         else:
-            print(
+            logger.debug(
                 f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches"
             )
             top_genes += list(dispersion_nbatches.index)

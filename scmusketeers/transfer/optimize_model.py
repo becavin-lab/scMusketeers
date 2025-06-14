@@ -1,29 +1,25 @@
-# except ImportError:
-#     from dataset import Dataset, load_dataset
-#     from scpermut.tools.utils import scanpy_to_input, default_value, str2bool
-#     from scpermut.tools.clust_compute import nn_overlap, batch_entropy_mixing_score,lisi_avg
-# from dca.utils import str2bool,tuple_to_scalar
 import argparse
 import functools
 import os
 import sys
 from unittest import TestResult
+import gc
+import json
+import os
+import subprocess
+import sys
+import time
+import logging
 
-try:
-    from ae_param import AE_PARAM
-    from class_param import CLASS_PARAM
-    from dann_param import DANN_PARAM
-    from dataset import Dataset, load_dataset
-
-    from . import freeze
-except ImportError:
-    from ..arguments.ae_param import AE_PARAM
-    from ..arguments.class_param import CLASS_PARAM
-    from ..arguments.dann_param import DANN_PARAM
-    from ..transfer.dataset_tf import Dataset, load_dataset
-    from . import freeze
-
+import matplotlib.pyplot as plt
+import neptune
+import numpy as np
+import pandas as pd
+import scanpy as sc
+import seaborn as sns
+import tensorflow as tf
 import keras
+
 from sklearn.metrics import (accuracy_score, adjusted_mutual_info_score,
                              adjusted_rand_score, balanced_accuracy_score,
                              cohen_kappa_score, confusion_matrix,
@@ -32,20 +28,15 @@ from sklearn.metrics import (accuracy_score, adjusted_mutual_info_score,
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.utils import compute_class_weight
 
-# try :
-#     from .dataset import Dataset, load_dataset
-#     from ..tools.utils import scanpy_to_input, default_value, str2bool
-#     from ..tools.clust_compute import nn_overlap, batch_entropy_mixing_score,lisi_avg
-
-
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
 try:
+    from ..arguments.neptune_log import NEPTUNE_INFO
+    from ..arguments.ae_param import AE_PARAM
+    from ..arguments.class_param import CLASS_PARAM
+    from ..arguments.dann_param import DANN_PARAM
+    from . import freeze
     from .dataset_tf import Dataset, load_dataset
-except ImportError:
-    from transfer.dataset_tf import Dataset, load_dataset
-
-try:
     from ..tools.clust_compute import (balanced_cohen_kappa_score,
                                        balanced_f1_score,
                                        balanced_matthews_corrcoef,
@@ -55,38 +46,26 @@ try:
     from ..tools.permutation import batch_generator_training_permuted
     from ..tools.utils import (default_value, nan_to_0, scanpy_to_input,
                                str2bool)
-
 except ImportError:
-    from tools.clust_compute import (balanced_cohen_kappa_score,
+    from scmusketeers.arguments.neptune_log import NEPTUNE_INFO
+    from scmusketeers.arguments.ae_param import AE_PARAM
+    from scmusketeers.arguments.class_param import CLASS_PARAM
+    from scmusketeers.arguments.dann_param import DANN_PARAM
+    from scmusketeers.transfer import freeze
+    from scmusketeers.transfer.dataset_tf import Dataset, load_dataset
+    from scmusketeers.tools.clust_compute import (balanced_cohen_kappa_score,
                                      balanced_f1_score,
                                      balanced_matthews_corrcoef,
                                      batch_entropy_mixing_score, lisi_avg,
                                      nn_overlap)
-    from tools.models import DANN_AE
-    from tools.permutation import batch_generator_training_permuted
-    from tools.utils import default_value, nan_to_0, scanpy_to_input, str2bool
+    from scmusketeers.tools.models import DANN_AE
+    from scmusketeers.tools.permutation import batch_generator_training_permuted
+    from scmusketeers.tools.utils import default_value, nan_to_0, scanpy_to_input, str2bool
 
 
+
+# Setup settings
 f1_score = functools.partial(f1_score, average="macro")
-import gc
-import json
-import os
-import subprocess
-import sys
-import time
-
-import matplotlib.pyplot as plt
-import neptune
-import numpy as np
-import pandas as pd
-import scanpy as sc
-import seaborn as sns
-import tensorflow as tf
-
-# from numba import cuda
-
-# from ax import RangeParameter, SearchSpace, ParameterType, FixedParameter, ChoiceParameter
-
 physical_devices = tf.config.list_physical_devices("GPU")
 for gpu_instance in physical_devices:
     tf.config.experimental.set_memory_growth(gpu_instance, True)
@@ -114,6 +93,7 @@ CLUSTERING_METRICS_LIST = {
 
 BATCH_METRICS_LIST = {"batch_mixing_entropy": batch_entropy_mixing_score}
 
+logger = logging.getLogger("Sc-Musketeers")
 
 class Workflow:
     def __init__(self, run_file):
@@ -205,7 +185,7 @@ class Workflow:
 
     def set_hyperparameters(self, params):
 
-        print(f"setting hparams {params}")
+        logger.debug(f"setting hparams {params}")
         self.use_hvg = params["use_hvg"]
         self.batch_size = params["batch_size"]
         self.clas_w = params["clas_w"]
@@ -249,7 +229,7 @@ class Workflow:
         )
 
         if not "X_pca" in self.dataset.adata.obsm:
-            print("Did not find existing PCA, computing it")
+            logger.info("Did not find existing PCA, computing it")
             sc.tl.pca(self.dataset.adata)
             self.dataset.adata.obsm["X_pca"] = np.asarray(
                 self.dataset.adata.obsm["X_pca"]
@@ -491,7 +471,7 @@ class Workflow:
                 self.learning_rate, self.weight_decay, self.optimizer_type
             )  # resetting optimizer state when switching strategy
             if verbose:
-                print(
+                logger.debug(
                     f"Step number {i}, running {strategy} strategy with permutation = {use_perm} for {n_epochs} epochs"
                 )
                 time_in = time.time()
@@ -570,7 +550,7 @@ class Workflow:
 
             for epoch in range(1, n_epochs + 1):
                 running_epoch += 1
-                print(
+                logger.info(
                     f"Epoch {running_epoch}/{total_epochs}, Current strat Epoch {epoch}/{n_epochs}"
                 )
                 history, _, _, _, _ = self.training_loop(
@@ -619,7 +599,7 @@ class Workflow:
                             wait = 0
                             best_model = self.dann_ae.get_weights()
                     if wait >= patience:
-                        print(
+                        logger.info(
                             f"Early stopping at epoch {best_epoch}, restoring model parameters from this epoch"
                         )
                         self.dann_ae.set_weights(best_model)
@@ -628,7 +608,7 @@ class Workflow:
 
             if verbose:
                 time_out = time.time()
-                print(f"Strategy duration : {time_out - time_in} s")
+                logger.debug(f"Strategy duration : {time_out - time_in} s")
         if self.run_file.log_neptune:
             self.run_neptune[f"training/{group}/total_epochs"] = running_epoch
         return history
@@ -704,7 +684,7 @@ class Workflow:
             layers_to_freeze = freeze.freeze_block(ae, "freeze_dec")
             freeze.freeze_layers(layers_to_freeze)
 
-        print(f"use_perm = {use_perm}")
+        logger.debug(f"Use permutation strategy? use_perm = {use_perm}")
         batch_generator = batch_generator_training_permuted(
             X=X_list[group],
             y=pseudo_y_list[

@@ -1,4 +1,5 @@
 import os
+import logging
 
 from scmusketeers.arguments.neptune_log import (start_neptune_log,
                                                 stop_neptune_log)
@@ -10,13 +11,24 @@ from scmusketeers.hpoptim.run_workflow import run_workflow
 
 
 def run_sc_musketeers():
+
+    # Set up logging
+    logger = logging.getLogger("Sc-Musketeers")
+    logging.basicConfig(format="|--- %(levelname)-8s %(message)s")
+
     # Get all arguments
     run_file = get_runfile()
-    #run_file = get_default_param()
-    print(run_file)
-    print(run_file.out_dir)
+    
+    # Set logger level
+    if run_file.debug:
+        logger.setLevel(getattr(logging, "DEBUG"))
+    else:
+        logger.setLevel(getattr(logging, "INFO"))
+    logger.debug(f"Program arguments: {run_file}")
+
     # Run transfer
     if run_file.process == PROCESS_TYPE[0]:
+        logger.info("Run transfer")
         # Transfer data
         workflow = Workflow(run_file=run_file)
         start_neptune_log(workflow)
@@ -26,22 +38,22 @@ def run_sc_musketeers():
             workflow.make_experiment()
         )
         stop_neptune_log(workflow)
-        print(query_pred)
         adata_pred_path = os.path.join(
             run_file.out_dir, f"{run_file.out_name}.h5ad"
         )
-        print((f"Save adata_pred to {adata_pred_path}"))
+        logger.info((f"Save adata_pred to {adata_pred_path}"))
         adata_pred.write_h5ad(adata_pred_path)
 
     # Run hyperparameters optimization
     elif run_file.process == PROCESS_TYPE[1]:
+        logger.info("Run hyperparameters optimization")
         run_workflow(run_file)
     # Run models benchmark
     elif run_file.process == PROCESS_TYPE[2]:
-        print("Run benchmark")
+        logger.info("Run benchmark")
     else:
         # No process
-        print("Process not recognized")
+        logger.info("Process not recognized")
 
 if __name__ == "__main__":
     run_sc_musketeers()

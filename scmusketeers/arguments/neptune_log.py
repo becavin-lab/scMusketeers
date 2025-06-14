@@ -1,3 +1,4 @@
+import logging
 import neptune
 from neptune.utils import stringify_unsupported
 
@@ -6,10 +7,12 @@ NEPTUNE_INFO["benchmark"] = "eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWk
 NEPTUNE_INFO["sc-musketeers"] = "eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI1Zjg5NGJkNC00ZmRkLTQ2NjctODhmYy0zZDAzYzM5ZTgxOTAifQ=="
 NEPTUNE_INFO["scmusk-review"] = "eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI1Zjg5NGJkNC00ZmRkLTQ2NjctODhmYy0zZDAzYzM5ZTgxOTAifQ=="
 
+logger = logging.getLogger("Sc-Musketeers")
+
 def start_neptune_log(workflow):
-    print(f"Use Neptune.ai log : {workflow.run_file.log_neptune}")
+    logger.info(f"Use Neptune.ai log : {workflow.run_file.log_neptune}")
     if workflow.run_file.log_neptune:
-        print(f"Use Neptune project name = {workflow.run_file.neptune_name}")
+        logger.info(f"Use Neptune project name = {workflow.run_file.neptune_name}")
         if workflow.run_file.neptune_name == "benchmark":
             workflow.run_neptune = neptune.init_run(
                 project="becavin-lab/benchmark",
@@ -26,7 +29,7 @@ def start_neptune_log(workflow):
                 api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI1Zjg5NGJkNC00ZmRkLTQ2NjctODhmYy0zZDAzYzM5ZTgxOTAifQ==",
             )
         else:
-            print("No neptune_name was provided !!!")
+            logger.info("No neptune_name was provided !!!")
 
         for par, val in workflow.run_file.__dict__.items():
             if par in dir(workflow):
