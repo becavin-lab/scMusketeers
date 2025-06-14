@@ -90,6 +90,7 @@ def get_hvg_common(
 
 def load_dataset(ref_path, query_path, class_key, unlabeled_category):
     if not query_path:
+        print(f"Load {ref_path}")
         adata = sc.read_h5ad(ref_path)
     else:
         ref = sc.read_h5ad(ref_path)

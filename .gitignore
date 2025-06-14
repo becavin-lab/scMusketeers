@@ -43,6 +43,7 @@ experiment_script/benchmark/zzlaunch_size_metrics.sh
 
 analysis_notebooks/000-banovich23/
 analysis_notebooks/spatial_loc/
+analysis_notebooks/figures_review/
 
 compute_single_metrics.py
 metricsbatch_mixing_expe2_htap_C1.csv
