@@ -37,6 +37,8 @@ htap_celltype.csv
 ajrccm_celltypes.csv
 *.log
 
+### Not include scMusketeers results
+experiment_script/results/
 experiment_script/benchmark/compute_size_metrics.py
 experiment_script/benchmark/*csv
 experiment_script/benchmark/zzlaunch_size_metrics.sh

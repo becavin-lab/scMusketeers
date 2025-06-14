@@ -472,12 +472,8 @@ class Workflow:
         # TODO also make it on gpu with smaller batch size
         if self.log_neptune:
             neptune_run_id = self.run["sys/id"].fetch()
-            save_dir = (
-                self.working_dir
-                + "experiment_script/results/"
-                + str(neptune_run_id)
-                + "/"
-            )
+            save_dir = os.path.join(self.run_file.out_dir,str(neptune_run_id))
+            print(f"Save results to: {save_dir}")
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             y_true_full = adata_list["full"].obs[f"true_{self.class_key}"]
@@ -516,12 +512,10 @@ class Workflow:
                             index=adata_list["full"].obs_names,
                             columns=self.dataset.ohe_celltype.categories_[0],
                         )
-                        y_pred_proba.to_csv(
-                            save_dir + f"y_pred_proba_full.csv"
-                        )
+                        y_pred_proba.to_csv(os.path.join(save_dir,"y_pred_proba_full.csv"))
                         self.run[
                             f"evaluation/{group}/y_pred_proba_full"
-                        ].track_files(save_dir + f"y_pred_proba_full.csv")
+                        ].track_files(os.path.join(save_dir,"y_pred_proba_full.csv"))
 
                     clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
 
@@ -553,12 +547,10 @@ class Workflow:
                     cm_to_save = pd.DataFrame(cm, index=labels, columns=labels)
                     cm_to_plot = cm_to_plot.fillna(value=0)
                     cm_to_save = cm_to_save.fillna(value=0)
-                    cm_to_save.to_csv(
-                        save_dir + f"confusion_matrix_{group}.csv"
-                    )
+                    cm_to_save.to_csv(os.path.join(save_dir,f"confusion_matrix_{group}.csv"))
                     self.run[
                         f"evaluation/{group}/confusion_matrix_file"
-                    ].track_files(save_dir + f"confusion_matrix_{group}.csv")
+                    ].track_files(os.path.join(save_dir,f"confusion_matrix_{group}.csv"))
                     size = len(labels)
                     f, ax = plt.subplots(figsize=(size / 1.5, size / 1.5))
                     sns.heatmap(
@@ -653,17 +645,15 @@ class Workflow:
                         split = pd.DataFrame(
                             split, index=adata_list[group].obs_names
                         )
-                        np.save(
-                            save_dir + f"latent_space_{group}.npy", enc.numpy()
-                        )
-                        y_pred_df.to_csv(save_dir + f"predictions_{group}.csv")
-                        split.to_csv(save_dir + f"split_{group}.csv")
+                        np.save(os.path.join(save_dir,f"latent_space_{group}.npy"), enc.numpy())
+                        y_pred_df.to_csv(os.path.join(save_dir,f"predictions_{group}.csv"))
+                        split.to_csv(os.path.join(save_dir,f"split_{group}.csv"))
                         self.run[
                             f"evaluation/{group}/latent_space"
-                        ].track_files(save_dir + f"latent_space_{group}.npy")
+                        ].track_files(os.path.join(save_dir,f"latent_space_{group}.npy"))
                         self.run[
                             f"evaluation/{group}/predictions"
-                        ].track_files(save_dir + f"predictions_{group}.csv")
+                        ].track_files(os.path.join(save_dir,f"predictions_{group}.csv"))
 
                         # Saving umap representation
                         pred_adata = sc.AnnData(
@@ -678,11 +668,11 @@ class Workflow:
                         sc.pp.neighbors(pred_adata, use_rep="latent_space")
                         sc.tl.umap(pred_adata)
                         np.save(
-                            save_dir + f"umap_{group}.npy",
+                            os.path.join(save_dir,f"umap_{group}.npy"),
                             pred_adata.obsm["X_umap"],
                         )
                         self.run[f"evaluation/{group}/umap"].track_files(
-                            save_dir + f"umap_{group}.npy"
+                            os.path.join(save_dir,f"umap_{group}.npy")
                         )
                         sc.set_figure_params(figsize=(15, 10), dpi=300)
                         fig_class = sc.pl.umap(

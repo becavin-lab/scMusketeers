@@ -14,6 +14,7 @@ def run_sc_musketeers():
     run_file = get_runfile()
     #run_file = get_default_param()
     print(run_file)
+    print(run_file.out_dir)
     # Run transfer
     if run_file.process == PROCESS_TYPE[0]:
         # Transfer data
