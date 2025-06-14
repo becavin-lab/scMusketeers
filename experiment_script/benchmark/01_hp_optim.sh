@@ -1,11 +1,11 @@
 #!/bin/sh
 #
 #SBATCH --account=cell     # The account name for the job.
-#SBATCH --output=/#home/acollin/ajrccm_hyperparam.log # Important to retrieve the port where the notebook is running, if not included a slurm file with the job-id will be outputted. 
+#SBATCH --output=ajrccm_hyperparam.log # Important to retrieve the port where the notebook is running, if not included a slurm file with the job-id will be outputted. 
 
-dataset_name=$1
-class_key=$2
-batch_key=$3
+#dataset_name=$1
+#class_key=$2
+#batch_key=$3
 ### Tests
 dataset_name="ajrccm_by_batch"
 class_key="celltype"
@@ -21,7 +21,7 @@ hparam_path=${working_dir}"/experiment_script/hp_ranges/generic_r1_debug.json"
 
 
 # Read dataset json to get h5ad path
-json_dataset_h5ad_path="experiment_script/datasets_h5ad.json"
+json_dataset_h5ad_path=${working_dir}"/experiment_script/datasets_h5ad.json"
 declare -A MY_SH_DICT
 while IFS='=' read -r key value; do
     MY_SH_DICT["$key"]="$value"
@@ -49,7 +49,8 @@ permonly_epoch=2   # default = 100, help = Number of epoch to train in permutati
 classifier_epoch=2   # default = 50, help = Number of epoch to train te classifier only
 
 
-echo python ${python_path} hp_optim ${h5ad_path} --neptune_name=${neptune_name} --out_dir ${out_dir} \
+
+python ${python_path} hp_optim ${h5ad_path} --neptune_name ${neptune_name} --out_dir ${out_dir} \
 --hparam_path ${hparam_path} --dataset_name ${dataset_name} \
 --class_key $class_key --batch_key $batch_key --test_obs $test_obs \
 --mode entire_condition --obs_key $batch_key --keep_obs $keep_obs \

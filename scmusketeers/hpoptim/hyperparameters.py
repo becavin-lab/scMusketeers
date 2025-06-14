@@ -612,7 +612,6 @@ class Workflow:
                         )  # Boolean array, no issue to index y_pred
                         y_true_sub = y_true[idx_s]
                         y_pred_sub = y_pred[idx_s]
-                        print(s)
                         for metric in self.pred_metrics_list:
                             self.run[f"evaluation/{group}/{s}/{metric}"] = (
                                 nan_to_0(

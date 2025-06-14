@@ -355,9 +355,13 @@ def make_weight(y_true):
     return a weight for each element of y_true corresponding to the number of elements of its class.
     Balanced metrics should use 1/weights
     """
+    pd.set_option('future.no_silent_downcasting', True)
+
+    y_true = np.array(y_true) # Example data
     y_true_s = pd.Series(y_true)
     ct_weights = y_true_s.value_counts()
-    weights = np.array(y_true_s.replace(ct_weights))
+    weights = np.array(y_true_s.replace(ct_weights)) # Your original line will now follow the future behavior
+
     return weights
 
 
