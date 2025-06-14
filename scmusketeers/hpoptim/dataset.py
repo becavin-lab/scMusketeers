@@ -1,6 +1,5 @@
 import os
 import sys
-
 import anndata
 import numpy as np
 import pandas as pd
@@ -13,7 +12,7 @@ sys.path.insert(1, os.path.join(sys.path[0], ".."))
 try:
     from ..tools.utils import densify
 except ImportError:
-    from tools.utils import densify
+    from scmusketeers.tools.utils import densify
 
 
 def get_hvg_common(
