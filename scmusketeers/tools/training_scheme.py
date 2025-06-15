@@ -189,7 +189,7 @@ def get_training_scheme(training_scheme, run_file):
         ]
 
     if training_scheme == "training_scheme_23":
-        training_scheme = [("full_model", 100, True)]
+        training_scheme = [("full_model", run_file.fullmodel_epoch, True)]
 
     if training_scheme == "training_scheme_24":
         training_scheme = [
@@ -198,34 +198,34 @@ def get_training_scheme(training_scheme, run_file):
 
     if training_scheme == "training_scheme_25":
         training_scheme = [
-            ("no_decoder", 100, False),
+            ("no_decoder", run_file.fullmodel_epoch, False),
         ]
 
     if training_scheme == "training_scheme_26":
         training_scheme = [
             (
                 "warmup_dann",
-                workflow.warmup_epoch,
+                run_file.warmup_epoch,
                 False,
             ),  # Permutating with pseudo labels during warmup
-            ("full_model", 100, False),
-            ("classifier_branch", 50, False),
+            ("full_model", run_file.fullmodel_epoch, False),
+            ("classifier_branch", run_file.classifier_epoch, False),
             (
                 "full_model_pseudolabels",
-                100,
+                run_file.fullmodel_epoch,
                 False,
             ),  # using permutations on plabels for full training
-            ("classifier_branch", 50, False),
+            ("classifier_branch", run_file.classifier_epoch, False),
         ]
 
     if training_scheme == "training_scheme_debug_1":
         training_scheme = [
-            ("classifier_branch", 50, False),
+            ("classifier_branch", run_file.classifier_epoch, False),
         ]
 
     if training_scheme == "training_scheme_debug_2":
         training_scheme = [
-            ("encoder_classifier", 50, False),
+            ("encoder_classifier", run_file.classifier_epoch, False),
         ]
     
     return training_scheme

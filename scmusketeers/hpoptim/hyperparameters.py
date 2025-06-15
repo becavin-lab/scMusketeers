@@ -585,7 +585,7 @@ class Workflow:
 
                     logger.debug("Save all matrices and figures")
                     if group == "full":
-                        metrics.save_results(y_pred, y_true, adata_list, group, save_dir, enc)
+                        metrics.save_results(self, y_pred, y_true, adata_list, group, save_dir, enc)
 
         if self.opt_metric:
             split, metric = self.opt_metric.split("-")
@@ -1096,7 +1096,6 @@ class Workflow:
         if self.clas_loss_name == "categorical_crossentropy":
             self.clas_loss_fn = tf.keras.losses.categorical_crossentropy
         elif self.clas_loss_name == "categorical_focal_crossentropy":
-
             self.clas_loss_fn = tf.keras.losses.CategoricalFocalCrossentropy(
                 alpha=class_weights, gamma=3
             )
