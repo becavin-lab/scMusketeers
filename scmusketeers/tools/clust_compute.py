@@ -379,6 +379,8 @@ def make_weight(y_true, reduction_type='inverse_frequency'):
                                  If y_true was a tf.Tensor, returns a tf.Tensor.
                                  Otherwise, returns a np.ndarray.
     """
+    # pd.set_option('future.no_silent_downcasting', True)
+    
     if isinstance(y_true, tf.Tensor):
         # Convert to NumPy for easier pandas operations.
         # Ensure it's detached from the TensorFlow graph if operations modify it.

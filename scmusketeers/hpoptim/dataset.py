@@ -101,7 +101,7 @@ def get_hvg_common(
         adata.var["highly_variable_nbatches"] == n_batches
     ]  # Starts with genes hvg for every batches
     dispersion_nbatches = dispersion_nbatches.sort_values(ascending=False)
-    logger.debug(f"Searching for highly variable genes in {n_batches} batches")
+    # logger.debug(f"Searching for highly variable genes in {n_batches} batches")
     if (
         len(dispersion_nbatches) >= n_hvg
     ):  # If there are already enough hvg in every batch, returns them
@@ -110,9 +110,9 @@ def get_hvg_common(
             return adata[:, top_genes]
         else:
             return top_genes
-    logger.debug(
-        f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches"
-    )
+    # logger.debug(
+    #    f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches"
+    # )
     top_genes = list(
         dispersion_nbatches.index
     )  # top_genes is the final selection of genes
@@ -123,7 +123,7 @@ def get_hvg_common(
         n_batches = (
             n_batches - 1
         )  # Looks for genes hvg for one fewer batch at each iteration
-        logger.debug(f"Searching for highly variable genes in {n_batches} batches")
+        # logger.debug(f"Searching for highly variable genes in {n_batches} batches")
         remaining_genes = n_hvg - len(top_genes)  # nb of genes left to find
         dispersion_nbatches = adata.var["dispersions_norm"][
             adata.var["highly_variable_nbatches"] == n_batches
@@ -132,16 +132,16 @@ def get_hvg_common(
         if (
             len(dispersion_nbatches) > remaining_genes
         ):  # Enough genes to fill in the rest
-            logger.debug(
-                f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches. Selecting top {remaining_genes}"
-            )
+            #logger.debug(
+            #    f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches. Selecting top {remaining_genes}"
+            #)
             # print(dispersion_nbatches)
             top_genes += list(dispersion_nbatches[:remaining_genes].index)
             enough = True
         else:
-            logger.debug(
-                f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches"
-            )
+            #logger.debug(
+            #    f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches"
+            #)
             top_genes += list(dispersion_nbatches.index)
 
     if reduce_adata:

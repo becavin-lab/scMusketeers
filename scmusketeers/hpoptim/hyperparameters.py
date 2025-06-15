@@ -323,7 +323,7 @@ class Workflow:
 
 
     def make_experiment(self):
-        logger.info("Create scmusketeers model and the train/test/val datasets:")
+        logger.info("##-- Create scmusketeers model and the train/test/val datasets:")
         logger.debug("hyperparameters.make_experiment()")
 
         logger.debug("Setup X,Y")
@@ -484,7 +484,7 @@ class Workflow:
             "Bottleneck activation : " + self.dann_ae.ae_bottleneck_activation
         )
         # Training
-        logger.info(f"Run model training")
+        logger.info(f"##-- Run model training")
         start_time = time.time()
         history = self.train_scheme(
             training_scheme=training_scheme,
@@ -503,7 +503,7 @@ class Workflow:
         stop_time = time.time()
         logger.info("Training complete")
 
-        logger.info("Performing model prediction")
+        logger.info("##-- Performing model prediction")
         if self.log_neptune:
             # TODO also make it on gpu with smaller batch size
             self.run["evaluation/training_time"] = stop_time - start_time
@@ -656,9 +656,10 @@ class Workflow:
                 self.learning_rate, self.weight_decay, self.optimizer_type
             )  # resetting optimizer state when switching strategy
             logger.debug(
-                f"{strategy} - Step number {i}, running {strategy} strategy with permutation = {use_perm} for {n_epochs} epochs"
+                f"##-- {strategy.upper()} - Step {i}, running {strategy} strategy with permutation = {use_perm} for {n_epochs} epochs"
             )
             time_in = time.time()
+            i += 1
 
                 # Early stopping for those strategies only
             if strategy in [

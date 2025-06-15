@@ -26,7 +26,7 @@ except ImportError:
 # JSON_PATH_DEFAULT = '/home/acollin/scMusketeers/experiment_script/hp_ranges/'
 JSON_PATH_DEFAULT = "/home/becavin/scMusketeers/experiment_script/hp_ranges/"
 
-TOTAL_TRIAL = 2
+TOTAL_TRIAL = 20
 RANDOM_SEED = 40
 
 logger = logging.getLogger("Sc-Musketeers")
