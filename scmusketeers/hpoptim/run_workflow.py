@@ -87,11 +87,11 @@ def run_workflow(run_file):
     )
     for i in range(TOTAL_TRIAL):
         logger.info(f"Running trial {i}/{TOTAL_TRIAL}")
-        parameterization, trial_index = ax_client.get_next_trial()
+        parametrization, trial_index = ax_client.get_next_trial()
         # Local evaluation here can be replaced with deployment to external system.
         ax_client.complete_trial(
             trial_index=trial_index,
-            raw_data=experiment.train(parameterization),
+            raw_data=experiment.train(parametrization),
         )
 
     logger.info("Hyperparam optimization finished")

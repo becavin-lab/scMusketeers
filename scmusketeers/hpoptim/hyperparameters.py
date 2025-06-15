@@ -29,6 +29,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.utils import compute_class_weight
 
 # Import scmusketeers library
+sys.path.insert(1, os.path.join(sys.path[0], ".."))
+
 try:
     from ..arguments.neptune_log import NEPTUNE_INFO
     from ..arguments.ae_param import AE_PARAM
@@ -71,6 +73,29 @@ f1_score = functools.partial(f1_score, average="macro")
 physical_devices = tf.config.list_physical_devices("GPU")
 for gpu_instance in physical_devices:
     tf.config.experimental.set_memory_growth(gpu_instance, True)
+
+PRED_METRICS_LIST = {
+    "acc": accuracy_score,
+    "mcc": matthews_corrcoef,
+    "f1_score": f1_score,
+    "KPA": cohen_kappa_score,
+    "ARI": adjusted_rand_score,
+    "NMI": normalized_mutual_info_score,
+    "AMI": adjusted_mutual_info_score,
+}
+
+PRED_METRICS_LIST_BALANCED = {
+    "balanced_acc": balanced_accuracy_score,
+    "balanced_mcc": balanced_matthews_corrcoef,
+    "balanced_f1_score": balanced_f1_score,
+    "balanced_KPA": balanced_cohen_kappa_score,
+}
+
+CLUSTERING_METRICS_LIST = {
+    "db_score": davies_bouldin_score
+}  #'clisi' : lisi_avg
+
+BATCH_METRICS_LIST = {"batch_mixing_entropy": batch_entropy_mixing_score}
 
 logger = logging.getLogger("Sc-Musketeers")
 
@@ -122,6 +147,7 @@ class Workflow:
         # train test split # TODO : Simplify this, or at first only use the case where data is split according to batch
 
         ### Hyperamateres attributes
+        self.hparam_path = self.run_file.hparam_path
         self.hp_params = None
         self.opt_metric = default_value(self.run_file.opt_metric, None)
 
@@ -181,37 +207,37 @@ class Workflow:
 
         logger.debug(f"setting hparams {params}")
         if "use_hvg" in params:
-            self.use_hvg = params["use_hvg"]
+            self.run_file.use_hvg = params["use_hvg"]
         if "batch_size" in params:
-            self.batch_size = params["batch_size"]
+            self.run_file.batch_size = params["batch_size"]
         if "clas_w" in params:
-            self.clas_w = params["clas_w"]
+            self.run_file.clas_w = params["clas_w"]
         if "dann_w" in params:
-            self.dann_w = params["dann_w"]
+            self.run_file.dann_w = params["dann_w"]
         if "rec_w" in params:
-            self.rec_w = params["rec_w"]
+            self.run_file.rec_w = params["rec_w"]
         if "ae_bottleneck_activation" in params:
-            self.ae_bottleneck_activation = params["ae_bottleneck_activation"]
+            self.run_file.ae_bottleneck_activation = params["ae_bottleneck_activation"]
         if "clas_loss_name" in params:
-            self.clas_loss_name = params["clas_loss_name"]
+            self.run_file.clas_loss_name = params["clas_loss_name"]
         if "size_factor" in params:
-            self.size_factor = params["size_factor"]
+            self.run_file.size_factor = params["size_factor"]
         if "weight_decay" in params:
-            self.weight_decay = params["weight_decay"]
+            self.run_file.weight_decay = params["weight_decay"]
         if "learning_rate" in params:
-            self.learning_rate = params["learning_rate"]
+            self.run_file.learning_rate = params["learning_rate"]
         if "warmup_epoch" in params:
-            self.warmup_epoch = params["warmup_epoch"]
+            self.run_file.warmup_epoch = params["warmup_epoch"]
         if "dropout" in params:
-            self.dropout = params["dropout"]
+            self.run_file.dropout = params["dropout"]
         if "layer1" in params:
-            self.layer1 = params["layer1"]
+            self.run_file.layer1 = params["layer1"]
         if "layer2" in params:
-            self.layer2 = params["layer2"]
+            self.run_file.layer2 = params["layer2"]
         if "bottleneck" in params:
-            self.bottleneck = params["bottleneck"]
+            self.run_file.bottleneck = params["bottleneck"]
         if "training_scheme" in params:
-            self.training_scheme = params["training_scheme"]
+            self.run_file.training_scheme = params["training_scheme"]
         self.hp_params = params
 
 
@@ -277,8 +303,8 @@ class Workflow:
             logtrans_input=self.logtrans_input,
             use_hvg=self.use_hvg,
             unlabeled_category=self.run_file.unlabeled_category,
-            test_split_key=self.run_file.test_split_key
-            #train_test_random_seed=self.train_test_random_seed,
+            test_split_key=self.run_file.test_split_key,
+            train_test_random_seed=self.train_test_random_seed
         )
         
         if not "X_pca" in self.dataset.adata.obsm:
@@ -291,6 +317,7 @@ class Workflow:
         self.dataset.normalize()
 
     def train_val_split(self):
+        logger.info("train_val_split ntrain_val_split train_val_split train_val_split train_val_split train_val_split train_val_split train_val_split")
         self.dataset.train_val_split()
         self.dataset.create_inputs()
 
@@ -787,14 +814,14 @@ class Workflow:
         running_epoch = 0
 
         for strategy, n_epochs, use_perm in training_scheme:
+
             optimizer = self.get_optimizer(
                 self.learning_rate, self.weight_decay, self.optimizer_type
             )  # resetting optimizer state when switching strategy
-            if verbose:
-                logger.debug(
-                    f"Step number {i}, running {strategy} strategy with permuation = {use_perm} for {n_epochs} epochs"
-                )
-                time_in = time.time()
+            logger.debug(
+                f"{strategy} - Step number {i}, running {strategy} strategy with permutation = {use_perm} for {n_epochs} epochs"
+            )
+            time_in = time.time()
 
                 # Early stopping for those strategies only
             if strategy in [
@@ -853,7 +880,7 @@ class Workflow:
                         == group,
                         :,
                     ] = (
-                        self.unlabeled_category
+                        self.run_file.unlabeled_category
                     )  # set val and test to self.unlabeled_category
                     loop_params["pseudo_y_list"][group] = pseudo_full[
                         loop_params["adata_list"]["full"].obs["train_split"]
@@ -1023,7 +1050,7 @@ class Workflow:
             ret_input_only=False,
             batch_size=self.batch_size,
             n_perm=1,
-            unlabeled_category=self.unlabeled_category,  # Those cells are matched with themselves during AE training
+            unlabeled_category=self.run_file.unlabeled_category,  # Those cells are matched with themselves during AE training
             use_perm=use_perm,
         )
         n_obs = adata_list[group].n_obs

@@ -28,6 +28,7 @@ from sklearn.metrics import (accuracy_score, adjusted_mutual_info_score,
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.utils import compute_class_weight
 
+# Import scmusketeers library
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
 try:

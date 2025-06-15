@@ -14,7 +14,56 @@ sys.path.insert(1, os.path.join(sys.path[0], ".."))
 try:
     from ..tools.utils import densify
 except ImportError:
-    from tools.utils import densify
+    from scmusketeers.tools.utils import densify
+    from scmusketeers.tools import markers
+
+DATASET_NAMES = {
+    "htap": "htap",
+    "lca": "LCA_log1p",
+    "discovair": "discovair_V6",
+    "discovair_V7": "discovair_V7",
+    "discovair_V7_filtered": "discovair_V7_filtered_raw",  # Filtered version with doublets, made lighter to pass through the model
+    "discovair_V7_filtered_no_D53": "discovair_V7_filtered_raw_no_D53",
+    "ajrccm": "HCA_Barbry_Grch38_Raw",
+    "ajrccm_by_batch": "ajrccm_by_batch",
+    "disco_htap_ajrccm": "discovair_htap_ajrccm",
+    "disco_htap": "discovair_htap",
+    "disco_ajrccm": "discovair_ajrccm",
+    "disco_ajrccm_downsampled": "discovair_ajrccm_downsampled",
+    "discovair_ajrccm_small": "discovair_ajrccm_small",
+    "htap_ajrccm": "htap_ajrccm_raw",
+    "pbmc3k_processed": "pbmc_3k",
+    "htap_final": "htap_final",
+    "htap_final_by_batch": "htap_final_by_batch",
+    "htap_final_C1_C5": "htap_final_C1_C5",
+    "pbmc8k": "pbmc8k",
+    "pbmc68k": "pbmc68k",
+    "pbmc8k_68k": "pbmc8k_68k",
+    "pbmc8k_68k_augmented": "pbmc8k_68k_augmented",
+    "pbmc8k_68k_downsampled": "pbmc8k_68k_downsampled",
+    "htap_final_ajrccm": "htap_final_ajrccm",
+    "hlca_par_sample_harmonized": "hlca_par_sample_harmonized",
+    "hlca_par_dataset_harmonized": "hlca_par_dataset_harmonized",
+    "hlca_trac_sample_harmonized": "hlca_trac_sample_harmonized",
+    "hlca_trac_dataset_harmonized": "hlca_trac_dataset_harmonized",
+    "koenig_2022": "celltypist_dataset/koenig_2022/koenig_2022_healthy",
+    "tosti_2021": "celltypist_dataset/tosti_2021/tosti_2021",
+    "yoshida_2021": "celltypist_dataset/yoshida_2021/yoshida_2021",
+    "yoshida_2021_debug": "celltypist_dataset/yoshida_2021/yoshida_2021_debug",
+    "tran_2021": "celltypist_dataset/tran_2021/tran_2021",
+    "dominguez_2022_lymph": "celltypist_dataset/dominguez_2022/dominguez_2022_lymph",
+    "dominguez_2022_spleen": "celltypist_dataset/dominguez_2022/dominguez_2022_spleen",
+    "tabula_2022_spleen": "celltypist_dataset/tabula_2022/tabula_2022_spleen",
+    "litvinukova_2020": "celltypist_dataset/litvinukova_2020/litvinukova_2020",
+    "lake_2021": "celltypist_dataset/lake_2021/lake_2021",
+    'tenx_hlca' : 'tenx_hlca',
+    'tenx_hlca_par' : 'tenx_hlca_par',
+    'tenx_hlca_par_cell' : 'tenx_hlca_par_cell',
+    'tenx_hlca_par_nuc' : 'tenx_hlca_par_nuc',
+    "wmb_full": "whole_mouse_brain_class_modality",
+    "wmb_it_et": "it_et_brain_subclass_modality",
+}
+
 
 logger = logging.getLogger("Sc-Musketeers")
 
@@ -24,6 +73,16 @@ def get_hvg_common(
     """
     Computes a list of hvg which are common to the most different batches.
     """
+    logger.debug(f'Selecting {n_hvg} HVG')
+
+    if n_hvg >= adata_.n_vars :
+        logger.debug(f'Dataset has less than {n_hvg} genes, keeping every genes')
+        if reduce_adata:
+            return adata_
+        else :
+            return adata_.var_names
+
+
     adata = adata_.copy()
     check_nnz = np.asarray(adata.X[adata.X != 0][0])
     while len(check_nnz.shape) >= 1:  # Get first non zero element of X
@@ -40,7 +99,7 @@ def get_hvg_common(
         adata.var["highly_variable_nbatches"] == n_batches
     ]  # Starts with genes hvg for every batches
     dispersion_nbatches = dispersion_nbatches.sort_values(ascending=False)
-    logger.info(f"Searching for highly variable genes in {n_batches} batches")
+    logger.debug(f"Searching for highly variable genes in {n_batches} batches")
     if (
         len(dispersion_nbatches) >= n_hvg
     ):  # If there are already enough hvg in every batch, returns them
@@ -58,7 +117,7 @@ def get_hvg_common(
     remaining_genes = n_hvg
     enough = False
 
-    while not enough:
+    while (not enough) and (n_batches > 0):
         n_batches = (
             n_batches - 1
         )  # Looks for genes hvg for one fewer batch at each iteration
@@ -117,7 +176,7 @@ class Dataset:
         use_hvg,
         test_split_key,
         unlabeled_category,
-        train_test_random_seed,
+        train_test_random_seed
     ):
         self.adata = adata
         self.class_key = class_key
@@ -143,10 +202,24 @@ class Dataset:
         self.adata_val = anndata.AnnData()
         self.adta_test = anndata.AnnData()
         self.train_test_random_seed = train_test_random_seed
+
+        # Only for hyperparameters optim and benchmarking
+        self.mode = str()
+        self.pct_split = float()
+        self.obs_key = str()
+        self.n_keep = int()
+        self.keep_obs = str()
+        self.train_test_random_seed = float()
+        self.obs_subsample = []
+        self.true_celltype = str()
+        self.false_celltype = str()
+        self.pct_false = float()
         # self.markers_path = self.dataset_dir + '/' + f'markers/markers_{dataset_name}.csv'
 
     def normalize(self):
+        logger.debug("Preprocess dataset - Normalization")
         if self.filter_min_counts:
+            logger.debug("Filter dataset")
             sc.pp.filter_genes(self.adata, min_counts=1)
             sc.pp.filter_cells(self.adata, min_counts=1)
         nonzero_genes, _ = sc.pp.filter_genes(self.adata.X, min_counts=1)
@@ -155,12 +228,14 @@ class Dataset:
         ), "Please remove all-zero genes before using DCA."
 
         if self.size_factor == "raw":  # Computing sf on raw data
+            logger.debug("Calculate size factor (raw mode)")
             self.adata.obs["n_counts"] = self.adata.X.sum(axis=1)
             self.adata.obs["size_factors"] = (
                 self.adata.obs.n_counts / np.median(self.adata.obs.n_counts)
             )
 
         if self.use_hvg:
+            logger.debug("Calculate HVG")
             self.adata = get_hvg_common(
                 self.adata, n_hvg=self.use_hvg, batch_key=self.batch_key
             )
@@ -175,27 +250,35 @@ class Dataset:
             self.adata.raw = self.adata
 
         if self.normalize_size_factors:
-
+            logger.debug("Normalize with total nb reads and calculate size factor")
             sc.pp.normalize_total(self.adata)
             self.adata.obs["size_factors"] = (
                 self.adata.obs.n_counts / np.median(self.adata.obs.n_counts)
             )
 
         if self.logtrans_input:
+            logger.debug("Log_1 transformation")
             sc.pp.log1p(self.adata)
 
         if self.scale_input:
+            logger.debug("Dataset scaling")
             sc.pp.scale(self.adata)
 
         if self.size_factor == "default":  # Computing sf on preprocessed data
+            logger.debug("Calculate size factor (default mode)")
             self.adata.obs["n_counts"] = self.adata.X.sum(axis=1)
             self.adata.obs["size_factors"] = (
                 self.adata.obs.n_counts / np.median(self.adata.obs.n_counts)
             )
         elif self.size_factor == "constant":
+            logger.debug("Calculate size factor (constant mode sf=1)")
             self.adata.obs["size_factors"] = 1.0
 
+
     def train_val_split(self):
+        """
+        Create train and validate split for transfer function
+        """
         self.adata_train_extended = self.adata[
             self.adata.obs[self.class_key] != self.unlabeled_category
         ]  # Contains the train and to-be-defined val data
@@ -343,55 +426,6 @@ class Dataset:
             "size_factors"
         ].values  # .reshape(-1,1)
 
-    def normalize(self):
-        if self.filter_min_counts:
-            sc.pp.filter_genes(self.adata, min_counts=1)
-            sc.pp.filter_cells(self.adata, min_counts=1)
-        nonzero_genes, _ = sc.pp.filter_genes(self.adata.X, min_counts=1)
-        assert (
-            nonzero_genes.all()
-        ), "Please remove all-zero genes before using DCA."
-
-        if self.size_factor == "raw":  # Computing sf on raw data
-            self.adata.obs["n_counts"] = self.adata.X.sum(axis=1)
-            self.adata.obs["size_factors"] = (
-                self.adata.obs.n_counts / np.median(self.adata.obs.n_counts)
-            )
-
-        if self.use_hvg:
-            self.adata = get_hvg_common(
-                self.adata, n_hvg=self.use_hvg, batch_key=self.batch_key
-            )
-
-        if (
-            self.normalize_size_factors
-            or self.scale_input
-            or self.logtrans_input
-        ):
-            self.adata.raw = self.adata.copy()
-        else:
-            self.adata.raw = self.adata
-
-        if self.normalize_size_factors:
-
-            sc.pp.normalize_total(self.adata)
-            self.adata.obs["size_factors"] = (
-                self.adata.obs.n_counts / np.median(self.adata.obs.n_counts)
-            )
-
-        if self.logtrans_input:
-            sc.pp.log1p(self.adata)
-
-        if self.scale_input:
-            sc.pp.scale(self.adata)
-
-        if self.size_factor == "default":  # Computing sf on preprocessed data
-            self.adata.obs["n_counts"] = self.adata.X.sum(axis=1)
-            self.adata.obs["size_factors"] = (
-                self.adata.obs.n_counts / np.median(self.adata.obs.n_counts)
-            )
-        elif self.size_factor == "constant":
-            self.adata.obs["size_factors"] = 1.0
 
     def test_split(self, test_index_name=None, test_obs=None):
 
@@ -414,7 +448,7 @@ class Dataset:
         self.adata_train_extended = self.adata[
             self.adata.obs[self.test_split_key] == "train"
         ]
-    
+
     def train_split(
         self,
         mode=None,
@@ -428,6 +462,7 @@ class Dataset:
     ):
         """
         Splits train and val datasets according to several modalities.
+        ONLY FOR BENCHMARKING SCmUSKETEERS
         percentage : Classic train test split
             pct_split : proportion (between 0 and 1) of the dataset to use as train
             split_strategy : Method/metric to use to determine which cells to chose from. Currently supported is 'random
@@ -446,41 +481,43 @@ class Dataset:
         self.mode = mode
         self.train_test_random_seed = train_test_random_seed
         if split_strategy == "avg_marker_ranking":
-            markers = load_ref_markers(
+            markers = markers.load_ref_markers(
                 self.adata_train_extended, marker_path=self.markers_path
             )
             if obs_key:
                 self.obs_key = obs_key
-                avg_scores = marker_ranking(
+                avg_scores = markers.marker_ranking(
                     markers,
                     adata=self.adata_train_extended,
                     obs_key=self.obs_key,
                 )
             else:
-                avg_scores = marker_ranking(
+                avg_scores = markers.marker_ranking(
                     markers,
                     adata=self.adata_train_extended,
                     obs_key=self.class_key,
                 )
         if split_strategy == "sum_marker_score":
-            markers = load_ref_markers(
+            markers = markers.load_ref_markers(
                 self.adata_train_extended, marker_path=self.markers_path
             )
             if obs_key:
                 self.obs_key = obs_key
-                sum_scores = sum_marker_score(
+                sum_scores = markers.sum_marker_score(
                     markers,
                     adata=self.adata_train_extended,
                     obs_key=self.obs_key,
                 )
             else:
-                sum_scores = sum_marker_score(
+                sum_scores = markers.sum_marker_score(
                     markers,
                     adata=self.adata_train_extended,
                     obs_key=self.class_key,
                 )
         if mode == "percentage":
             self.pct_split = pct_split
+            total_cells = self.adata_train_extended.obs[self.class_key].value_counts()
+            logger.debug(f"Count adata var for percentage: {total_cells}")
             if split_strategy == "random" or not split_strategy:
                 # Dirty workaround for celltypes with 1 cell only, which is a rare case
                 stratification = self.adata_train_extended.obs[

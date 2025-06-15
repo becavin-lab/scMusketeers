@@ -10,10 +10,62 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.utils import shuffle
 
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
+
 try:
     from ..tools.utils import densify
+    from ..tools.utils import densify
+    from ..tools import markers
 except ImportError:
     from scmusketeers.tools.utils import densify
+    from scmusketeers.tools import markers
+
+DATASET_NAMES = {
+    "htap": "htap",
+    "lca": "LCA_log1p",
+    "discovair": "discovair_V6",
+    "discovair_V7": "discovair_V7",
+    "discovair_V7_filtered": "discovair_V7_filtered_raw",  # Filtered version with doublets, made lighter to pass through the model
+    "discovair_V7_filtered_no_D53": "discovair_V7_filtered_raw_no_D53",
+    "ajrccm": "HCA_Barbry_Grch38_Raw",
+    "ajrccm_by_batch": "ajrccm_by_batch",
+    "disco_htap_ajrccm": "discovair_htap_ajrccm",
+    "disco_htap": "discovair_htap",
+    "disco_ajrccm": "discovair_ajrccm",
+    "disco_ajrccm_downsampled": "discovair_ajrccm_downsampled",
+    "discovair_ajrccm_small": "discovair_ajrccm_small",
+    "htap_ajrccm": "htap_ajrccm_raw",
+    "pbmc3k_processed": "pbmc_3k",
+    "htap_final": "htap_final",
+    "htap_final_by_batch": "htap_final_by_batch",
+    "htap_final_C1_C5": "htap_final_C1_C5",
+    "pbmc8k": "pbmc8k",
+    "pbmc68k": "pbmc68k",
+    "pbmc8k_68k": "pbmc8k_68k",
+    "pbmc8k_68k_augmented": "pbmc8k_68k_augmented",
+    "pbmc8k_68k_downsampled": "pbmc8k_68k_downsampled",
+    "htap_final_ajrccm": "htap_final_ajrccm",
+    "hlca_par_sample_harmonized": "hlca_par_sample_harmonized",
+    "hlca_par_dataset_harmonized": "hlca_par_dataset_harmonized",
+    "hlca_trac_sample_harmonized": "hlca_trac_sample_harmonized",
+    "hlca_trac_dataset_harmonized": "hlca_trac_dataset_harmonized",
+    "koenig_2022": "celltypist_dataset/koenig_2022/koenig_2022_healthy",
+    "tosti_2021": "celltypist_dataset/tosti_2021/tosti_2021",
+    "yoshida_2021": "celltypist_dataset/yoshida_2021/yoshida_2021",
+    "yoshida_2021_debug": "celltypist_dataset/yoshida_2021/yoshida_2021_debug",
+    "tran_2021": "celltypist_dataset/tran_2021/tran_2021",
+    "dominguez_2022_lymph": "celltypist_dataset/dominguez_2022/dominguez_2022_lymph",
+    "dominguez_2022_spleen": "celltypist_dataset/dominguez_2022/dominguez_2022_spleen",
+    "tabula_2022_spleen": "celltypist_dataset/tabula_2022/tabula_2022_spleen",
+    "litvinukova_2020": "celltypist_dataset/litvinukova_2020/litvinukova_2020",
+    "lake_2021": "celltypist_dataset/lake_2021/lake_2021",
+    'tenx_hlca' : 'tenx_hlca',
+    'tenx_hlca_par' : 'tenx_hlca_par',
+    'tenx_hlca_par_cell' : 'tenx_hlca_par_cell',
+    'tenx_hlca_par_nuc' : 'tenx_hlca_par_nuc',
+    "wmb_full": "whole_mouse_brain_class_modality",
+    "wmb_it_et": "it_et_brain_subclass_modality",
+}
+
 
 logger = logging.getLogger("Sc-Musketeers")
 
@@ -98,127 +150,8 @@ def get_hvg_common(
     return top_genes
 
 
-def load_ref_markers(adata, marker_path):
-    """
-    loads markers as a dict and filters out the ones which are absent from the adata
-    """
-    markers_ref_df = pd.read_csv(marker_path, sep=";")
-    markers_ref = dict.fromkeys(markers_ref_df.columns)
-    for col in markers_ref_df.columns:
-        markers_ref[col] = list(
-            [
-                gene
-                for gene in markers_ref_df[col].dropna()
-                if gene in adata.var_names
-            ]
-        )
-    return markers_ref
-
-
-def marker_ranking(markers, adata, obs_key):
-    """
-    markers : dict of the shape {celltype: [marker list]}
-    adata : the dataset to compute markers on
-    obs_key : the key where to look up the celltypes. must be coherent with the celltypes of markers
-
-    Computes a score equal to the average ranking of the cell for the expression of each marker
-    """
-    avg_scores = pd.Series(
-        index=adata.obs_names, name=("ranking_marker_average")
-    )
-    celltypes = np.unique(adata.obs[obs_key])
-    for ct in celltypes:
-        markers_ct = markers[ct]
-        sub_adata = adata[
-            adata.obs[obs_key] == ct, markers_ct
-        ]  # subset to only keep markers
-        marker_scores = pd.DataFrame(
-            sub_adata.X.toarray(),
-            index=sub_adata.obs_names,
-            columns=sub_adata.var_names,
-        )
-        marker_scores = marker_scores.assign(
-            **marker_scores.rank(axis=0, ascending=False, method="min").astype(
-                int
-            )
-        )
-        avg_scores[sub_adata.obs_names] = marker_scores.mean(axis=1)
-    adata.obs["ranking_marker_average"] = avg_scores
-    return avg_scores
-
-
-def sum_marker_score(markers, adata, obs_key):
-    """
-    markers : dict of the shape {celltype: [marker list]}
-    adata : the dataset to compute markers on
-    obs_key : the key where to look up the celltypes. must be coherent with the celltypes of markers
-
-    Computes a score equal to the sum of the expression of each marker for a cell. No need to normalize since it is celltype specific.
-    TODO : Add a weighing on each marker if we consider that some are more important than others
-    """
-    sum_scores = pd.Series(index=adata.obs_names, name=("sum_marker_score"))
-    celltypes = np.unique(adata.obs[obs_key])
-    for ct in celltypes:
-        markers_ct = markers[ct]
-        sub_adata = adata[
-            adata.obs[obs_key] == ct, markers_ct
-        ]  # subset to only keep markers
-        marker_scores = pd.DataFrame(
-            sub_adata.X.toarray(),
-            index=sub_adata.obs_names,
-            columns=sub_adata.var_names,
-        )
-        sum_scores[sub_adata.obs_names] = marker_scores.sum(axis=1)
-    adata.obs["sum_marker_score"] = sum_scores
-
-
 def load_dataset(ref_path):
-    dataset_names = {
-        "htap": "htap",
-        "lca": "LCA_log1p",
-        "discovair": "discovair_V6",
-        "discovair_V7": "discovair_V7",
-        "discovair_V7_filtered": "discovair_V7_filtered_raw",  # Filtered version with doublets, made lighter to pass through the model
-        "discovair_V7_filtered_no_D53": "discovair_V7_filtered_raw_no_D53",
-        "ajrccm": "HCA_Barbry_Grch38_Raw",
-        "ajrccm_by_batch": "ajrccm_by_batch",
-        "disco_htap_ajrccm": "discovair_htap_ajrccm",
-        "disco_htap": "discovair_htap",
-        "disco_ajrccm": "discovair_ajrccm",
-        "disco_ajrccm_downsampled": "discovair_ajrccm_downsampled",
-        "discovair_ajrccm_small": "discovair_ajrccm_small",
-        "htap_ajrccm": "htap_ajrccm_raw",
-        "pbmc3k_processed": "pbmc_3k",
-        "htap_final": "htap_final",
-        "htap_final_by_batch": "htap_final_by_batch",
-        "htap_final_C1_C5": "htap_final_C1_C5",
-        "pbmc8k": "pbmc8k",
-        "pbmc68k": "pbmc68k",
-        "pbmc8k_68k": "pbmc8k_68k",
-        "pbmc8k_68k_augmented": "pbmc8k_68k_augmented",
-        "pbmc8k_68k_downsampled": "pbmc8k_68k_downsampled",
-        "htap_final_ajrccm": "htap_final_ajrccm",
-        "hlca_par_sample_harmonized": "hlca_par_sample_harmonized",
-        "hlca_par_dataset_harmonized": "hlca_par_dataset_harmonized",
-        "hlca_trac_sample_harmonized": "hlca_trac_sample_harmonized",
-        "hlca_trac_dataset_harmonized": "hlca_trac_dataset_harmonized",
-        "koenig_2022": "celltypist_dataset/koenig_2022/koenig_2022_healthy",
-        "tosti_2021": "celltypist_dataset/tosti_2021/tosti_2021",
-        "yoshida_2021": "celltypist_dataset/yoshida_2021/yoshida_2021",
-        "yoshida_2021_debug": "celltypist_dataset/yoshida_2021/yoshida_2021_debug",
-        "tran_2021": "celltypist_dataset/tran_2021/tran_2021",
-        "dominguez_2022_lymph": "celltypist_dataset/dominguez_2022/dominguez_2022_lymph",
-        "dominguez_2022_spleen": "celltypist_dataset/dominguez_2022/dominguez_2022_spleen",
-        "tabula_2022_spleen": "celltypist_dataset/tabula_2022/tabula_2022_spleen",
-        "litvinukova_2020": "celltypist_dataset/litvinukova_2020/litvinukova_2020",
-        "lake_2021": "celltypist_dataset/lake_2021/lake_2021",
-        'tenx_hlca' : 'tenx_hlca',
-        'tenx_hlca_par' : 'tenx_hlca_par',
-        'tenx_hlca_par_cell' : 'tenx_hlca_par_cell',
-        'tenx_hlca_par_nuc' : 'tenx_hlca_par_nuc',
-        "wmb_full": "whole_mouse_brain_class_modality",
-        "wmb_it_et": "it_et_brain_subclass_modality",
-    }
+    
     logger.debug(f"Load h5ad: {ref_path}")
     adata = sc.read_h5ad(ref_path)
     if not adata.raw:
@@ -229,7 +162,7 @@ def load_dataset(ref_path):
 class Dataset:
     def __init__(
         self,
-        adata,
+        adata,  # full anndata, query is the cells which have unlabeled_category as class_key.
         class_key,
         batch_key,
         filter_min_counts,
@@ -240,12 +173,9 @@ class Dataset:
         use_hvg,
         test_split_key,
         unlabeled_category,
+        train_test_random_seed
     ):
         self.adata = adata
-        self.adata_train_extended = anndata.AnnData()
-        self.adata_train = anndata.AnnData()
-        self.adata_val = anndata.AnnData()
-        self.adata_test = anndata.AnnData()
         self.class_key = class_key
         self.adata.obs[f"true_{self.class_key}"] = self.adata.obs[
             self.class_key
@@ -261,6 +191,16 @@ class Dataset:
         # if not semi_sup:
         #     self.semi_sup = True # semi_sup defaults to True, especially for scANVI
         self.unlabeled_category = unlabeled_category
+        self.adata_train_extended = (
+            anndata.AnnData()
+        )  # Contains the train and to-be-defined val data
+        self.adata_test = anndata.AnnData()  # The query data
+        self.adata_train = anndata.AnnData()
+        self.adata_val = anndata.AnnData()
+        self.adta_test = anndata.AnnData()
+        self.train_test_random_seed = train_test_random_seed
+
+        # Only for hyperparameters optim and benchmarking
         self.mode = str()
         self.pct_split = float()
         self.obs_key = str()
@@ -342,7 +282,7 @@ class Dataset:
         if test_index_name:
             test_idx = self.adata.obs_names.isin(test_index_name)
         if test_obs:
-            print(f"test obs :{test_obs}")
+            logger.debug(f"test obs :{test_obs}")
             test_idx = self.adata.obs[self.batch_key].isin(test_obs)
 
             split = pd.Series(
@@ -372,6 +312,7 @@ class Dataset:
     ):
         """
         Splits train and val datasets according to several modalities.
+        ONLY FOR BENCHMARKING SCmUSKETEERS
         percentage : Classic train test split
             pct_split : proportion (between 0 and 1) of the dataset to use as train
             split_strategy : Method/metric to use to determine which cells to chose from. Currently supported is 'random
@@ -390,42 +331,43 @@ class Dataset:
         self.mode = mode
         self.train_test_random_seed = train_test_random_seed
         if split_strategy == "avg_marker_ranking":
-            markers = load_ref_markers(
+            markers = markers.load_ref_markers(
                 self.adata_train_extended, marker_path=self.markers_path
             )
             if obs_key:
                 self.obs_key = obs_key
-                avg_scores = marker_ranking(
+                avg_scores = markers.marker_ranking(
                     markers,
                     adata=self.adata_train_extended,
                     obs_key=self.obs_key,
                 )
             else:
-                avg_scores = marker_ranking(
+                avg_scores = markers.marker_ranking(
                     markers,
                     adata=self.adata_train_extended,
                     obs_key=self.class_key,
                 )
         if split_strategy == "sum_marker_score":
-            markers = load_ref_markers(
+            markers = markers.load_ref_markers(
                 self.adata_train_extended, marker_path=self.markers_path
             )
             if obs_key:
                 self.obs_key = obs_key
-                sum_scores = sum_marker_score(
+                sum_scores = markers.sum_marker_score(
                     markers,
                     adata=self.adata_train_extended,
                     obs_key=self.obs_key,
                 )
             else:
-                sum_scores = sum_marker_score(
+                sum_scores = markers.sum_marker_score(
                     markers,
                     adata=self.adata_train_extended,
                     obs_key=self.class_key,
                 )
         if mode == "percentage":
             self.pct_split = pct_split
-            print(self.adata_train_extended.obs[self.class_key].value_counts())
+            total_cells = self.adata_train_extended.obs[self.class_key].value_counts()
+            logger.debug(f"Count adata var for percentage: {total_cells}")
             if split_strategy == "random" or not split_strategy:
                 # Dirty workaround for celltypes with 1 cell only, which is a rare case
                 stratification = self.adata_train_extended.obs[
@@ -498,7 +440,7 @@ class Dataset:
         elif mode == "entire_condition":
             self.obs_key = obs_key
             self.keep_obs = keep_obs
-            print(
+            logger.debug(
                 f"splitting this adata train/val : {self.adata_train_extended}"
             )
             keep_idx = self.adata_train_extended.obs[obs_key].isin(
@@ -591,7 +533,7 @@ class Dataset:
             to_keep[remove_idx] = "val"
             self.adata_train_extended.obs["train_split"] = to_keep
         else:
-            print(f"{mode} is not a valid splitting mode")
+            logger.error(f"{mode} is not a valid splitting mode")
             return
 
         train_split = self.adata.obs[self.test_split_key].astype(
@@ -602,7 +544,7 @@ class Dataset:
         )
         self.adata.obs["train_split"] = train_split
 
-        print(
+        logger.info(
             f'train, test, val proportions : {self.adata.obs["train_split"].value_counts()}'
         )
 
