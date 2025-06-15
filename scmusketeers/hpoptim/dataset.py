@@ -441,7 +441,7 @@ class Dataset:
             self.obs_key = obs_key
             self.keep_obs = keep_obs
             logger.debug(
-                f"splitting this adata train/val : {self.adata_train_extended}"
+                f"Splitting the adata for train/val"
             )
             keep_idx = self.adata_train_extended.obs[obs_key].isin(
                 self.keep_obs
@@ -544,8 +544,9 @@ class Dataset:
         )
         self.adata.obs["train_split"] = train_split
 
+        nb_cells = self.adata.obs["train_split"].value_counts()
         logger.info(
-            f'train, test, val proportions : {self.adata.obs["train_split"].value_counts()}'
+            f'train, test, val proportions : {nb_cells}'
         )
 
     def create_inputs(self):

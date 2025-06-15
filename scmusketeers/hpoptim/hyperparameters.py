@@ -8,12 +8,10 @@ import subprocess
 import sys
 import time
 import logging
-import matplotlib.pyplot as plt
 import neptune
 import numpy as np
 import pandas as pd
 import scanpy as sc
-import seaborn as sns
 import tensorflow as tf
 
 from ax.service.managed_loop import optimize
@@ -38,6 +36,7 @@ try:
     from ..arguments.dann_param import DANN_PARAM
     from .dataset import Dataset, load_dataset
     from ..tools import freeze
+    from . import metrics
     from ..tools.training_scheme import get_training_scheme
     from ..tools.clust_compute import (balanced_cohen_kappa_score,
                                        balanced_f1_score,
@@ -55,6 +54,7 @@ except ImportError:
     from scmusketeers.arguments.dann_param import DANN_PARAM
     from scmusketeers.hpoptim.dataset import Dataset, load_dataset
     from scmusketeers.tools import freeze
+    from scmusketeers.hpoptim import metrics
     from scmusketeers.tools.training_scheme import get_training_scheme
     from scmusketeers.tools.clust_compute import (balanced_cohen_kappa_score,
                                      balanced_f1_score,
@@ -408,14 +408,13 @@ class Workflow:
             .astype(float)
             .todense(),
         }
-        print(f"pseudo_y_full = {pseudo_y_list}")
-
+        
         adata_dict = {i: adata_list[i] for i in adata_list}
-        logger.debug(f"adata_dict {adata_dict}")
+        # logger.debug(f"adata_dict {adata_dict}")
         y_dict = {i: len(y_list[i]) for i in y_list}
-        logger.debug(f"y_dict {y_dict}")
-        logger.debug(f"Number of cells : {len(y_list['train']) + len(y_list['test']) + len(y_list['val'])}")
-        logger.debug(f"full: {len(y_list['full'])}")
+        # logger.debug(f"y_dict {y_dict}")
+        # logger.debug(f"Number of cells : {len(y_list['train']) + len(y_list['test']) + len(y_list['val'])}")
+        # logger.debug(f"full: {len(y_list['full'])}")
 
         self.num_classes = len(np.unique(self.dataset.y_train))
         self.num_batches = len(np.unique(self.dataset.batch))
@@ -546,6 +545,7 @@ class Workflow:
                     if (
                         group == "full"
                     ):  # saving full predictions as probability output from the classifier
+                        logger.debug("Saving predicted matrix and embedding")
                         y_pred_proba = pd.DataFrame(
                             np.asarray(clas),
                             index=adata_list["full"].obs_names,
@@ -556,8 +556,8 @@ class Workflow:
                             f"evaluation/{group}/y_pred_proba_full"
                         ].track_files(os.path.join(save_dir,"y_pred_proba_full.csv"))
 
+                    # Create predicted cell types
                     clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
-
                     y_pred = self.dataset.ohe_celltype.inverse_transform(
                         clas
                     ).reshape(
@@ -572,183 +572,20 @@ class Workflow:
                     split = adata_list[group].obs["train_split"]
 
                     # Saving confusion matrices
-                    labels = list(
-                        set(np.unique(y_true)).union(set(np.unique(y_pred)))
-                    )
-                    cm_no_label = confusion_matrix(y_true, y_pred)
-                    print(f"no label : {cm_no_label.shape}")
-                    cm = confusion_matrix(y_true, y_pred, labels=labels)
-                    cm_norm = cm / cm.sum(axis=1, keepdims=True)
-                    print(f"label : {cm.shape}")
-                    cm_to_plot = pd.DataFrame(
-                        cm_norm, index=labels, columns=labels
-                    )
-                    cm_to_save = pd.DataFrame(cm, index=labels, columns=labels)
-                    cm_to_plot = cm_to_plot.fillna(value=0)
-                    cm_to_save = cm_to_save.fillna(value=0)
-                    cm_to_save.to_csv(os.path.join(save_dir,f"confusion_matrix_{group}.csv"))
-                    self.run[
-                        f"evaluation/{group}/confusion_matrix_file"
-                    ].track_files(os.path.join(save_dir,f"confusion_matrix_{group}.csv"))
-                    size = len(labels)
-                    f, ax = plt.subplots(figsize=(size / 1.5, size / 1.5))
-                    sns.heatmap(
-                        cm_to_plot,
-                        annot=True,
-                        ax=ax,
-                        fmt=".2f",
-                        vmin=0,
-                        vmax=1,
-                    )
-                    show_mask = np.asarray(cm_to_plot > 0.01)
-                    print(f"label df : {cm_to_plot.shape}")
-                    for text, show_annot in zip(
-                        ax.texts,
-                        (element for row in show_mask for element in row),
-                    ):
-                        text.set_visible(show_annot)
-
-                    self.run[f"evaluation/{group}/confusion_matrix"].upload(f)
+                    metrics.metric_confusion_matrix(self, y_pred, y_true, group, save_dir)
 
                     # Computing batch mixing metrics
-                    if (
-                        len(
-                            np.unique(
-                                np.asarray(batch_list[group].argmax(axis=1))
-                            )
-                        )
-                        >= 2
-                    ):  # If there are more than 2 batches in this group
-                        for metric in self.batch_metrics_list:
-                            self.run[f"evaluation/{group}/{metric}"] = (
-                                self.batch_metrics_list[metric](enc, batches)
-                            )
-                            logger.debug("Printing type of batch_metrics_list",
-                                            type(
-                                            self.batch_metrics_list[metric](
-                                                enc, batches
-                                            )
-                                )
-                            )
+                    metrics.metric_batch_mixing(self, batch_list, group, enc, batches)
 
-                    # Computing classification metrics
-                    for metric in self.pred_metrics_list:
-                        self.run[f"evaluation/{group}/{metric}"] = (
-                            self.pred_metrics_list[metric](y_true, y_pred)
-                        )
+                    # Save classification metrics
+                    metrics.metric_classification(self, y_pred, y_true, group, sizes)
 
-                    for metric in self.pred_metrics_list_balanced:
-                        self.run[f"evaluation/{group}/{metric}"] = (
-                            self.pred_metrics_list_balanced[metric](
-                                y_true, y_pred
-                            )
-                        )
+                    # save clustering metrics
+                    metrics.metric_clustering(self, y_pred, group, enc)
 
-                    # Metrics by size of ct
-                    for s in sizes:
-                        idx_s = np.isin(
-                            y_true, sizes[s]
-                        )  # Boolean array, no issue to index y_pred
-                        y_true_sub = y_true[idx_s]
-                        y_pred_sub = y_pred[idx_s]
-                        for metric in self.pred_metrics_list:
-                            self.run[f"evaluation/{group}/{s}/{metric}"] = (
-                                nan_to_0(
-                                    self.pred_metrics_list[metric](
-                                        y_true_sub, y_pred_sub
-                                    )
-                                )
-                            )
-
-                        for metric in self.pred_metrics_list_balanced:
-                            self.run[f"evaluation/{group}/{s}/{metric}"] = (
-                                nan_to_0(
-                                    self.pred_metrics_list_balanced[metric](
-                                        y_true_sub, y_pred_sub
-                                    )
-                                )
-                            )
-
-                    # Computing clustering metrics
-                    for metric in self.clustering_metrics_list:
-                        self.run[f"evaluation/{group}/{metric}"] = (
-                            self.clustering_metrics_list[metric](enc, y_pred)
-                        )
-
+                    logger.debug("Save all matrices and figures")
                     if group == "full":
-                        y_pred_df = pd.DataFrame(
-                            {"pred": y_pred, "true": y_true, "split": split},
-                            index=adata_list[group].obs_names,
-                        )
-                        split = pd.DataFrame(
-                            split, index=adata_list[group].obs_names
-                        )
-                        np.save(os.path.join(save_dir,f"latent_space_{group}.npy"), enc.numpy())
-                        y_pred_df.to_csv(os.path.join(save_dir,f"predictions_{group}.csv"))
-                        split.to_csv(os.path.join(save_dir,f"split_{group}.csv"))
-                        self.run[
-                            f"evaluation/{group}/latent_space"
-                        ].track_files(os.path.join(save_dir,f"latent_space_{group}.npy"))
-                        self.run[
-                            f"evaluation/{group}/predictions"
-                        ].track_files(os.path.join(save_dir,f"predictions_{group}.csv"))
-
-                        # Saving umap representation
-                        pred_adata = sc.AnnData(
-                            X=adata_list[group].X,
-                            obs=adata_list[group].obs,
-                            var=adata_list[group].var,
-                        )
-                        pred_adata.obs[f"{self.class_key}_pred"] = y_pred_df[
-                            "pred"
-                        ]
-                        pred_adata.obsm["latent_space"] = enc.numpy()
-                        sc.pp.neighbors(pred_adata, use_rep="latent_space")
-                        sc.tl.umap(pred_adata)
-                        np.save(
-                            os.path.join(save_dir,f"umap_{group}.npy"),
-                            pred_adata.obsm["X_umap"],
-                        )
-                        self.run[f"evaluation/{group}/umap"].track_files(
-                            os.path.join(save_dir,f"umap_{group}.npy")
-                        )
-                        sc.set_figure_params(figsize=(15, 10), dpi=300)
-                        fig_class = sc.pl.umap(
-                            pred_adata,
-                            color=f"true_{self.class_key}",
-                            size=10,
-                            return_fig=True,
-                        )
-                        fig_pred = sc.pl.umap(
-                            pred_adata,
-                            color=f"{self.class_key}_pred",
-                            size=10,
-                            return_fig=True,
-                        )
-                        fig_batch = sc.pl.umap(
-                            pred_adata,
-                            color=self.batch_key,
-                            size=10,
-                            return_fig=True,
-                        )
-                        fig_split = sc.pl.umap(
-                            pred_adata,
-                            color="train_split",
-                            size=10,
-                            return_fig=True,
-                        )
-                        self.run[f"evaluation/{group}/true_umap"].upload(
-                            fig_class
-                        )
-                        self.run[f"evaluation/{group}/pred_umap"].upload(
-                            fig_pred
-                        )
-                        self.run[f"evaluation/{group}/batch_umap"].upload(
-                            fig_batch
-                        )
-                        self.run[f"evaluation/{group}/split_umap"].upload(
-                            fig_split
-                        )
+                        metrics.save_results(y_pred, y_true, adata_list, group, save_dir, enc)
 
         if self.opt_metric:
             split, metric = self.opt_metric.split("-")
@@ -785,6 +622,7 @@ class Workflow:
         tf.keras.backend.clear_session()
 
         return opt_metric
+    
 
     def train_scheme(self, training_scheme, verbose=True, **loop_params):
         """
@@ -870,7 +708,6 @@ class Workflow:
                         == group,
                         :,
                     ]  # the predicted labels in test and val
-
             elif strategy in ["warmup_dann_semisup"]:
                 memory = {}
                 memory["pseudo_full"] = loop_params["pseudo_y_list"]["full"]
@@ -887,7 +724,6 @@ class Workflow:
                         == group,
                         :,
                     ]
-
             else:
                 if (
                     memory
@@ -898,7 +734,7 @@ class Workflow:
 
             for epoch in range(1, n_epochs + 1):
                 running_epoch += 1
-                print(
+                logger.debug(
                     f"Epoch {running_epoch}/{total_epochs}, Current strat Epoch {epoch}/{n_epochs}"
                 )
                 history, _, _, _, _ = self.training_loop(
@@ -1139,18 +975,7 @@ class Workflow:
             self.mean_dann_loss_fn(dann_loss.__float__())
             self.mean_rec_loss_fn(rec_loss.__float__())
 
-            if verbose:
-                self.print_status_bar(
-                    n_samples,
-                    n_obs,
-                    [
-                        self.mean_loss_fn,
-                        self.mean_clas_loss_fn,
-                        self.mean_dann_loss_fn,
-                        self.mean_rec_loss_fn,
-                    ],
-                    self.metrics,
-                )
+            
         self.print_status_bar(
             n_samples,
             n_obs,
@@ -1175,6 +1000,7 @@ class Workflow:
         )
         del input_batch
         return history, _, clas, dann, rec
+
 
     def evaluation_pass(
         self,
@@ -1283,18 +1109,6 @@ class Workflow:
             print(self.dann_loss_name + " loss not supported for dann")
         return self.rec_loss_fn, self.clas_loss_fn, self.dann_loss_fn
 
-    def print_status_bar(self, iteration, total, loss, metrics=None):
-        metrics = " - ".join(
-            [
-                "{}: {:.4f}".format(m.name, m.result())
-                for m in loss + (metrics or [])
-            ]
-        )
-
-        end = "" if int(iteration) < int(total) else "\n"
-        #     print(f"{iteration}/{total} - "+metrics ,end="\r")
-        #     print(f"\r{iteration}/{total} - " + metrics, end=end)
-        print("\r{}/{} - ".format(iteration, total) + metrics, end=end)
 
     def get_optimizer(
         self, learning_rate, weight_decay, optimizer_type, momentum=0.9
@@ -1338,3 +1152,17 @@ class Workflow:
                 momentum=momentum,
             )
         return optimizer
+
+    def print_status_bar(self, iteration, total, loss, metrics=None):
+        metrics = " - ".join(
+            [
+                "{}: {:.4f}".format(m.name, m.result())
+                for m in loss + (metrics or [])
+            ]
+        )
+
+        end = "" if int(iteration) < int(total) else "\n"
+        #     print(f"{iteration}/{total} - "+metrics ,end="\r")
+        #     print(f"\r{iteration}/{total} - " + metrics, end=end)
+        print("\r{}/{} - ".format(iteration, total) + metrics, end=end)
+

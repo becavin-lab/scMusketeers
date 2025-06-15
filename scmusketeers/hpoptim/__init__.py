@@ -1,1 +1,1 @@
-from . import dataset, experiment, hyperparameters, run_workflow
+from . import dataset, metrics, experiment, hyperparameters, run_workflow

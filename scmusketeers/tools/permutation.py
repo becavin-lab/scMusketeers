@@ -3,6 +3,7 @@ import os
 import random
 import subprocess as sp
 import time
+import logging
 
 import numpy as np
 import pandas as pd
@@ -14,6 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.utils import shuffle
 
+logger = logging.getLogger("Sc-Musketeers")
 
 def get_gpu_memory(txt):
     # command = "nvidia-smi --query-gpu=memory.used --format=csv"
@@ -74,7 +76,7 @@ def make_training_set(
     same_class_pct : When using contrastive loss, indicates the pct of samples to permute within their class. set to None when not using contrastive loss
     """
     permutations = [[], []]
-    print("switching perm")
+    logger.debug("Change the cell permutations")
 
     # y = np.array(y).astype(str) If passing labels as string
 
