@@ -4,8 +4,14 @@ import anndata
 import numpy as np
 import pandas as pd
 from anndata import AnnData
-from sklearn.metrics import *
-# from sklearn.metrics import confusion_matrix, balanced_accuracy_score, accuracy_score,silhouette_samples,f1_score,matthews_corrcoef,cohen_kappa_score
+import tensorflow as tf # Assuming a TensorFlow/Keras context
+
+from sklearn.metrics import (v_measure_score, confusion_matrix, 
+                             balanced_accuracy_score, accuracy_score,silhouette_samples,
+                             f1_score,matthews_corrcoef,cohen_kappa_score,
+                             davies_bouldin_score, silhouette_score, adjusted_rand_score,
+                             calinski_harabasz_score, fowlkes_mallows_score,
+                             adjusted_mutual_info_score)
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import LabelEncoder
 
@@ -350,7 +356,70 @@ def dunn(adata, partition_key: str, obsm_representation: Optional[str] = None):
     """
 
 
-def make_weight(y_true):
+def make_weight(y_true, reduction_type='inverse_frequency'):
+    """
+    Calculates weights for each element of y_true, typically used for class balancing
+    in deep learning models.
+
+    Args:
+        y_true (np.ndarray or tf.Tensor): The true labels of the samples. Can be
+                                          a NumPy array or a TensorFlow tensor.
+        reduction_type (str): Specifies how to calculate the weights.
+                              - 'inverse_frequency': Weight is 1 / class_count.
+                              - 'inverse_sqrt_frequency': Weight is 1 / sqrt(class_count).
+                                This can be useful for very imbalanced datasets
+                                to slightly reduce the impact of extremely low counts.
+                              - 'normalized_inverse_frequency': Inverse frequency, then normalized
+                                so that the sum of weights for each class equals 1 (or other sum).
+                                This is less common for direct sample weighting but good for
+                                understanding class proportions.
+
+    Returns:
+        np.ndarray or tf.Tensor: A weight for each element of y_true.
+                                 If y_true was a tf.Tensor, returns a tf.Tensor.
+                                 Otherwise, returns a np.ndarray.
+    """
+    if isinstance(y_true, tf.Tensor):
+        # Convert to NumPy for easier pandas operations.
+        # Ensure it's detached from the TensorFlow graph if operations modify it.
+        # For actual TensorFlow graph operations, we'd use tf.gather or tf.map_fn.
+        is_tf_tensor = True
+        y_true_np = y_true.numpy()
+    else:
+        is_tf_tensor = False
+        y_true_np = np.asarray(y_true) # Ensure it's a NumPy array
+
+    # Handle cases where y_true might be one-hot encoded or have multiple dimensions
+    if y_true_np.ndim > 1:
+        # Assuming y_true is one-hot encoded, get the class index
+        y_true_np = np.argmax(y_true_np, axis=-1)
+
+    y_true_s = pd.Series(y_true_np)
+    class_counts = y_true_s.value_counts()
+
+    if reduction_type == 'inverse_frequency':
+        # Calculate inverse frequency
+        class_weights = 1.0 / class_counts
+    elif reduction_type == 'inverse_sqrt_frequency':
+        class_weights = 1.0 / np.sqrt(class_counts)
+    elif reduction_type == 'normalized_inverse_frequency':
+        # Sum of inverse frequencies
+        sum_inverse_freq = (1.0 / class_counts).sum()
+        # Normalize so that the sum of weights for each class is 1 (or whatever sum_inverse_freq implies)
+        class_weights = (1.0 / class_counts) / sum_inverse_freq
+    else:
+        raise ValueError(f"Unknown reduction_type: {reduction_type}")
+
+    # Map the class weights back to each sample
+    sample_weights = y_true_s.replace(class_weights).values
+
+    if is_tf_tensor:
+        return tf.convert_to_tensor(sample_weights, dtype=tf.float32)
+    else:
+        return sample_weights
+
+
+def make_weight_old(y_true):
     """
     return a weight for each element of y_true corresponding to the number of elements of its class.
     Balanced metrics should use 1/weights
@@ -365,6 +434,7 @@ def make_weight(y_true):
     return weights
 
 
+
 def to_1d(y):
     return np.asarray(y).reshape(
         -1,
@@ -373,20 +443,20 @@ def to_1d(y):
 
 def balanced_f1_score(y_true, y_pred):
     y_true, y_pred = to_1d(y_true), to_1d(y_pred)
-    weights = make_weight(y_true)
-    return f1_score(y_true, y_pred, sample_weight=1 / weights, average="macro")
+    sample_weights = make_weight(y_true)
+    return f1_score(y_true, y_pred, sample_weight=sample_weights, average="macro")
 
 
 def balanced_matthews_corrcoef(y_true, y_pred):
     y_true, y_pred = to_1d(y_true), to_1d(y_pred)
-    weights = make_weight(y_true)
-    return matthews_corrcoef(y_true, y_pred, sample_weight=1 / weights)
+    sample_weights = make_weight(y_true)
+    return matthews_corrcoef(y_true, y_pred, sample_weight=sample_weights)
 
 
 def balanced_cohen_kappa_score(y_true, y_pred):
     y_true, y_pred = to_1d(y_true), to_1d(y_pred)
-    weights = make_weight(y_true)
-    return cohen_kappa_score(y_true, y_pred, sample_weight=1 / weights)
+    sample_weights = make_weight(y_true)
+    return cohen_kappa_score(y_true, y_pred, sample_weight=sample_weights)
 
 
 import numpy as np

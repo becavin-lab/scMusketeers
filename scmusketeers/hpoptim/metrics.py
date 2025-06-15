@@ -126,7 +126,7 @@ def metric_clustering(workflow, y_pred, group, enc):
         )
 
 
-def save_results(workflow, y_pred, y_true, adata_list, group, save_dir, enc):
+def save_results(workflow, y_pred, y_true, adata_list, group, save_dir, split, enc):
     y_pred_df = pd.DataFrame(
         {"pred": y_pred, "true": y_true, "split": split},
         index=adata_list[group].obs_names,

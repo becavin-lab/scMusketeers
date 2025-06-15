@@ -207,37 +207,37 @@ class Workflow:
 
         logger.debug(f"setting hparams {params}")
         if "use_hvg" in params:
-            self.run_file.use_hvg = params["use_hvg"]
+            self.use_hvg = params["use_hvg"]
         if "batch_size" in params:
-            self.run_file.batch_size = params["batch_size"]
+            self.batch_size = params["batch_size"]
         if "clas_w" in params:
-            self.run_file.clas_w = params["clas_w"]
+            self.clas_w = params["clas_w"]
         if "dann_w" in params:
-            self.run_file.dann_w = params["dann_w"]
+            self.dann_w = params["dann_w"]
         if "rec_w" in params:
-            self.run_file.rec_w = params["rec_w"]
+            self.rec_w = params["rec_w"]
         if "ae_bottleneck_activation" in params:
-            self.run_file.ae_bottleneck_activation = params["ae_bottleneck_activation"]
+            self.ae_bottleneck_activation = params["ae_bottleneck_activation"]
         if "clas_loss_name" in params:
-            self.run_file.clas_loss_name = params["clas_loss_name"]
+            self.clas_loss_name = params["clas_loss_name"]
         if "size_factor" in params:
-            self.run_file.size_factor = params["size_factor"]
+            self.size_factor = params["size_factor"]
         if "weight_decay" in params:
-            self.run_file.weight_decay = params["weight_decay"]
+            self.weight_decay = params["weight_decay"]
         if "learning_rate" in params:
-            self.run_file.learning_rate = params["learning_rate"]
+            self.learning_rate = params["learning_rate"]
         if "warmup_epoch" in params:
-            self.run_file.warmup_epoch = params["warmup_epoch"]
+            self.warmup_epoch = params["warmup_epoch"]
         if "dropout" in params:
-            self.run_file.dropout = params["dropout"]
+            self.dropout = params["dropout"]
         if "layer1" in params:
-            self.run_file.layer1 = params["layer1"]
+            self.layer1 = params["layer1"]
         if "layer2" in params:
-            self.run_file.layer2 = params["layer2"]
+            self.layer2 = params["layer2"]
         if "bottleneck" in params:
-            self.run_file.bottleneck = params["bottleneck"]
+            self.bottleneck = params["bottleneck"]
         if "training_scheme" in params:
-            self.run_file.training_scheme = params["training_scheme"]
+            self.training_scheme = params["training_scheme"]
         self.hp_params = params
 
 
@@ -424,7 +424,7 @@ class Workflow:
         self.ae_hidden_size = [
             self.layer1,
             self.layer2,
-            self.bottleneck,
+            self.run_file.bottleneck,
             self.layer2,
             self.layer1,
         ]
@@ -531,61 +531,60 @@ class Workflow:
             }
             for group in ["full", "train", "val", "test"]:
                 logger.info(f"Prediction for dataset - {group}")
-                with tf.device("CPU"):
-                    input_tensor = {
-                        k: tf.convert_to_tensor(v)
-                        for k, v in scanpy_to_input(
-                            adata_list[group], ["size_factors"]
-                        ).items()
-                    }
-                    enc, clas, dann, rec = self.dann_ae(
-                        input_tensor, training=False
-                    ).values()  # Model predict
+                input_tensor = {
+                    k: tf.convert_to_tensor(v)
+                    for k, v in scanpy_to_input(
+                        adata_list[group], ["size_factors"]
+                    ).items()
+                }
+                enc, clas, dann, rec = self.dann_ae(
+                    input_tensor, training=False
+                ).values()  # Model predict
 
-                    if (
-                        group == "full"
-                    ):  # saving full predictions as probability output from the classifier
-                        logger.debug("Saving predicted matrix and embedding")
-                        y_pred_proba = pd.DataFrame(
-                            np.asarray(clas),
-                            index=adata_list["full"].obs_names,
-                            columns=self.dataset.ohe_celltype.categories_[0],
-                        )
-                        y_pred_proba.to_csv(os.path.join(save_dir,"y_pred_proba_full.csv"))
-                        self.run[
-                            f"evaluation/{group}/y_pred_proba_full"
-                        ].track_files(os.path.join(save_dir,"y_pred_proba_full.csv"))
-
-                    # Create predicted cell types
-                    clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
-                    y_pred = self.dataset.ohe_celltype.inverse_transform(
-                        clas
-                    ).reshape(
-                        -1,
+                if (
+                    group == "full"
+                ):  # saving full predictions as probability output from the classifier
+                    logger.debug("Saving predicted matrix and embedding")
+                    y_pred_proba = pd.DataFrame(
+                        np.asarray(clas),
+                        index=adata_list["full"].obs_names,
+                        columns=self.dataset.ohe_celltype.categories_[0],
                     )
-                    y_true = adata_list[group].obs[f"true_{self.class_key}"]
-                    batches = np.asarray(
-                        batch_list[group].argmax(axis=1)
-                    ).reshape(
-                        -1,
-                    )
-                    split = adata_list[group].obs["train_split"]
+                    y_pred_proba.to_csv(os.path.join(save_dir,"y_pred_proba_full.csv"))
+                    self.run[
+                        f"evaluation/{group}/y_pred_proba_full"
+                    ].track_files(os.path.join(save_dir,"y_pred_proba_full.csv"))
 
-                    # Saving confusion matrices
-                    metrics.metric_confusion_matrix(self, y_pred, y_true, group, save_dir)
+                # Create predicted cell types
+                clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
+                y_pred = self.dataset.ohe_celltype.inverse_transform(
+                    clas
+                ).reshape(
+                    -1,
+                )
+                y_true = adata_list[group].obs[f"true_{self.class_key}"]
+                batches = np.asarray(
+                    batch_list[group].argmax(axis=1)
+                ).reshape(
+                    -1,
+                )
+                split = adata_list[group].obs["train_split"]
 
-                    # Computing batch mixing metrics
-                    metrics.metric_batch_mixing(self, batch_list, group, enc, batches)
+                # Saving confusion matrices
+                metrics.metric_confusion_matrix(self, y_pred, y_true, group, save_dir)
 
-                    # Save classification metrics
-                    metrics.metric_classification(self, y_pred, y_true, group, sizes)
+                # Computing batch mixing metrics
+                metrics.metric_batch_mixing(self, batch_list, group, enc, batches)
 
-                    # save clustering metrics
-                    metrics.metric_clustering(self, y_pred, group, enc)
+                # Save classification metrics
+                metrics.metric_classification(self, y_pred, y_true, group, sizes)
 
-                    logger.debug("Save all matrices and figures")
-                    if group == "full":
-                        metrics.save_results(self, y_pred, y_true, adata_list, group, save_dir, enc)
+                # save clustering metrics
+                metrics.metric_clustering(self, y_pred, group, enc)
+
+                logger.debug("Save all matrices and figures")
+                if group == "full":
+                    metrics.save_results(self, y_pred, y_true, adata_list, group, save_dir, split, enc)
 
         if self.opt_metric:
             split, metric = self.opt_metric.split("-")
