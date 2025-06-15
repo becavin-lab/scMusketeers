@@ -1,5 +1,6 @@
 import json
 import os
+import logging
 
 try:
     from ..arguments.neptune_log import (start_neptune_log,
@@ -25,28 +26,45 @@ except ImportError:
 # JSON_PATH_DEFAULT = '/home/acollin/scMusketeers/experiment_script/hp_ranges/'
 JSON_PATH_DEFAULT = "/home/becavin/scMusketeers/experiment_script/hp_ranges/"
 
-TOTAL_TRIAL = 10
+TOTAL_TRIAL = 2
 RANDOM_SEED = 40
 
+logger = logging.getLogger("Sc-Musketeers")
 
 def load_json(hparam_path):
+    """
+    Load json file with hyperparameter ranges
+    """
     with open(hparam_path, "r") as fichier_json:
         dico = json.load(fichier_json)
     return dico
 
 
 def run_workflow(run_file):
+    """
+    Run hyperparameter optimization
+
+    - Create Experiment <br>
+    - Load hyperparameters ranges<br>
+    - Run AX Platform for hyperparameters optimization
+    - Run all trials
+    - Print/save best parameters
+
+    """
+    logger.info("Create Experiment")
     experiment = MakeExperiment(
         run_file=run_file,
         total_trial=TOTAL_TRIAL,
         random_seed=RANDOM_SEED
     )
 
+    logger.info("Load hyperparameters ranges")
     if not run_file.hparam_path:
+        logger.debug("hp ranges: ")
         hparam_path = JSON_PATH_DEFAULT + "generic_r1.json"
     else:
         hparam_path = run_file.hparam_path
-
+    logger.info(f"hp ranges: {hparam_path}")
     hparams = load_json(hparam_path)
 
     ### Loop API
@@ -60,6 +78,7 @@ def run_workflow(run_file):
     # )
 
     ### Service API
+    logger.info("Run AX Platform for hyperparameters optimization")
     ax_client = AxClient()
     ax_client.create_experiment(
         name="scmusketeers",
@@ -67,6 +86,7 @@ def run_workflow(run_file):
         objectives={"opt_metric": ObjectiveProperties(minimize=False)},
     )
     for i in range(TOTAL_TRIAL):
+        logger.info(f"Running trial {i}/{TOTAL_TRIAL}")
         parameterization, trial_index = ax_client.get_next_trial()
         # Local evaluation here can be replaced with deployment to external system.
         ax_client.complete_trial(
@@ -74,6 +94,9 @@ def run_workflow(run_file):
             raw_data=experiment.train(parameterization),
         )
 
+    logger.info("Hyperparam optimization finished")
     best_parameters, values = ax_client.get_best_parameters()
-    print(best_parameters)
+    logger.info(f" Best parameters {best_parameters}")
+    ## TO DO : SAVE best parameters
+
     

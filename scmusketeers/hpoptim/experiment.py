@@ -4,6 +4,7 @@ import pandas as pd
 import sys
 import os
 import neptune
+import logging
 
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
@@ -18,8 +19,12 @@ except ImportError:
     from scmusketeers.hpoptim.dataset import Dataset, load_dataset
     from scmusketeers.hpoptim.hyperparameters import Workflow
 
+logger = logging.getLogger("Sc-Musketeers")
 
 def load_json(json_path):
+    """
+    Load json with hyperparameters
+    """
     with open(json_path, "r") as fichier_json:
         dico = json.load(fichier_json)
     return dico
@@ -43,29 +48,22 @@ class MakeExperiment:
         project.stop()
         
     def train(self, params):
+        logger.info("Run the Experiment: experiment.train()")
         # cuda.select_device(0)
         # device = cuda.get_current_device()
         # device.reset()
         # import tensorflow as tf
 
+        logger.debug("Load checkpoint")
         self.trial_count += 1
-        # print('params')
-        # print(params)
         checkpoint = {"parameters/" + k: i for k, i in params.items()}
-
-        # dataset_name
-
-
         checkpoint["parameters/dataset_name"] = self.run_file.dataset_name
         checkpoint["parameters/opt_metric"] = self.run_file.opt_metric
         checkpoint["parameters/task"] = "hp_optim_V2"
-        print(checkpoint)
-        print(self.runs_table_df)
-        # checkpoint = {'parameters/dataset_name': self.run_file.dataset_name,
-        #               'parameters/total_trial': total_trial, 'parameters/trial_count': self.trial_count,
-        #               'parameters/opt_metric': self.opt_metric, 'parameters/hp_random_seed': random_seed}
+        #logger.debug(checkpoint)
         
         # common columns runs_table_df and checkpoint
+        logger.debug("Compare checkpoint and Neptune dataframe")
         common_headers = []
         common_values = []
         for header in list(checkpoint.keys()):
@@ -78,23 +76,32 @@ class MakeExperiment:
             .eq(common_values)
             .all(axis=1)
         ]
-        print(result)
+        #logger.debug(f"Neptune dataframe: {result}")
+
+        
         split, metric = self.run_file.opt_metric.split("-")
         if result.empty or pd.isna(
             result.loc[:, f"evaluation/{split}/{metric}"].iloc[-1]
         ):  # we run the trial
-            print(f"Trial {self.trial_count} does not exist, running trial")
+            logger.debug(f"Trial {self.trial_count} does not exist, running trial")
             self.workflow = Workflow(
                 run_file=self.run_file
             )
+            logger.debug("Set hyparameters")
             self.workflow.set_hyperparameters(params)
+            logger.debug("")
             self.workflow.start_neptune_log(self.run_file.neptune_name)
+            logger.debug("")
             self.workflow.process_dataset()
+            logger.debug("")
             self.workflow.split_train_test()
+            logger.debug("")
             self.workflow.split_train_val()
+            logger.debug("Run the training")
             opt_metric = (
                 self.workflow.make_experiment()
-            )  # This starts the logging
+            )  
+            logger.debug("Log the trial on Neptune")
             self.workflow.add_custom_log("task", "hp_optim_V2")
             self.workflow.add_custom_log("total_trial", self.total_trial)
             self.workflow.add_custom_log("hp_random_seed", self.random_seed)

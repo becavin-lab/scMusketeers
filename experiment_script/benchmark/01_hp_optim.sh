@@ -17,7 +17,7 @@ working_dir="/workspace/cell/scMusketeers"
 out_dir=${working_dir}"/experiment_script/results"
 python_path=${working_dir}"/scmusketeers/__main__.py"
 data_path=${working_dir}"/data"
-hparam_path=${working_dir}"/experiment_script/hp_ranges/generic_r1_debug.json"
+hparam_path=${working_dir}"/experiment_script/hp_ranges/generic_r1.json"
 
 
 # Read dataset json to get h5ad path
@@ -50,7 +50,7 @@ classifier_epoch=2   # default = 50, help = Number of epoch to train te classifi
 
 
 
-python ${python_path} hp_optim ${h5ad_path} --neptune_name ${neptune_name} --out_dir ${out_dir} \
+python ${python_path} hp_optim ${h5ad_path} --debug --neptune_name ${neptune_name} --out_dir ${out_dir} \
 --hparam_path ${hparam_path} --dataset_name ${dataset_name} \
 --class_key $class_key --batch_key $batch_key --test_obs $test_obs \
 --mode entire_condition --obs_key $batch_key --keep_obs $keep_obs \

@@ -219,6 +219,7 @@ def load_dataset(ref_path):
         "wmb_full": "whole_mouse_brain_class_modality",
         "wmb_it_et": "it_et_brain_subclass_modality",
     }
+    logger.debug(f"Load h5ad: {ref_path}")
     adata = sc.read_h5ad(ref_path)
     if not adata.raw:
         adata.raw = adata
@@ -273,7 +274,9 @@ class Dataset:
         # self.markers_path = self.dataset_dir + '/' + f'markers/markers_{dataset_name}.csv'
 
     def normalize(self):
+        logger.debug("Preprocess dataset - Normalization")
         if self.filter_min_counts:
+            logger.debug("Filter dataset")
             sc.pp.filter_genes(self.adata, min_counts=1)
             sc.pp.filter_cells(self.adata, min_counts=1)
         nonzero_genes, _ = sc.pp.filter_genes(self.adata.X, min_counts=1)
@@ -282,12 +285,14 @@ class Dataset:
         ), "Please remove all-zero genes before using DCA."
 
         if self.size_factor == "raw":  # Computing sf on raw data
+            logger.debug("Calculate size factor (raw mode)")
             self.adata.obs["n_counts"] = self.adata.X.sum(axis=1)
             self.adata.obs["size_factors"] = (
                 self.adata.obs.n_counts / np.median(self.adata.obs.n_counts)
             )
 
         if self.use_hvg:
+            logger.debug("Calculate HVG")
             self.adata = get_hvg_common(
                 self.adata, n_hvg=self.use_hvg, batch_key=self.batch_key
             )
@@ -302,24 +307,28 @@ class Dataset:
             self.adata.raw = self.adata
 
         if self.normalize_size_factors:
-
+            logger.debug("Normalize with total nb reads and calculate size factor")
             sc.pp.normalize_total(self.adata)
             self.adata.obs["size_factors"] = (
                 self.adata.obs.n_counts / np.median(self.adata.obs.n_counts)
             )
 
         if self.logtrans_input:
+            logger.debug("Log_1 transformation")
             sc.pp.log1p(self.adata)
 
         if self.scale_input:
+            logger.debug("Dataset scaling")
             sc.pp.scale(self.adata)
 
         if self.size_factor == "default":  # Computing sf on preprocessed data
+            logger.debug("Calculate size factor (default mode)")
             self.adata.obs["n_counts"] = self.adata.X.sum(axis=1)
             self.adata.obs["size_factors"] = (
                 self.adata.obs.n_counts / np.median(self.adata.obs.n_counts)
             )
         elif self.size_factor == "constant":
+            logger.debug("Calculate size factor (constant mode sf=1)")
             self.adata.obs["size_factors"] = 1.0
         # print('right after loading')
         # print(self.adata)

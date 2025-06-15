@@ -9,12 +9,12 @@ from scmusketeers.hpoptim.experiment import MakeExperiment
 from scmusketeers.transfer.optimize_model import Workflow
 from scmusketeers.hpoptim.run_workflow import run_workflow
 
+logger = logging.getLogger("Sc-Musketeers")
 
 def run_sc_musketeers():
 
     # Set up logging
-    logger = logging.getLogger("Sc-Musketeers")
-    logging.basicConfig(format="|--- %(levelname)-8s %(message)s")
+    logging.basicConfig(format="|--- %(levelname)-8s    %(message)s")
 
     # Get all arguments
     run_file = get_runfile()

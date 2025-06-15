@@ -1,8 +1,3 @@
-# # except ImportError:
-#     from dataset import Dataset, load_dataset
-#     from scpermut.tools.utils import scanpy_to_input, default_value, str2bool
-#     from scpermut.tools.clust_compute import nn_overlap, batch_entropy_mixing_score,lisi_avg
-# from dca.utils import str2bool,tuple_to_scalar
 import argparse
 import functools
 import os
@@ -12,7 +7,7 @@ import json
 import subprocess
 import sys
 import time
-
+import logging
 import matplotlib.pyplot as plt
 import neptune
 import numpy as np
@@ -40,7 +35,7 @@ try:
     from ..arguments.class_param import CLASS_PARAM
     from ..arguments.dann_param import DANN_PARAM
     from .dataset import Dataset, load_dataset
-    from ..transfer import freeze
+    from ..tools import freeze
     from ..tools.training_scheme import get_training_scheme
     from ..tools.clust_compute import (balanced_cohen_kappa_score,
                                        balanced_f1_score,
@@ -57,7 +52,7 @@ except ImportError:
     from scmusketeers.arguments.class_param import CLASS_PARAM
     from scmusketeers.arguments.dann_param import DANN_PARAM
     from scmusketeers.hpoptim.dataset import Dataset, load_dataset
-    from scmusketeers.transfer import freeze
+    from scmusketeers.tools import freeze
     from scmusketeers.tools.training_scheme import get_training_scheme
     from scmusketeers.tools.clust_compute import (balanced_cohen_kappa_score,
                                      balanced_f1_score,
@@ -77,9 +72,11 @@ physical_devices = tf.config.list_physical_devices("GPU")
 for gpu_instance in physical_devices:
     tf.config.experimental.set_memory_growth(gpu_instance, True)
 
+logger = logging.getLogger("Sc-Musketeers")
 
 # Reset Keras Session
 def reset_keras():
+    logger.debug("Reset Keras session")
     sess = tf.compat.v1.keras.backend.get_session()
     tf.compat.v1.keras.backend.clear_session()
     sess.close()
@@ -90,7 +87,7 @@ def reset_keras():
     except:
         pass
 
-    print(gc.collect())
+    logger.debug(f"GC collect: {gc.collect()}")
 
     # use the same config as you used to create the session
     config = tf.compat.v1.ConfigProto()
@@ -113,12 +110,12 @@ class Workflow:
 
         # get attributes from run_file
         for par, val_from_runfile in self.run_file.__dict__.items():
-            # print(f"Processing parameter '{par}' from run_file:")
+            # logger.debug(f"Processing parameter '{par}' from run_file:")
             # Check if 'self' has an attribute with the same name
             if not hasattr(self, par):
                 setattr(self, par, val_from_runfile)
-                #print(f"  - '{par}' from run_file DOES NOT exist in 'self'.")
-                #print(f"    - Creating 'self.{par}' with value: {val_from_runfile} (from run_file).")
+                #logger.debug(f"  - '{par}' from run_file DOES NOT exist in 'self'.")
+                #logger.debug(f"    - Creating 'self.{par}' with value: {val_from_runfile} (from run_file).")
                 
         self.n_perm = 1
         self.semi_sup = False  # TODO : Not yet handled by DANN_AE, the case wwhere unlabeled cells are reconstructed as themselves
@@ -182,7 +179,7 @@ class Workflow:
 
     def set_hyperparameters(self, params):
 
-        print(f"setting hparams {params}")
+        logger.debug(f"setting hparams {params}")
         if "use_hvg" in params:
             self.use_hvg = params["use_hvg"]
         if "batch_size" in params:
@@ -248,6 +245,7 @@ class Workflow:
         )
 
     def split_train_val(self):
+        logger.info("Process train, test, val datasets")
         self.dataset.train_split(
             mode=self.mode,
             pct_split=self.pct_split,
@@ -259,11 +257,12 @@ class Workflow:
             train_test_random_seed=self.train_test_random_seed,
         )
 
-        print("dataset has been preprocessed")
+        logger.info("Dataset split performed")
         self.dataset.create_inputs()
 
     def process_dataset(self):
         # Loading dataset
+        logger.info(f"Load dataset {self.run_file.ref_path}")
         adata = load_dataset(
             ref_path=self.run_file.ref_path)
 
@@ -283,7 +282,7 @@ class Workflow:
         )
         
         if not "X_pca" in self.dataset.adata.obsm:
-            print("Did not find existing PCA, computing it")
+            logger.debug("Did not find existing PCA, computing it")
             sc.tl.pca(self.dataset.adata)
             self.dataset.adata.obsm["X_pca"] = np.asarray(
                 self.dataset.adata.obsm["X_pca"]
@@ -297,20 +296,10 @@ class Workflow:
 
 
     def make_experiment(self):
-        self.ae_hidden_size = [
-            self.layer1,
-            self.layer2,
-            self.bottleneck,
-            self.layer2,
-            self.layer1,
-        ]
+        logger.info("Create scmusketeers model and the train/test/val datasets:")
+        logger.debug("hyperparameters.make_experiment()")
 
-        (
-            self.dann_hidden_dropout,
-            self.class_hidden_dropout,
-            self.ae_hidden_dropout,
-        ) = (self.dropout, self.dropout, self.dropout)
-
+        logger.debug("Setup X,Y")
         adata_list = {
             "full": self.dataset.adata,
             "train": self.dataset.adata_train,
@@ -353,6 +342,8 @@ class Workflow:
             "test": self.dataset.adata_test.obsm["X_pca"],
         }
 
+        # Create pesudo labels
+        logger.debug("Create pseudo-labels pseudo_y_list")
         knn_cl = KNeighborsClassifier(n_neighbors=5)
         knn_cl.fit(X_pca_list["train"], y_nooh_list["train"])
 
@@ -372,8 +363,6 @@ class Workflow:
             adata_list["full"].obs_names
         ]  # reordering cells in the right order
 
-        print(f"pseudo_y_full = {pseudo_y_full}")
-
         pseudo_y_list = {
             "full": self.dataset.ohe_celltype.transform(
                 np.array(pseudo_y_full).reshape(-1, 1)
@@ -392,21 +381,35 @@ class Workflow:
             .astype(float)
             .todense(),
         }
+        print(f"pseudo_y_full = {pseudo_y_list}")
 
-        print({i: adata_list[i] for i in adata_list})
-        print({i: len(y_list[i]) for i in y_list})
-        print(
-            f"sum : {len(y_list['train']) + len(y_list['test']) + len(y_list['val'])}"
-        )
-        print(f"full: {len(y_list['full'])}")
+        adata_dict = {i: adata_list[i] for i in adata_list}
+        logger.debug(f"adata_dict {adata_dict}")
+        y_dict = {i: len(y_list[i]) for i in y_list}
+        logger.debug(f"y_dict {y_dict}")
+        logger.debug(f"Number of cells : {len(y_list['train']) + len(y_list['test']) + len(y_list['val'])}")
+        logger.debug(f"full: {len(y_list['full'])}")
 
         self.num_classes = len(np.unique(self.dataset.y_train))
         self.num_batches = len(np.unique(self.dataset.batch))
 
+        # SEtup model layers param
+        logger.debug("Setup model settings")
+        self.ae_hidden_size = [
+            self.layer1,
+            self.layer2,
+            self.bottleneck,
+            self.layer2,
+            self.layer1,
+        ]
+        (
+            self.dann_hidden_dropout,
+            self.class_hidden_dropout,
+            self.ae_hidden_dropout,
+        ) = (self.dropout, self.dropout, self.dropout)
         bottleneck_size = int(
             self.ae_hidden_size[int(len(self.ae_hidden_size) / 2)]
         )
-
         self.class_hidden_size = default_value(
             self.class_hidden_size, (bottleneck_size + self.num_classes) / 2
         )  # default value [(bottleneck_size + num_classes)/2]
@@ -415,6 +418,7 @@ class Workflow:
         )  # default value [(bottleneck_size + num_batches)/2]
 
         # Creation of model
+        logger.debug("Create the model: DANN_AE")
         self.dann_ae = DANN_AE(
             ae_hidden_size=self.ae_hidden_size,
             ae_hidden_dropout=self.ae_hidden_dropout,
@@ -439,19 +443,23 @@ class Workflow:
             dann_output_activation=self.dann_output_activation,
         )
 
+        logger.debug("Setup optimizer")
         self.optimizer = self.get_optimizer(
             self.learning_rate, self.weight_decay, self.optimizer_type
         )
+        logger.debug("Setup losses")
         self.rec_loss_fn, self.clas_loss_fn, self.dann_loss_fn = (
             self.get_losses(y_list)
         )  # redundant
+        logger.debug("Setup training scheme")
         training_scheme = self.get_scheme()
-        start_time = time.time()
 
-        print(
-            "bottleneck activation : " + self.dann_ae.ae_bottleneck_activation
+        logger.debug(
+            "Bottleneck activation : " + self.dann_ae.ae_bottleneck_activation
         )
         # Training
+        logger.info(f"Run model training")
+        start_time = time.time()
         history = self.train_scheme(
             training_scheme=training_scheme,
             verbose=False,
@@ -467,15 +475,19 @@ class Workflow:
             rec_loss_fn=self.rec_loss_fn,
         )
         stop_time = time.time()
+        logger.info("Training complete")
+
+        logger.info("Performing model prediction")
         if self.log_neptune:
+            # TODO also make it on gpu with smaller batch size
             self.run["evaluation/training_time"] = stop_time - start_time
-        # TODO also make it on gpu with smaller batch size
-        if self.log_neptune:
             neptune_run_id = self.run["sys/id"].fetch()
             save_dir = os.path.join(self.run_file.out_dir,str(neptune_run_id))
-            print(f"Save results to: {save_dir}")
+            logger.info(f"Save results to: {save_dir}")
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
+            
+            # Setting model inference
             y_true_full = adata_list["full"].obs[f"true_{self.class_key}"]
             ct_prop = (
                 pd.Series(y_true_full).value_counts()
@@ -491,8 +503,8 @@ class Workflow:
                 ),
                 "large": list(ct_prop[ct_prop >= 0.1].index),
             }
-
             for group in ["full", "train", "val", "test"]:
+                logger.info(f"Prediction for dataset - {group}")
                 with tf.device("CPU"):
                     input_tensor = {
                         k: tf.convert_to_tensor(v)
@@ -584,11 +596,11 @@ class Workflow:
                             self.run[f"evaluation/{group}/{metric}"] = (
                                 self.batch_metrics_list[metric](enc, batches)
                             )
-                            print(
-                                type(
-                                    self.batch_metrics_list[metric](
-                                        enc, batches
-                                    )
+                            logger.debug("Printing type of batch_metrics_list",
+                                            type(
+                                            self.batch_metrics_list[metric](
+                                                enc, batches
+                                            )
                                 )
                             )
 
@@ -715,8 +727,7 @@ class Workflow:
             split, metric = self.opt_metric.split("-")
             self.run.wait()
             opt_metric = self.run[f"evaluation/{split}/{metric}"].fetch()
-            print("opt_metric")
-            print(opt_metric)
+            logger.debug(f"optimal metric:{opt_metric}")
         else:
             opt_metric = None
         # Redondant, à priori c'est le mcc qu'on a déjà calculé au dessus.
@@ -780,7 +791,7 @@ class Workflow:
                 self.learning_rate, self.weight_decay, self.optimizer_type
             )  # resetting optimizer state when switching strategy
             if verbose:
-                print(
+                logger.debug(
                     f"Step number {i}, running {strategy} strategy with permuation = {use_perm} for {n_epochs} epochs"
                 )
                 time_in = time.time()
@@ -909,7 +920,7 @@ class Workflow:
                             wait = 0
                             best_model = self.dann_ae.get_weights()
                     if wait >= patience:
-                        print(
+                        logger.debug(
                             f"Early stopping at epoch {best_epoch}, restoring model parameters from this epoch"
                         )
                         self.dann_ae.set_weights(best_model)
@@ -918,10 +929,14 @@ class Workflow:
 
             if verbose:
                 time_out = time.time()
-                print(f"Strategy duration : {time_out - time_in} s")
+                logger.debug(f"Strategy duration : {time_out - time_in} s")
         if self.log_neptune:
             self.run[f"training/{group}/total_epochs"] = running_epoch
         return history
+
+
+
+
 
     def training_loop(
         self,
@@ -953,14 +968,15 @@ class Workflow:
         use_perm : True by default except form "warmup_dann" training strategy. Note that for training strategies that don't involve the reconstruction, this parameter has no impact on training
         """
 
-        self.unfreeze_all(ae)  # resetting freeze state
+        freeze.unfreeze_all(ae)  # resetting freeze state
         if training_strategy == "full_model":
             group = "train"
         elif training_strategy == "full_model_pseudolabels":
             group = "full"
         elif training_strategy == "encoder_classifier":
             group = "train"
-            self.freeze_block(ae, "all_but_classifier")  # training only
+            layers_to_freeze = freeze.freeze_block(ae, "all_but_classifier")  # training only
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy in [
             "warmup_dann",
             "warmup_dann_pseudolabels",
@@ -973,26 +989,30 @@ class Workflow:
             ae.classifier.trainable = False  # Freezing classifier just to be sure but should not be necessary since gradient won't be propagating in this branch
         elif training_strategy == "warmup_dann_no_rec":
             group = "full"
-            self.freeze_block(ae, "all_but_dann")
+            layers_to_freeze = freeze.freeze_block(ae, "all_but_dann")
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "dann_with_ae":
             group = "train"
             ae.classifier.trainable = False
         elif training_strategy == "classifier_branch":
             group = "train"
-            self.freeze_block(
+            layers_to_freeze = freeze.freeze_block(
                 ae, "all_but_classifier_branch"
             )  # training only classifier branch
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "permutation_only":
             group = "train"
-            self.freeze_block(ae, "all_but_autoencoder")
+            layers_to_freeze = freeze.freeze_block(ae, "all_but_autoencoder")
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "no_dann":
             group = "train"
-            self.freeze_block(ae, "freeze_dann")
+            layers_to_freeze = freeze.freeze_block(ae, "freeze_dann")
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "no_decoder":
             group = "train"
-            self.freeze_block(ae, "freeze_dec")
+            layers_to_freeze = freeze.freeze_block(ae, "freeze_dec")
+            freeze.freeze_layers(layers_to_freeze)
 
-        print(f"use_perm = {use_perm}")
         batch_generator = batch_generator_training_permuted(
             X=X_list[group],
             y=pseudo_y_list[
@@ -1201,99 +1221,6 @@ class Workflow:
         del inp
         return history, _, clas, dann, rec
 
-    # def evaluation_pass_gpu(self,history, ae, adata_list, X_list, y_list, batch_list, clas_loss_fn, dann_loss_fn, rec_loss_fn):
-    #     '''
-    #     evaluate model and logs metrics. Depending on "on parameter, computes it on train and val or train,val and test.
-
-    #     on : "epoch_end" to evaluate on train and val, "training_end" to evaluate on train, val and "test".
-    #     '''
-    #     for group in ['train', 'val']: # evaluation round
-    #         # inp = scanpy_to_input(adata_list[group],['size_factors'])
-    #         batch_generator = batch_generator_training_permuted(X = X_list[group],
-    #                                                 y = y_list[group],
-    #                                                 batch_ID = batch_list[group],
-    #                                                 sf = adata_list[group].obs['size_factors'],
-    #                                                 ret_input_only=False,
-    #                                                 batch_size=self.batch_size,
-    #                                                 n_perm=1,
-    #                                                 use_perm=use_perm)
-    #         n_obs = adata_list[group].n_obs
-    #         steps = n_obs // self.batch_size + 1
-    #         n_steps = steps
-    #         n_samples = 0
-
-    #         clas_batch, dann_batch, rec_batch = output_batch.values()
-
-    #         with tf.GradientTape() as tape:
-    #             input_batch = {k:tf.convert_to_tensor(v) for k,v in input_batch.items()}
-    #             enc, clas, dann, rec = ae(input_batch, training=True).values()
-    #             clas_loss = tf.reduce_mean(clas_loss_fn(clas_batch, clas)).numpy()
-    #             dann_loss = tf.reduce_mean(dann_loss_fn(dann_batch, dann)).numpy()
-    #             rec_loss = tf.reduce_mean(rec_loss_fn(rec_batch, rec)).numpy()
-    #     #         return _, clas, dann, rec
-    #             history[group]['clas_loss'] += [clas_loss]
-    #             history[group]['dann_loss'] += [dann_loss]
-    #             history[group]['rec_loss'] += [rec_loss]
-    #             history[group]['total_loss'] += [self.clas_w * clas_loss + self.dann_w * dann_loss + self.rec_w * rec_loss + np.sum(ae.losses)] # using numpy to prevent memory leaks
-    #             # history[group]['total_loss'] += [tf.add_n([self.clas_w * clas_loss] + [self.dann_w * dann_loss] + [self.rec_w * rec_loss] + ae.losses).numpy()]
-
-    #             clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
-    #             for metric in self.pred_metrics_list: # only classification metrics ATM
-    #                 history[group][metric] += [self.pred_metrics_list[metric](np.asarray(y_list[group].argmax(axis=1)), clas.argmax(axis=1))] # y_list are onehot encoded
-    #     del inp
-    #     return history, _, clas, dann, rec
-
-    def freeze_layers(self, ae, layers_to_freeze):
-        """
-        Freezes specified layers in the model.
-
-        ae: Model to freeze layers in.
-        layers_to_freeze: List of layers to freeze.
-        """
-        for layer in layers_to_freeze:
-            layer.trainable = False
-
-    def freeze_block(self, ae, strategy):
-        if strategy == "all_but_classifier_branch":
-            layers_to_freeze = [
-                ae.dann_discriminator,
-                ae.enc,
-                ae.dec,
-                ae.ae_output_layer,
-            ]
-        elif strategy == "all_but_classifier":
-            layers_to_freeze = [
-                ae.dann_discriminator,
-                ae.dec,
-                ae.ae_output_layer,
-            ]
-        elif strategy == "all_but_dann_branch":
-            layers_to_freeze = [
-                ae.classifier,
-                ae.enc,
-                ae.dec,
-                ae.ae_output_layer,
-            ]
-        elif strategy == "all_but_dann":
-            layers_to_freeze = [ae.classifier, ae.dec, ae.ae_output_layer]
-        elif strategy == "all_but_autoencoder":
-            layers_to_freeze = [ae.classifier, ae.dann_discriminator]
-        elif strategy == "freeze_dann":
-            layers_to_freeze = [ae.dann_discriminator]
-        elif strategy == "freeze_dec":
-            layers_to_freeze = [ae.dec]
-        else:
-            raise ValueError("Unknown freeze strategy: " + strategy)
-
-        self.freeze_layers(ae, layers_to_freeze)
-
-    def freeze_all(self, ae):
-        for l in ae.layers:
-            l.trainable = False
-
-    def unfreeze_all(self, ae):
-        for l in ae.layers:
-            l.trainable = True
 
     def get_scheme(self):
         training_scheme = get_training_scheme(self.training_scheme, self.run_file)
@@ -1356,7 +1283,7 @@ class Workflow:
             an optimizer object
         """
         # TODO Add more optimizers
-        print(optimizer_type)
+        logger.debug(f"Optimizer type: {optimizer_type}")
         if optimizer_type == "adam":
             optimizer = tf.keras.optimizers.Adam(
                 learning_rate=learning_rate,
@@ -1384,149 +1311,3 @@ class Workflow:
                 momentum=momentum,
             )
         return optimizer
-
-
-# if __name__ == '__main__':
-#     parser = argparse.ArgumentParser()
-
-#     # parser.add_argument('--run_file', type = , default = , help ='')
-#     # parser.add_argument('--workflow_ID', type = , default = , help ='')
-#     parser.add_argument('--dataset_name', type = str, default = 'disco_ajrccm_downsampled', help ='Name of the dataset to use, should indicate a raw h5ad AnnData file')
-#     parser.add_argument('--class_key', type = str, default = 'celltype_lv2_V3', help ='Key of the class to classify')
-#     parser.add_argument('--batch_key', type = str, default = 'manip', help ='Key of the batches')
-#     parser.add_argument('--filter_min_counts', type=str2bool, nargs='?',const=True, default=True, help ='Filters genes with <1 counts')# TODO :remove, we always want to do that
-#     parser.add_argument('--normalize_size_factors', type=str2bool, nargs='?',const=True, default=True, help ='Weither to normalize dataset or not')
-#     parser.add_argument('--scale_input', type=str2bool, nargs='?',const=False, default=False, help ='Weither to scale input the count values')
-#     parser.add_argument('--logtrans_input', type=str2bool, nargs='?',const=True, default=True, help ='Weither to log transform count values')
-#     parser.add_argument('--use_hvg', type=int, nargs='?', const=10000, default=None, help = "Number of hvg to use. If no tag, don't use hvg.")
-#     # parser.add_argument('--reduce_lr', type = , default = , help ='')
-#     # parser.add_argument('--early_stop', type = , default = , help ='')
-#     parser.add_argument('--batch_size', type = int, nargs='?', default = 256, help = 'Training batch size')
-#     # parser.add_argument('--verbose', type = , default = , help ='')
-#     # parser.add_argument('--threads', type = , default = , help ='')
-#     parser.add_argument('--mode', type = str, default = 'percentage', help ='Train test split mode to be used by Dataset.train_split')
-#     parser.add_argument('--pct_split', type = float,nargs='?', default = 0.9, help ='')
-#     parser.add_argument('--obs_key', type = str,nargs='?', default = 'manip', help ='')
-#     parser.add_argument('--n_keep', type = int,nargs='?', default = 0, help ='')
-#     parser.add_argument('--split_strategy', type = str,nargs='?', default = None, help ='')
-#     parser.add_argument('--keep_obs', type = str,nargs='+',default = None, help ='')
-#     parser.add_argument('--train_test_random_seed', type = float,nargs='?', default = 0, help ='')
-#     parser.add_argument('--obs_subsample', type = str,nargs='?', default = None, help ='')
-#     parser.add_argument('--make_fake', type=str2bool, nargs='?',const=False, default=False, help ='')
-#     parser.add_argument('--true_celltype', type = str,nargs='?', default = None, help ='')
-#     parser.add_argument('--false_celltype', type = str,nargs='?', default = None, help ='')
-#     parser.add_argument('--pct_false', type = float,nargs='?', default = 0, help ='')
-#     parser.add_argument('--clas_loss_name', type = str,nargs='?', choices = ['categorical_crossentropy'], default = 'categorical_crossentropy' , help ='Loss of the classification branch')
-#     parser.add_argument('--dann_loss_name', type = str,nargs='?', choices = ['categorical_crossentropy'], default ='categorical_crossentropy', help ='Loss of the DANN branch')
-#     parser.add_argument('--rec_loss_name', type = str,nargs='?', choices = ['MSE'], default ='MSE', help ='Reconstruction loss of the autoencoder')
-#     parser.add_argument('--weight_decay', type = float,nargs='?', default = 1e-4, help ='Weight decay applied by th optimizer')
-#     parser.add_argument('--learning_rate', type = float,nargs='?', default = 0.001, help ='Starting learning rate for training')
-#     parser.add_argument('--optimizer_type', type = str, nargs='?',choices = ['adam','adamw','rmsprop'], default = 'adam' , help ='Name of the optimizer to use')
-#     parser.add_argument('--clas_w', type = float,nargs='?', default = 0.1, help ='Wight of the classification loss')
-#     parser.add_argument('--dann_w', type = float,nargs='?', default = 0.1, help ='Wight of the DANN loss')
-#     parser.add_argument('--rec_w', type = float,nargs='?', default = 0.8, help ='Wight of the reconstruction loss')
-#     parser.add_argument('--warmup_epoch', type = float,nargs='?', default = 50, help ='Number of epoch to warmup DANN')
-#     parser.add_argument('--ae_hidden_size', type = int,nargs='+', default = [128,64,128], help ='Hidden sizes of the successive ae layers')
-#     parser.add_argument('--ae_hidden_dropout', type =float, nargs='?', default = 0, help ='')
-#     parser.add_argument('--ae_activation', type = str ,nargs='?', default = 'relu' , help ='')
-#     parser.add_argument('--ae_output_activation', type = str,nargs='?', default = 'linear', help ='')
-#     parser.add_argument('--ae_init', type = str,nargs='?', default = 'glorot_uniform', help ='')
-#     parser.add_argument('--ae_batchnorm', type=str2bool, nargs='?',const=True, default=True , help ='')
-#     parser.add_argument('--ae_l1_enc_coef', type = float,nargs='?', default = 0, help ='')
-#     parser.add_argument('--ae_l2_enc_coef', type = float,nargs='?', default = 0, help ='')
-#     parser.add_argument('--class_hidden_size', type = int,nargs='+', default = [64], help ='Hidden sizes of the successive classification layers')
-#     parser.add_argument('--class_hidden_dropout', type =float, nargs='?', default = 0, help ='')
-#     parser.add_argument('--class_batchnorm', type=str2bool, nargs='?',const=True, default=True , help ='')
-#     parser.add_argument('--class_activation', type = str ,nargs='?', default = 'relu' , help ='')
-#     parser.add_argument('--class_output_activation', type = str,nargs='?', default = 'softmax', help ='')
-#     parser.add_argument('--dann_hidden_size', type = int,nargs='?', default = [64], help ='')
-#     parser.add_argument('--dann_hidden_dropout', type =float, nargs='?', default = 0, help ='')
-#     parser.add_argument('--dann_batchnorm', type=str2bool, nargs='?',const=True, default=True , help ='')
-#     parser.add_argument('--dann_activation', type = str ,nargs='?', default = 'relu' , help ='')
-#     parser.add_argument('--dann_output_activation', type = str,nargs='?', default = 'softmax', help ='')
-#     parser.add_argument('--training_scheme', type = str,nargs='?', default = 'training_scheme_1', help ='')
-#     parser.add_argument('--log_neptune', type=str2bool, nargs='?',const=True, default=True , help ='')
-#     parser.add_argument('--hparam_path', type=str, nargs='?', default=None, help ='')
-#     # parser.add_argument('--epochs', type=int, nargs='?', default=100, help ='')
-
-#     run_file = parser.parse_args()
-#     # experiment = MakeExperiment(run_file=run_file, working_dir=working_dir)
-#     # workflow = Workflow(run_file=run_file, working_dir=working_dir)
-#     print("Workflow loaded")
-#     if run_file.hparam_path:
-#         with open(run_file.hparam_path, 'r') as hparam_json:
-#             hparams = json.load(hparam_json)
-
-#     else:
-#         hparams = [ # round 1
-#             #{"name": "use_hvg", "type": "range", "bounds": [5000, 10000], "log_scale": False},
-#             {"name": "clas_w", "type": "range", "bounds": [1e-4, 1e2], "log_scale": False},
-#             {"name": "dann_w", "type": "range", "bounds": [1e-4, 1e2], "log_scale": False},
-#             {"name": "learning_rate", "type": "range", "bounds": [1e-4, 1e-2], "log_scale": True},
-#             {"name": "weight_decay", "type": "range", "bounds": [1e-8, 1e-4], "log_scale": True},
-#             {"name": "warmup_epoch", "type": "range", "bounds": [1, 50]},
-#             {"name": "dropout", "type": "range", "bounds": [0.0, 0.5]},
-#             {"name": "bottleneck", "type": "range", "bounds": [32, 64]},
-#             {"name": "layer2", "type": "range", "bounds": [64, 512]},
-#             {"name": "layer1", "type": "range", "bounds": [512, 2048]},
-
-#         ]
-
-
-#     def train_cmd(params):
-#         print(params)
-#         run_file.clas_w =  params['clas_w']
-#         run_file.dann_w = params['dann_w']
-#         run_file.rec_w =  1
-#         run_file.learning_rate = params['learning_rate']
-#         run_file.weight_decay =  params['weight_decay']
-#         run_file.warmup_epoch =  params['warmup_epoch']
-#         dropout =  params['dropout']
-#         layer1 = params['layer1']
-#         layer2 =  params['layer2']
-#         bottleneck = params['bottleneck']
-
-#         run_file.ae_hidden_size = [layer1, layer2, bottleneck, layer2, layer1]
-
-#         run_file.dann_hidden_dropout, run_file.class_hidden_dropout, run_file.ae_hidden_dropout = dropout, dropout, dropout
-
-#         cmd = ['sbatch', '--wait', '/home/simonp/dca_permuted_workflow/workflow/run_workflow_cmd.sh']
-#         for k, v in run_file.__dict__.items():
-#             cmd += ([f'--{k}'])
-#             if type(v) == list:
-#                 cmd += ([str(i) for i in v])
-#             else :
-#                 cmd += ([str(v)])
-#         print(cmd)
-#         subprocess.Popen(cmd).wait()
-#         with open(working_dir + 'mcc_res.txt', 'r') as my_file:
-#             mcc = float(my_file.read())
-#         os.remove(working_dir + 'mcc_res.txt')
-#         return mcc
-
-#     best_parameters, values, experiment, model = optimize(
-#         parameters=hparams,
-#         evaluation_function=train_cmd,
-#         objective_name='mcc',
-#         minimize=False,
-#         total_trials=50,
-#         random_seed=40,
-#     )
-
-# best_parameters, values, experiment, model = optimize(
-#     parameters=hparams,
-#     evaluation_function=workflow.make_experiment,
-#     objective_name='mcc',
-#     minimize=False,
-#     total_trials=30,
-#     random_seed=40,
-# )
-
-# print(best_parameters)
-
-
-# run_workflow_cmd.py --run_file --wd --args --params
-
-# self.workflow = Workflow(run_file=self.run_file, working_dir=self.working_dir)
-# mcc = self.workflow.make_experiment(params)
-# mcc.write('somewhere')

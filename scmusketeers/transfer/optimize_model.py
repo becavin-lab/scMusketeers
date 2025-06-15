@@ -35,7 +35,7 @@ try:
     from ..arguments.ae_param import AE_PARAM
     from ..arguments.class_param import CLASS_PARAM
     from ..arguments.dann_param import DANN_PARAM
-    from . import freeze
+    from ..tools import freeze
     from .dataset_tf import Dataset, load_dataset
     from ..tools.clust_compute import (balanced_cohen_kappa_score,
                                        balanced_f1_score,
@@ -51,7 +51,7 @@ except ImportError:
     from scmusketeers.arguments.ae_param import AE_PARAM
     from scmusketeers.arguments.class_param import CLASS_PARAM
     from scmusketeers.arguments.dann_param import DANN_PARAM
-    from scmusketeers.transfer import freeze
+    from scmusketeers.tools import freeze
     from scmusketeers.transfer.dataset_tf import Dataset, load_dataset
     from scmusketeers.tools.clust_compute import (balanced_cohen_kappa_score,
                                      balanced_f1_score,
