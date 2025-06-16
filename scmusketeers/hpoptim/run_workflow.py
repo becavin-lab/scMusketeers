@@ -51,14 +51,14 @@ def run_workflow(run_file):
     - Print/save best parameters
 
     """
-    logger.info("Create Experiment")
+    logger.info("#HP_optim--- Create Experiment")
     experiment = MakeExperiment(
         run_file=run_file,
         total_trial=TOTAL_TRIAL,
         random_seed=RANDOM_SEED
     )
 
-    logger.info("Load hyperparameters ranges")
+    logger.info("#HP_optim--- Load hyperparameters ranges")
     if not run_file.hparam_path:
         logger.debug("hp ranges: ")
         hparam_path = JSON_PATH_DEFAULT + "generic_r1.json"
@@ -78,7 +78,7 @@ def run_workflow(run_file):
     # )
 
     ### Service API
-    logger.info("Run AX Platform for hyperparameters optimization")
+    logger.info("#HP_optim--- Run AX Platform for hyperparameters optimization")
     ax_client = AxClient()
     ax_client.create_experiment(
         name="scmusketeers",
@@ -86,7 +86,7 @@ def run_workflow(run_file):
         objectives={"opt_metric": ObjectiveProperties(minimize=False)},
     )
     for i in range(TOTAL_TRIAL):
-        logger.info(f"Running trial {i}/{TOTAL_TRIAL}")
+        logger.info(f"#HP_optim--- Running trial {i}/{TOTAL_TRIAL}")
         parametrization, trial_index = ax_client.get_next_trial()
         # Local evaluation here can be replaced with deployment to external system.
         ax_client.complete_trial(
@@ -94,7 +94,7 @@ def run_workflow(run_file):
             raw_data=experiment.train(parametrization),
         )
 
-    logger.info("Hyperparam optimization finished")
+    logger.info("#HP_optim--- Hyperparam optimization finished")
     best_parameters, values = ax_client.get_best_parameters()
     logger.info(f" Best parameters {best_parameters}")
     ## TO DO : SAVE best parameters

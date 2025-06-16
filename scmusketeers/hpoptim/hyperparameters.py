@@ -651,155 +651,154 @@ class Workflow:
         running_epoch = 0
 
         for strategy, n_epochs, use_perm in training_scheme:
+            self.run_single_scheme(strategy, n_epochs, use_perm, loop_params, total_epochs)
 
-            optimizer = self.get_optimizer(
-                self.learning_rate, self.weight_decay, self.optimizer_type
-            )  # resetting optimizer state when switching strategy
+        if self.log_neptune:
+            self.run[f"training/{group}/total_epochs"] = running_epoch
+        return history
+
+
+    def run_single_scheme(self, strategy, n_epochs, use_perm, loop_params, i, total_epochs):
+        optimizer = self.get_optimizer(
+            self.learning_rate, self.weight_decay, self.optimizer_type
+        )  # resetting optimizer state when switching strategy
+        logger.debug(
+            f"##-- {strategy.upper()} - Step {i}, running {strategy} strategy with permutation = {use_perm} for {n_epochs} epochs"
+        )
+        time_in = time.time()
+        i += 1
+
+            # Early stopping for those strategies only
+        if strategy in [
+            "full_model",
+            "classifier_branch",
+            "permutation_only",
+            "encoder_classifier",
+        ]:
+            wait = 0
+            best_epoch = 0
+            patience = 20
+            min_delta = 0
+            if strategy == "permutation_only":
+                monitored = "rec_loss"
+                es_best = np.inf  # initialize early_stopping
+            else:
+                split, metric = self.opt_metric.split("-")
+                monitored = metric
+                es_best = -np.inf
+        memory = {}
+        if strategy in [
+            "warmup_dann_pseudolabels",
+            "full_model_pseudolabels",
+        ]:  # We use the pseudolabels computed with the model
+            input_tensor = {
+                k: tf.convert_to_tensor(v)
+                for k, v in scanpy_to_input(
+                    loop_params["adata_list"]["full"], ["size_factors"]
+                ).items()
+            }
+            enc, clas, dann, rec = self.dann_ae(
+                input_tensor, training=False
+            ).values()  # Model predict
+            pseudo_full = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
+            pseudo_full[
+                loop_params["adata_list"]["full"].obs["train_split"]
+                == "train",
+                :,
+            ] = loop_params["pseudo_y_list"][
+                "train"
+            ]  # the true labels
+            loop_params["pseudo_y_list"]["full"] = pseudo_full
+            for group in ["val", "test"]:
+                loop_params["pseudo_y_list"][group] = pseudo_full[
+                    loop_params["adata_list"]["full"].obs["train_split"]
+                    == group,
+                    :,
+                ]  # the predicted labels in test and val
+        elif strategy in ["warmup_dann_semisup"]:
+            memory = {}
+            memory["pseudo_full"] = loop_params["pseudo_y_list"]["full"]
+            for group in ["val", "test"]:
+                loop_params["pseudo_y_list"]["full"][
+                    loop_params["adata_list"]["full"].obs["train_split"]
+                    == group,
+                    :,
+                ] = (
+                    self.run_file.unlabeled_category
+                )  # set val and test to self.unlabeled_category
+                loop_params["pseudo_y_list"][group] = pseudo_full[
+                    loop_params["adata_list"]["full"].obs["train_split"]
+                    == group,
+                    :,
+                ]
+        else:
+            if (
+                memory
+            ):  # In case we are no longer using semi sup config, we reset to the previous known pseudolabels
+                for group in ["val", "test", "full"]:
+                    loop_params["pseudo_y_list"][group] = memory[group]
+                memory = {}
+
+        for epoch in range(1, n_epochs + 1):
+            running_epoch += 1
             logger.debug(
-                f"##-- {strategy.upper()} - Step {i}, running {strategy} strategy with permutation = {use_perm} for {n_epochs} epochs"
+                f"Epoch {running_epoch}/{total_epochs}, Current strat Epoch {epoch}/{n_epochs}"
             )
-            time_in = time.time()
-            i += 1
+            history, _, _, _, _ = self.training_loop(
+                history=history,
+                training_strategy=strategy,
+                use_perm=use_perm,
+                optimizer=optimizer,
+                **loop_params,
+            )
 
-                # Early stopping for those strategies only
+            if self.log_neptune:
+                for group in history:
+                    for par, value in history[group].items():
+                        self.run[f"training/{group}/{par}"].append(
+                            value[-1]
+                        )
+                        if physical_devices:
+                            self.run[
+                                "training/train/tf_GPU_memory"
+                            ].append(
+                                tf.config.experimental.get_memory_info(
+                                    "GPU:0"
+                                )["current"]
+                                / 1e6
+                            )
             if strategy in [
                 "full_model",
                 "classifier_branch",
                 "permutation_only",
                 "encoder_classifier",
             ]:
-                wait = 0
-                best_epoch = 0
-                patience = 20
-                min_delta = 0
-                if strategy == "permutation_only":
-                    monitored = "rec_loss"
-                    es_best = np.inf  # initialize early_stopping
+                # Early stopping
+                wait += 1
+                monitored_value = history["val"][monitored][-1]
+
+                if "loss" in monitored:
+                    if monitored_value < es_best - min_delta:
+                        best_epoch = epoch
+                        es_best = monitored_value
+                        wait = 0
+                        best_model = self.dann_ae.get_weights()
                 else:
-                    split, metric = self.opt_metric.split("-")
-                    monitored = metric
-                    es_best = -np.inf
-            memory = {}
-            if strategy in [
-                "warmup_dann_pseudolabels",
-                "full_model_pseudolabels",
-            ]:  # We use the pseudolabels computed with the model
-                input_tensor = {
-                    k: tf.convert_to_tensor(v)
-                    for k, v in scanpy_to_input(
-                        loop_params["adata_list"]["full"], ["size_factors"]
-                    ).items()
-                }
-                enc, clas, dann, rec = self.dann_ae(
-                    input_tensor, training=False
-                ).values()  # Model predict
-                pseudo_full = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
-                pseudo_full[
-                    loop_params["adata_list"]["full"].obs["train_split"]
-                    == "train",
-                    :,
-                ] = loop_params["pseudo_y_list"][
-                    "train"
-                ]  # the true labels
-                loop_params["pseudo_y_list"]["full"] = pseudo_full
-                for group in ["val", "test"]:
-                    loop_params["pseudo_y_list"][group] = pseudo_full[
-                        loop_params["adata_list"]["full"].obs["train_split"]
-                        == group,
-                        :,
-                    ]  # the predicted labels in test and val
-            elif strategy in ["warmup_dann_semisup"]:
-                memory = {}
-                memory["pseudo_full"] = loop_params["pseudo_y_list"]["full"]
-                for group in ["val", "test"]:
-                    loop_params["pseudo_y_list"]["full"][
-                        loop_params["adata_list"]["full"].obs["train_split"]
-                        == group,
-                        :,
-                    ] = (
-                        self.run_file.unlabeled_category
-                    )  # set val and test to self.unlabeled_category
-                    loop_params["pseudo_y_list"][group] = pseudo_full[
-                        loop_params["adata_list"]["full"].obs["train_split"]
-                        == group,
-                        :,
-                    ]
-            else:
-                if (
-                    memory
-                ):  # In case we are no longer using semi sup config, we reset to the previous known pseudolabels
-                    for group in ["val", "test", "full"]:
-                        loop_params["pseudo_y_list"][group] = memory[group]
-                    memory = {}
-
-            for epoch in range(1, n_epochs + 1):
-                running_epoch += 1
-                logger.debug(
-                    f"Epoch {running_epoch}/{total_epochs}, Current strat Epoch {epoch}/{n_epochs}"
-                )
-                history, _, _, _, _ = self.training_loop(
-                    history=history,
-                    training_strategy=strategy,
-                    use_perm=use_perm,
-                    optimizer=optimizer,
-                    **loop_params,
-                )
-
-                if self.log_neptune:
-                    for group in history:
-                        for par, value in history[group].items():
-                            self.run[f"training/{group}/{par}"].append(
-                                value[-1]
-                            )
-                            if physical_devices:
-                                self.run[
-                                    "training/train/tf_GPU_memory"
-                                ].append(
-                                    tf.config.experimental.get_memory_info(
-                                        "GPU:0"
-                                    )["current"]
-                                    / 1e6
-                                )
-                if strategy in [
-                    "full_model",
-                    "classifier_branch",
-                    "permutation_only",
-                    "encoder_classifier",
-                ]:
-                    # Early stopping
-                    wait += 1
-                    monitored_value = history["val"][monitored][-1]
-
-                    if "loss" in monitored:
-                        if monitored_value < es_best - min_delta:
-                            best_epoch = epoch
-                            es_best = monitored_value
-                            wait = 0
-                            best_model = self.dann_ae.get_weights()
-                    else:
-                        if monitored_value > es_best + min_delta:
-                            best_epoch = epoch
-                            es_best = monitored_value
-                            wait = 0
-                            best_model = self.dann_ae.get_weights()
-                    if wait >= patience:
-                        logger.debug(
-                            f"Early stopping at epoch {best_epoch}, restoring model parameters from this epoch"
-                        )
-                        self.dann_ae.set_weights(best_model)
-                        break
-            del optimizer
-
-            if verbose:
-                time_out = time.time()
-                logger.debug(f"Strategy duration : {time_out - time_in} s")
-        if self.log_neptune:
-            self.run[f"training/{group}/total_epochs"] = running_epoch
-        return history
-
-
-
-
+                    if monitored_value > es_best + min_delta:
+                        best_epoch = epoch
+                        es_best = monitored_value
+                        wait = 0
+                        best_model = self.dann_ae.get_weights()
+                if wait >= patience:
+                    logger.debug(
+                        f"Early stopping at epoch {best_epoch}, restoring model parameters from this epoch"
+                    )
+                    self.dann_ae.set_weights(best_model)
+                    break
+        
+        time_out = time.time()
+        logger.debug(f"Strategy {strategy}duration : {time_out - time_in} s")
+        
 
     def training_loop(
         self,
