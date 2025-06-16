@@ -110,7 +110,7 @@ def create_argparser():
         "--training_scheme",
         type=str,
         nargs="?",
-        default="training_scheme_13",
+        default="training_scheme_8",
         help="",
     )
     workflow_group.add_argument(
@@ -264,7 +264,7 @@ def create_argparser():
         "--keep_obs", type=str, nargs="+", default=None, help=""
     )
     training_group.add_argument(
-        "--train_test_random_seed", type=float, nargs="?", default=0, help=""
+        "--train_test_random_seed", type=int, nargs="?", default=0, help=""
     )
     training_group.add_argument(
         "--obs_subsample", type=str, nargs="?", default=None, help=""

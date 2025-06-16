@@ -209,7 +209,6 @@ class Dataset:
         self.obs_key = str()
         self.n_keep = int()
         self.keep_obs = str()
-        self.train_test_random_seed = float()
         self.obs_subsample = []
         self.true_celltype = str()
         self.false_celltype = str()

@@ -226,7 +226,7 @@ class Workflow:
             use_hvg=self.use_hvg,
             unlabeled_category=self.run_file.unlabeled_category,
             test_split_key=self.run_file.test_split_key,
-            train_test_random_seed=self.train_test_random_seed,
+            train_test_random_seed=self.run_file.train_test_random_seed,
         )
 
         if not "X_pca" in self.dataset.adata.obsm:

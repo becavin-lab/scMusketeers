@@ -205,7 +205,7 @@ class Workflow:
 
     def set_hyperparameters(self, params):
 
-        logger.debug(f"setting hparams {params}")
+        logger.debug(f"Setting hparams {params}")
         if "use_hvg" in params:
             self.use_hvg = params["use_hvg"]
         if "batch_size" in params:
@@ -641,32 +641,38 @@ class Workflow:
             for m in self.pred_metrics_list_balanced:
                 history[group][m] = []
 
-        # if self.log_neptune:
-        #     for group in history:
-        #         for par,val in history[group].items():
-        #             self.run[f"training/{group}/{par}"] = []
-        i = 0
-
+        
+        # Run scMusketeers one after the other
         total_epochs = np.sum([n_epochs for _, n_epochs, _ in training_scheme])
         running_epoch = 0
-
+        scheme_index = 0
         for strategy, n_epochs, use_perm in training_scheme:
-            self.run_single_scheme(strategy, n_epochs, use_perm, loop_params, total_epochs)
+            self.run_single_scheme(strategy, history, use_perm, loop_params, scheme_index, running_epoch, n_epochs, total_epochs)
 
         if self.log_neptune:
             self.run[f"training/{group}/total_epochs"] = running_epoch
         return history
 
 
-    def run_single_scheme(self, strategy, n_epochs, use_perm, loop_params, i, total_epochs):
+    def run_single_scheme(self, strategy, history, use_perm, loop_params, scheme_index, running_epoch, n_epochs, total_epochs):
+        """
+        Run the training of one scMusketeers scheme given by the varialbe strategy
+        full_model,
+        classifier_branch
+        permutation_only
+        encoder_classifier
+        warmup_dann_pseudolabels
+        full_model_pseudolabels
+        warmup_dann_semisup
+        """
         optimizer = self.get_optimizer(
             self.learning_rate, self.weight_decay, self.optimizer_type
         )  # resetting optimizer state when switching strategy
         logger.debug(
-            f"##-- {strategy.upper()} - Step {i}, running {strategy} strategy with permutation = {use_perm} for {n_epochs} epochs"
+            f"##-- {strategy.upper()} - Step {scheme_index}, running {strategy} strategy with permutation = {use_perm} for {n_epochs} epochs"
         )
         time_in = time.time()
-        i += 1
+        scheme_index += 1
 
             # Early stopping for those strategies only
         if strategy in [
