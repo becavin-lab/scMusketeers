@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger("Sc-Musketeers")
+
 def freeze_layers(layers_to_freeze):
     """
     Freezes specified layers in the model.
@@ -6,6 +9,7 @@ def freeze_layers(layers_to_freeze):
     layers_to_freeze: List of layers to freeze.
     """
     for layer in layers_to_freeze:
+        logger.info(f"Freezing layer: {layer}")
         layer.trainable = False
         if hasattr(layer, 'layers'): # If it's a nested model
             for sub_l in layer.layers:  

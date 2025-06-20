@@ -645,8 +645,18 @@ class Workflow:
             - permutation_only : trains the autoencoder with permutations, optimizing the reconstruction loss without the classifier
         use_perm : True by default except form "warmup_dann" training strategy. Note that for training strategies that don't involve the reconstruction, this parameter has no impact on training
         """
-
-        freeze.unfreeze_all(ae)  # resetting freeze state
+        trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
+        logger.debug(f"Before unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
+        for i, var in enumerate(trainable_unfrozen_variables):
+            logger.debug(f"  Before Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
+        
+        
+        #freeze.unfreeze_all(ae)  # resetting freeze state
+        trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
+        logger.debug(f"After unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
+        for i, var in enumerate(trainable_unfrozen_variables):
+            logger.debug(f"  After Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
+       
         if training_strategy == "full_model":
             group = "train"
         elif training_strategy == "full_model_pseudolabels":
@@ -658,7 +668,7 @@ class Workflow:
         ]:
             group = "full"  # semi-supervised setting
             layers_to_freeze = freeze.freeze_block(ae, "warmup_dann")
-            freeze.freeze_layers(layers_to_freeze)
+            # freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "warmup_dann_train":
             group = "train"  # semi-supervised setting
             layers_to_freeze = freeze.freeze_block(ae, "warmup_dann")
@@ -676,7 +686,7 @@ class Workflow:
             layers_to_freeze = freeze.freeze_block(
                 ae, "all_but_classifier_branch"
             )  # training only classifier branch
-            freeze.freeze_layers(layers_to_freeze)
+            # freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "permutation_only":
             group = "train"
             layers_to_freeze = freeze.freeze_block(ae, "all_but_autoencoder")
@@ -704,7 +714,6 @@ class Workflow:
             unlabeled_category=self.run_file.unlabeled_category,  # Those cells are matched with themselves during AE training
             use_perm=use_perm,
         )
-        logger.debug(f"{batch_generator}")
         n_obs = adata_list[group].n_obs
         steps = n_obs // self.batch_size + 1
         n_steps = steps
@@ -781,51 +790,59 @@ class Workflow:
         clas_batch, dann_batch, rec_batch = output_batch.values()
 
         trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
-
+        """
         logger.debug(f"Expected unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
         for i, var in enumerate(trainable_unfrozen_variables):
             logger.debug(f"  Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
         logger.debug(f"\n--- List of unfrozen trainable variables being checked ({len(trainable_unfrozen_variables)}): ---")
         for i, var in enumerate(trainable_unfrozen_variables):
             logger.debug(f"  [{i}] Var: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}")
-        
+         """
 
         # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
         with tf.GradientTape(persistent=True) as tape:
             # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
+            if training_strategy == "classifier_branch":
+                for i, var in enumerate(ae.classifier.trainable_variables): 
+                    if isinstance(var, tf.Variable):
+                        logger.debug(f"  Unfrozen Var {i}: {var.name}, Shape: {var.shape}")
+                        tape.watch(var)
+
 
             input_batch_new = dict()
             for k, v in input_batch.items():
-                print(f"input-batch {k} {type(v)}")
                 input_batch_new[k] = tf.convert_to_tensor(v)
-            
             input_batch = input_batch_new
             # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
 
-            enc, clas, dann, rec = ae(input_batch, training=True).values()
+            enc_layer, class_out, dann_out, rec_out = ae(input_batch, training=True).values()
             # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
-
-            logger.debug(f"batch: {clas_batch}")
-            logger.debug(f"clas: {clas}")
             
 
-            clas_loss = tf.reduce_mean(clas_loss_fn(clas_batch, clas))
-            dann_loss = tf.reduce_mean(dann_loss_fn(dann_batch, dann))
-            rec_loss = tf.reduce_mean(rec_loss_fn(rec_batch, rec))
+            class_loss = tf.reduce_mean(clas_loss_fn(clas_batch, class_out))
+            dann_loss = tf.reduce_mean(dann_loss_fn(dann_batch, dann_out))
+            rec_loss = tf.reduce_mean(rec_loss_fn(rec_batch, rec_out))
+
+            logger.debug(f"class loss: {class_loss}")
+            logger.debug(f"dann_loss loss: {dann_loss}")
+            logger.debug(f"rec_loss loss: {rec_loss}")
+            logger.debug(f"ae losses {ae.losses}")
 
             if training_strategy == "full_model":
                 loss = tf.add_n(
-                    [self.run_file.clas_w * clas_loss]
+                    [self.run_file.clas_w * class_loss]
                     + [self.run_file.dann_w * dann_loss]
                     + [self.run_file.rec_w * rec_loss]
                     + ae.losses
                 )
+                logger.debug(f"ae losses {len(ae.losses)} {ae.losses}")
             elif training_strategy == "warmup_dann":
                 loss = tf.add_n(
                     [self.run_file.dann_w * dann_loss]
                     + [self.run_file.rec_w * rec_loss]
                     + ae.losses
                 )
+                logger.debug(f"ae losses {len(ae.losses)} {ae.losses}")
             elif training_strategy == "warmup_dann_no_rec":
                 loss = tf.add_n([self.run_file.dann_w * dann_loss] + ae.losses)
             elif training_strategy == "dann_with_ae":
@@ -835,19 +852,21 @@ class Workflow:
                     + ae.losses
                 )
             elif training_strategy == "classifier_branch":
-                loss = tf.add_n([self.run_file.clas_w * clas_loss] + ae.losses)
+                logger.debug(f"Init clas_loss {class_loss}")
+                loss = tf.add_n([self.run_file.clas_w * class_loss] + ae.losses)
+                logger.debug(f"ae losses {len(ae.losses)} {ae.losses}")
             elif training_strategy == "permutation_only":
                 loss = tf.add_n([self.run_file.rec_w * rec_loss] + ae.losses)
             elif training_strategy == "no_dann":
                 loss = tf.add_n(
                     [self.run_file.rec_w * rec_loss]
-                    + [self.run_file.clas_w * clas_loss]
+                    + [self.run_file.clas_w * class_loss]
                     + ae.losses
                 )
             elif training_strategy == "no_decoder":
                 loss = tf.add_n(
                     [self.run_file.dann_w * dann_loss]
-                    + [self.run_file.clas_w * clas_loss]
+                    + [self.run_file.clas_w * class_loss]
                     + ae.losses
                 )
 
@@ -859,16 +878,23 @@ class Workflow:
                     logger.debug(f"DANN Loss: {dann_loss.numpy() if hasattr(dann_loss, 'numpy') else dann_loss}") # Even if not used in this scheme, helps confirm its value
                     logger.debug(f"Reconstruction Loss: {rec_loss.numpy() if hasattr(rec_loss, 'numpy') else rec_loss}") # Even if not used in this scheme
         """
-        
-        logger.debug(f"Loss DType: {loss.dtype}")
-        logger.debug(f"Loss value: {loss}")
+        # After classifier output
+        logger.debug(f"Classifier output (clas_out) norm: {tf.norm(class_out)}")
+
+        # After loss calculation
+        logger.debug(f"Classification Loss norm: {tf.norm(class_loss)}")
+
+        # After loss calculation
+        logger.debug(f"Total Loss norm: {tf.norm(loss)}")
 
         # --- Debugging Gradients for Individual Loss Components ---
         # Gradients for Classifier branch wrt unfrozen vars (mainly encoder/classifier)
-        clas_grads = tape.gradient(clas_loss, trainable_unfrozen_variables)
+        class_grads = tape.gradient(class_loss, trainable_unfrozen_variables)
         logger.debug("\n--- Gradients from CLASSIFICATION LOSS ---")
-        for grad, var in zip(clas_grads, trainable_unfrozen_variables):
-            logger.debug(f"  - Var: {var.name}, Grad: {'None' if grad is None else 'OK (shape: '+str(grad.shape)+')'}")
+        for grad, var in zip(class_grads, trainable_unfrozen_variables):
+            if "classifier" in var.name: # Only focus on classifier variables
+                grad_status = 'None' if grad is None else f'OK (norm: {tf.norm(grad):.4f})'
+                logger.debug(f"  - Var: {var.name}, Shape: {var.shape}, Grad: {grad_status}")
 
         # Gradients for DANN branch wrt unfrozen vars (mainly encoder)
         dann_grads = tape.gradient(dann_loss, trainable_unfrozen_variables)
@@ -883,13 +909,13 @@ class Workflow:
         logger.debug("\n--- Gradients from RECONSTRUCTION LOSS ---")
         for grad, var in zip(rec_grads, trainable_unfrozen_variables):
             logger.debug(f"  - Var: {var.name}, Grad: {'None' if grad is None else 'OK (shape: '+str(grad.shape)+')'}")
-
+       
         # --- Main Gradients for the Total Loss ---
         gradients = tape.gradient(loss, ae.trainable_variables) # Request only for unfrozen
-        logger.debug("\n--- Gradients from TOTAL LOSS ---")
+        """ logger.debug("\n--- Gradients from TOTAL LOSS ---")
         for grad, var in zip(gradients, trainable_unfrozen_variables):
             logger.debug(f"  - Var: {var.name}, Grad: {'None' if grad is None else 'OK (shape: '+str(grad.shape)+')'}")
-
+        """
         del tape # Don't forget to delete persistent tape
         """ logger.debug("Variables being watched by tape:")
         for var in ae.trainable_variables:
@@ -901,7 +927,7 @@ class Workflow:
 
         # print(f"loss {asizeof.asizeof(loss)}")
         # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
-        n_samples += enc.shape[0]
+        n_samples += enc_layer.shape[0]
         # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
         """ logger.debug(f"{training_strategy}")
         logger.debug(f"AE trainable var: {type(ae.trainable_variables)}")
@@ -946,7 +972,7 @@ class Workflow:
         # print(f"optimizer {asizeof.asizeof(optimizer)}")
         # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
         self.mean_loss_fn(loss.__float__())
-        self.mean_clas_loss_fn(clas_loss.__float__())
+        self.mean_clas_loss_fn(class_loss.__float__())
         self.mean_dann_loss_fn(dann_loss.__float__())
         self.mean_rec_loss_fn(rec_loss.__float__())
 

@@ -385,6 +385,7 @@ class Classif_Autoencoder(Autoencoder):
             output_activation=class_output_activation,
             name="Classifier",
         )
+        
 
     def call(self, inputs, training=None):
         if isinstance(inputs, dict):
@@ -399,13 +400,13 @@ class Classif_Autoencoder(Autoencoder):
 
         enc_layer = self.enc(Z, training=training)
         dec_layer = self.dec(enc_layer, training=training)
-        clas_out = self.classifier(enc_layer, training=training)
+        class_out = self.classifier(enc_layer, training=training)
         mean = self.ae_output_layer(dec_layer)
-        out = ColwiseMultLayer([mean, sf_layer])
+        rec_out = ColwiseMultLayer([mean, sf_layer])
         return {
             "bottleneck": enc_layer,
-            "classifier": clas_out,
-            "reconstruction": out,
+            "classifier": class_out,
+            "reconstruction": rec_out,
         }
 
 
@@ -453,17 +454,17 @@ class DANN_AE(Classif_Autoencoder):
             
         enc_layer = self.enc(Z, training=training)
         dec_layer = self.dec(enc_layer, training=training)
-        clas_out = self.classifier(enc_layer, training=training)
+        class_out = self.classifier(enc_layer, training=training)
         dann_out = self.dann_discriminator(
             self.grad_reverse(enc_layer), training=training
         )
         mean = self.ae_output_layer(dec_layer)
-        out = ColwiseMultLayer([mean, sf_layer])
+        rec_out = ColwiseMultLayer([mean, sf_layer])
         return {
             "bottleneck": enc_layer,
-            "classifier": clas_out,
+            "classifier": class_out,
             "batch_discriminator": dann_out,
-            "reconstruction": out,
+            "reconstruction": rec_out,
         }
 
     # def build_graph(
