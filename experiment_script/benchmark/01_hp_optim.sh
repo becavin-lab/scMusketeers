@@ -17,7 +17,7 @@ working_dir="/workspace/cell/scMusketeers"
 out_dir=${working_dir}"/experiment_script/results"
 python_path=${working_dir}"/scmusketeers/__main__.py"
 data_path=${working_dir}"/data"
-hparam_path=${working_dir}"/experiment_script/hp_ranges/generic_r1.json"
+hparam_path=${working_dir}"/experiment_script/hp_ranges/generic_r1_debug.json"
 
 
 # Read dataset json to get h5ad path

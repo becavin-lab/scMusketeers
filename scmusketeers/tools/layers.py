@@ -5,7 +5,7 @@
 
 # from keras.engine.base_layer import InputSpec
 import tensorflow as tf
-from keras import backend as K
+## from keras import backend as K
 
 # from keras.engine.topology import Layer
 from keras.layers import Dense, Lambda
@@ -16,8 +16,8 @@ ColwiseMultLayer = Lambda(
 )
 
 
-def reverse_gradient(X, hp_lambda):
-    """Flips the sign of the incoming gradient during training."""
+""" def reverse_gradient(X, hp_lambda):
+    # Flips the sign of the incoming gradient during training.
     try:
         reverse_gradient.num_calls += 1
     except AttributeError:
@@ -34,7 +34,7 @@ def reverse_gradient(X, hp_lambda):
         y = tf.identity(X)
 
     return y
-
+ """
 
 @tf.custom_gradient
 def grad_reverse(x):

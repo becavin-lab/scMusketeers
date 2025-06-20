@@ -38,6 +38,7 @@ try:
     from ..arguments.dann_param import DANN_PARAM
     from ..tools import freeze
     from .dataset_tf import Dataset, load_dataset
+    from ..tools.training_scheme import get_training_scheme
     from ..tools.clust_compute import (balanced_cohen_kappa_score,
                                        balanced_f1_score,
                                        balanced_matthews_corrcoef,
@@ -53,6 +54,7 @@ except ImportError:
     from scmusketeers.arguments.class_param import CLASS_PARAM
     from scmusketeers.arguments.dann_param import DANN_PARAM
     from scmusketeers.tools import freeze
+    from scmusketeers.tools.training_scheme import get_training_scheme
     from scmusketeers.transfer.dataset_tf import Dataset, load_dataset
     from scmusketeers.tools.clust_compute import (balanced_cohen_kappa_score,
                                      balanced_f1_score,
@@ -390,7 +392,7 @@ class Workflow:
         self.rec_loss_fn, self.clas_loss_fn, self.dann_loss_fn = (
             self.get_losses(y_list)
         )  # redundant
-        training_scheme = self.get_scheme()
+        training_scheme = get_training_scheme(self.run_file.training_scheme, self.run_file)
         start_time = time.time()
 
         # Training
@@ -699,6 +701,7 @@ class Workflow:
             unlabeled_category=self.run_file.unlabeled_category,  # Those cells are matched with themselves during AE training
             use_perm=use_perm,
         )
+        logger.debug(f"{batch_generator}")
         n_obs = adata_list[group].n_obs
         steps = n_obs // self.batch_size + 1
         n_steps = steps
@@ -773,21 +776,41 @@ class Workflow:
         # print(f"input {type(input_batch)}")
         # X_batch, sf_batch = input_batch.values()
         clas_batch, dann_batch, rec_batch = output_batch.values()
+
+        trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
+
+        """        logger.debug(f"Expected unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
+                for i, var in enumerate(trainable_unfrozen_variables):
+                    logger.debug(f"  Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
+                logger.debug(f"\n--- List of unfrozen trainable variables being checked ({len(trainable_unfrozen_variables)}): ---")
+                for i, var in enumerate(trainable_unfrozen_variables):
+                    logger.debug(f"  [{i}] Var: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}")
+        """
+
+
         # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
-        with tf.GradientTape() as tape:
+        with tf.GradientTape(persistent=True) as tape:
             # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
 
-            input_batch = {
-                k: tf.convert_to_tensor(v) for k, v in input_batch.items()
-            }
+            input_batch_new = dict()
+            for k, v in input_batch.items():
+                print(f"input-batch {k} {type(v)}")
+                input_batch_new[k] = tf.convert_to_tensor(v)
+            
+            input_batch = input_batch_new
             # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
 
             enc, clas, dann, rec = ae(input_batch, training=True).values()
             # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
 
+            logger.debug(f"batch: {clas_batch}")
+            logger.debug(f"clas: {clas}")
+            
+
             clas_loss = tf.reduce_mean(clas_loss_fn(clas_batch, clas))
             dann_loss = tf.reduce_mean(dann_loss_fn(dann_batch, dann))
             rec_loss = tf.reduce_mean(rec_loss_fn(rec_batch, rec))
+
             if training_strategy == "full_model":
                 loss = tf.add_n(
                     [self.run_file.clas_w * clas_loss]
@@ -815,24 +838,108 @@ class Workflow:
                 loss = tf.add_n([self.run_file.rec_w * rec_loss] + ae.losses)
             elif training_strategy == "no_dann":
                 loss = tf.add_n(
-                    [self.rec_w * rec_loss]
-                    + [self.clas_w * clas_loss]
+                    [self.run_file.rec_w * rec_loss]
+                    + [self.run_file.clas_w * clas_loss]
                     + ae.losses
                 )
             elif training_strategy == "no_decoder":
                 loss = tf.add_n(
-                    [self.dann_w * dann_loss]
-                    + [self.clas_w * clas_loss]
+                    [self.run_file.dann_w * dann_loss]
+                    + [self.run_file.clas_w * clas_loss]
                     + ae.losses
                 )
+
+            
+        """             logger.debug(f"Current training strategy: {training_strategy}")
+                    logger.debug(f"Classification Weight (clas_w): {self.run_file.clas_w}") # Add this!
+                    logger.debug(f"Loss value: {loss.numpy() if hasattr(loss, 'numpy') else loss}")
+                    logger.debug(f"Classification Loss: {clas_loss.numpy() if hasattr(clas_loss, 'numpy') else clas_loss}")
+                    logger.debug(f"DANN Loss: {dann_loss.numpy() if hasattr(dann_loss, 'numpy') else dann_loss}") # Even if not used in this scheme, helps confirm its value
+                    logger.debug(f"Reconstruction Loss: {rec_loss.numpy() if hasattr(rec_loss, 'numpy') else rec_loss}") # Even if not used in this scheme
+        """
+        
+        logger.debug(f"Loss DType: {loss.dtype}")
+        logger.debug(f"Loss value: {loss}")
+
+        # --- Debugging Gradients for Individual Loss Components ---
+        # Gradients for Classifier branch wrt unfrozen vars (mainly encoder/classifier)
+        clas_grads = tape.gradient(clas_loss, trainable_unfrozen_variables)
+        logger.debug("\n--- Gradients from CLASSIFICATION LOSS ---")
+        for grad, var in zip(clas_grads, trainable_unfrozen_variables):
+            logger.debug(f"  - Var: {var.name}, Grad: {'None' if grad is None else 'OK (shape: '+str(grad.shape)+')'}")
+
+        # Gradients for DANN branch wrt unfrozen vars (mainly encoder)
+        dann_grads = tape.gradient(dann_loss, trainable_unfrozen_variables)
+        logger.debug("\n--- Gradients from DANN LOSS ---")
+        for grad, var in zip(dann_grads, trainable_unfrozen_variables):
+            logger.debug(f"  - Var: {var.name}, Grad: {'None' if grad is None else 'OK (shape: '+str(grad.shape)+')'}")
+
+        # Gradients for Reconstruction branch wrt unfrozen vars (mainly encoder)
+        # Note: If rec_loss is based on a frozen decoder, you'll still get None for decoder weights,
+        # but we care about encoder weights if they contribute to reconstruction.
+        rec_grads = tape.gradient(rec_loss, trainable_unfrozen_variables)
+        logger.debug("\n--- Gradients from RECONSTRUCTION LOSS ---")
+        for grad, var in zip(rec_grads, trainable_unfrozen_variables):
+            logger.debug(f"  - Var: {var.name}, Grad: {'None' if grad is None else 'OK (shape: '+str(grad.shape)+')'}")
+
+        # --- Main Gradients for the Total Loss ---
+        gradients = tape.gradient(loss, ae.trainable_variables) # Request only for unfrozen
+        logger.debug("\n--- Gradients from TOTAL LOSS ---")
+        for grad, var in zip(gradients, trainable_unfrozen_variables):
+            logger.debug(f"  - Var: {var.name}, Grad: {'None' if grad is None else 'OK (shape: '+str(grad.shape)+')'}")
+
+        del tape # Don't forget to delete persistent tape
+        """ logger.debug("Variables being watched by tape:")
+        for var in ae.trainable_variables:
+            logger.debug(f"  - {var.name}, Trainable: {var.trainable}")
+            # Explicitly check if the tape is watching this variable
+            if not tape.watched_variables(): # This method is available in newer TF versions
+                # Alternatively, you can conceptually confirm it's being used inside the tape scope
+                pass """
+
         # print(f"loss {asizeof.asizeof(loss)}")
         # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
         n_samples += enc.shape[0]
         # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
-        gradients = tape.gradient(loss, ae.trainable_variables)
+        """ logger.debug(f"{training_strategy}")
+        logger.debug(f"AE trainable var: {type(ae.trainable_variables)}")
+        logger.debug(f"AE trainable var: {len(ae.trainable_variables)}")
+        logger.debug(f"Loss: {type(loss)}")
+        logger.debug(f"Loss: {loss}") """
+        #gradients = tape.gradient(loss, ae.trainable_variables)
+        """ logger.debug(f"gradient: {type(gradients)}")
+        logger.debug(f"gradient: {len(gradients)}")
+        logger.debug(f"Loss tensor device: {loss.device}")
+        logger.debug("Checking variable devices before gradient calculation:") """
+         
         # print(f"gradients {asizeof.asizeof(gradients)}")
         # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
+        """ for grad, var in zip(gradients, ae.trainable_variables):
+            logger.debug(f"Variable: {var.name}, Device: {var}")
+            if grad is None:
+                print("  - Gradient: None! (No path from loss to this variable)")
+                continue # Skip to the next gradient
 
+            # Check if the gradient is sparse or dense
+            if isinstance(grad, tf.IndexedSlices):
+                print("  - Type: tf.IndexedSlices (Sparse Gradient)")
+                print(f"  - Gradient Values Shape: {grad.values.shape}")
+                print(f"  - Gradient Indices Shape: {grad.indices.shape}")
+                print(f"  - Full Variable Dense Shape: {grad.dense_shape}")
+            else: # It's a tf.Tensor
+                print("  - Type: tf.Tensor (Dense Gradient)")
+                print(f"  - Gradient Shape: {grad.shape}")
+                print(f"  - Gradient DType: {grad.dtype}") """
+
+#        logger.debug(f"Loss type: {type(loss)}, device: {loss.device}, dtype: {loss.dtype}")
+#       logger.debug(f"First variable to check: {ae.trainable_variables[0].name}, type: {type(ae.trainable_variables[0])},  dtype: {ae.trainable_variables[0].dtype}")
+#        logger.debug(f"First variable to check: {ae.trainable_variables[0].name}, type: {type(ae.trainable_variables[0])}, device: {ae.trainable_variables[0].device}, dtype: {ae.trainable_variables[0].dtype}")
+        """ logger.debug(f"Length variables: {len(tape.watched_variables())} - {len(ae.trainable_variables)}")
+        if len(tape.watched_variables()) != len(ae.trainable_variables):
+            for var in tape.watched_variables():
+                logger.debug(f"Watched var: {var.name}")
+            for grad, var in zip(gradients, ae.trainable_variables):
+                logger.debug(f"Variable: {var.name}") """
         optimizer.apply_gradients(zip(gradients, ae.trainable_variables))
         # print(f"optimizer {asizeof.asizeof(optimizer)}")
         # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
@@ -873,266 +980,58 @@ class Workflow:
         """
         for group in ["train", "val"]:  # evaluation round
             inp = scanpy_to_input(adata_list[group], ["size_factors"])
-            with tf.device("CPU"):
-                inp = {k: tf.convert_to_tensor(v) for k, v in inp.items()}
-                _, clas, dann, rec = ae(inp, training=False).values()
+            inp = {k: tf.convert_to_tensor(v) for k, v in inp.items()}
+            _, clas, dann, rec = ae(inp, training=False).values()
+        
+            #         return _, clas, dann, rec
+            clas_loss = tf.reduce_mean(
+                clas_loss_fn(y_list[group], clas)
+            ).numpy()
+            history[group]["clas_loss"] += [clas_loss]
+            dann_loss = tf.reduce_mean(
+                dann_loss_fn(batch_list[group], dann)
+            ).numpy()
+            history[group]["dann_loss"] += [dann_loss]
+            rec_loss = tf.reduce_mean(
+                rec_loss_fn(X_list[group], rec)
+            ).numpy()
+            history[group]["rec_loss"] += [rec_loss]
+            history[group]["total_loss"] += [
+                self.clas_w * clas_loss
+                + self.dann_w * dann_loss
+                + self.rec_w * rec_loss
+                + np.sum(ae.losses)
+            ]  # using numpy to prevent memory leaks
+            # history[group]['total_loss'] += [tf.add_n([self.clas_w * clas_loss] + [self.dann_w * dann_loss] + [self.rec_w * rec_loss] + ae.losses).numpy()]
 
-                #         return _, clas, dann, rec
-                clas_loss = tf.reduce_mean(
-                    clas_loss_fn(y_list[group], clas)
-                ).numpy()
-                history[group]["clas_loss"] += [clas_loss]
-                dann_loss = tf.reduce_mean(
-                    dann_loss_fn(batch_list[group], dann)
-                ).numpy()
-                history[group]["dann_loss"] += [dann_loss]
-                rec_loss = tf.reduce_mean(
-                    rec_loss_fn(X_list[group], rec)
-                ).numpy()
-                history[group]["rec_loss"] += [rec_loss]
-                history[group]["total_loss"] += [
-                    self.clas_w * clas_loss
-                    + self.dann_w * dann_loss
-                    + self.rec_w * rec_loss
-                    + np.sum(ae.losses)
-                ]  # using numpy to prevent memory leaks
-                # history[group]['total_loss'] += [tf.add_n([self.clas_w * clas_loss] + [self.dann_w * dann_loss] + [self.rec_w * rec_loss] + ae.losses).numpy()]
-
-                clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
-                for (
-                    metric
-                ) in PRED_METRICS_LIST:  # only classification metrics ATM
-                    history[group][metric] += [
-                        PRED_METRICS_LIST[metric](
-                            np.asarray(y_list[group].argmax(axis=1)).reshape(
-                                -1,
-                            ),
-                            clas.argmax(axis=1),
-                        )
-                    ]  # y_list are onehot encoded
-                for (
-                    metric
-                ) in (
-                    PRED_METRICS_LIST_BALANCED
-                ):  # only classification metrics ATM
-                    history[group][metric] += [
-                        PRED_METRICS_LIST_BALANCED[metric](
-                            np.asarray(y_list[group].argmax(axis=1)).reshape(
-                                -1,
-                            ),
-                            clas.argmax(axis=1),
-                        )
-                    ]  # y_list are onehot encoded
+            clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
+            for (
+                metric
+            ) in PRED_METRICS_LIST:  # only classification metrics ATM
+                history[group][metric] += [
+                    PRED_METRICS_LIST[metric](
+                        np.asarray(y_list[group].argmax(axis=1)).reshape(
+                            -1,
+                        ),
+                        clas.argmax(axis=1),
+                    )
+                ]  # y_list are onehot encoded
+            for (
+                metric
+            ) in (
+                PRED_METRICS_LIST_BALANCED
+            ):  # only classification metrics ATM
+                history[group][metric] += [
+                    PRED_METRICS_LIST_BALANCED[metric](
+                        np.asarray(y_list[group].argmax(axis=1)).reshape(
+                            -1,
+                        ),
+                        clas.argmax(axis=1),
+                    )
+                ]  # y_list are onehot encoded
         del inp
         return history, _, clas, dann, rec
 
-    def get_scheme(self):
-        print(
-            f"Training scheme : {self.training_scheme}, warmup {self.run_file.warmup_epoch}"
-        )
-        if self.training_scheme == "training_scheme_1":
-            training_scheme = [
-                ("warmup_dann", self.run_file.warmup_epoch, False),
-                ("full_model", self.run_file.fullmodel_epoch, True),
-            ]  # This will end with a callback
-        if self.training_scheme == "training_scheme_2":
-            training_scheme = [
-                ("warmup_dann_no_rec", self.run_file.warmup_epoch, False),
-                ("full_model", self.run_file.fullmodel_epoch, True),
-            ]  # This will end with a callback
-        if self.training_scheme == "training_scheme_3":
-            training_scheme = [
-                ("warmup_dann", self.run_file.warmup_epoch, False),
-                ("full_model", self.run_file.fullmodel_epoch, True),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]  # This will end with a callback
-        if self.training_scheme == "training_scheme_4":
-            training_scheme = [
-                ("warmup_dann", self.run_file.warmup_epoch, False),
-                (
-                    "permutation_only",
-                    100,
-                    True,
-                ),  # This will end with a callback
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]  # This will end with a callback
-        if self.training_scheme == "training_scheme_5":
-            training_scheme = [
-                ("warmup_dann", self.run_file.warmup_epoch, False),
-                ("full_model", self.run_file.fullmodel_epoch, False),
-            ]  # This will end with a callback, NO PERMUTATION HERE
-        if self.training_scheme == "training_scheme_6":
-            training_scheme = [
-                (
-                    "warmup_dann",
-                    self.run_file.warmup_epoch,
-                    True,
-                ),  # Permutating with pseudo labels during warmup
-                ("full_model", self.run_file.fullmodel_epoch, True),
-            ]
-
-        if self.training_scheme == "training_scheme_7":
-            training_scheme = [
-                (
-                    "warmup_dann",
-                    self.run_file.warmup_epoch,
-                    True,
-                ),  # Permutating with pseudo labels during warmup
-                ("full_model", self.run_file.fullmodel_epoch, False),
-            ]
-
-        if self.training_scheme == "training_scheme_8":
-            training_scheme = [
-                (
-                    "warmup_dann",
-                    self.run_file.warmup_epoch,
-                    True,
-                ),  # Permutating with pseudo labels during warmup
-                ("full_model", self.run_file.fullmodel_epoch, False),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]  # This will end with a callback]
-
-        if self.training_scheme == "training_scheme_9":
-            training_scheme = [
-                ("warmup_dann", self.run_file.warmup_epoch, False),
-                ("full_model", self.run_file.fullmodel_epoch, True),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]  # This will end with a callback]
-
-        if self.training_scheme == "training_scheme_10":
-            training_scheme = [
-                (
-                    "warmup_dann",
-                    self.run_file.warmup_epoch,
-                    True,
-                ),  # Permutating with pseudo labels during warmup
-                ("full_model", self.run_file.fullmodel_epoch, False),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-                (
-                    "warmup_dann_pseudolabels",
-                    self.run_file.warmup_epoch,
-                    True,
-                ),  # Permutating with pseudo labels from the current model state
-                ("full_model", self.run_file.fullmodel_epoch, False),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]  # This will end with a callback
-
-        if self.training_scheme == "training_scheme_11":
-            training_scheme = [
-                (
-                    "warmup_dann",
-                    self.run_file.warmup_epoch,
-                    True,
-                ),  # Permutating with pseudo labels during warmup
-                ("full_model", self.run_file.fullmodel_epoch, False),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-                (
-                    "full_model_pseudolabels",
-                    100,
-                    True,
-                ),  # using permutations on plabels for full training
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]  # This will end with a callback
-
-        if self.training_scheme == "training_scheme_12":
-            training_scheme = [
-                (
-                    "permutation_only",
-                    self.run_file.warmup_epoch,
-                    True,
-                ),  # Permutating with pseudo labels during warmup
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]
-
-        if self.training_scheme == "training_scheme_13":
-            training_scheme = [
-                ("full_model", self.run_file.fullmodel_epoch, True),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]
-
-        if self.training_scheme == "training_scheme_14":
-            training_scheme = [
-                ("full_model", self.run_file.fullmodel_epoch, False),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]
-
-        if self.training_scheme == "training_scheme_15":
-            training_scheme = [
-                ("warmup_dann_train", self.run_file.warmup_epoch, True),
-                ("full_model", self.run_file.fullmodel_epoch, False),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]
-
-        if self.training_scheme == "training_scheme_16":
-            training_scheme = [
-                ("warmup_dann", self.run_file.warmup_epoch, True),
-                ("full_model", self.run_file.fullmodel_epoch, True),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]
-
-        if self.training_scheme == "training_scheme_17":
-            training_scheme = [
-                ("no_dann", self.run_file.fullmodel_epoch, True),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]
-
-        if self.training_scheme == "training_scheme_18":
-            training_scheme = [
-                ("no_dann", self.run_file.fullmodel_epoch, False),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]
-
-        if self.training_scheme == "training_scheme_19":
-            training_scheme = [
-                (
-                    "warmup_dann",
-                    self.run_file.warmup_epoch,
-                    False,
-                ),  # Permutating with pseudo labels during warmup
-                ("full_model", self.run_file.fullmodel_epoch, False),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]
-
-        if self.training_scheme == "training_scheme_20":
-            training_scheme = [
-                (
-                    "warmup_dann_semisup",
-                    self.run_file.warmup_epoch,
-                    True,
-                ),  # Permutating in semisup fashion ie unknown cells reconstruc themselves
-                ("full_model", self.run_file.fullmodel_epoch, False),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]
-
-        if self.training_scheme == "training_scheme_21":
-            training_scheme = [
-                ("warmup_dann", self.run_file.warmup_epoch, False),
-                ("no_dann", 100, False),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]
-
-        if self.training_scheme == "training_scheme_22":
-            training_scheme = [
-                ("permutation_only", self.run_file.warmup_epoch, True),
-                ("warmup_dann", self.run_file.warmup_epoch, True),
-                ("full_model", self.run_file.fullmodel_epoch, False),
-                ("classifier_branch", self.run_file.classifier_epoch, False),
-            ]
-
-        if self.training_scheme == "training_scheme_23":
-            training_scheme = [("full_model", 100, True)]
-
-        if self.training_scheme == "training_scheme_24":
-            training_scheme = [
-                ("full_model", self.run_file.fullmodel_epoch, False),
-            ]
-
-        if self.training_scheme == "training_scheme_25":
-            training_scheme = [
-                ("no_decoder", 100, False),
-            ]
-
-        return training_scheme
 
     def get_losses(self, y_list):
         if self.rec_loss_name == "MSE":
@@ -1151,13 +1050,12 @@ class Workflow:
         if self.clas_loss_name == "categorical_crossentropy":
             self.clas_loss_fn = tf.keras.losses.categorical_crossentropy
         elif self.clas_loss_name == "categorical_focal_crossentropy":
-
             self.clas_loss_fn = tf.keras.losses.CategoricalFocalCrossentropy(
                 alpha=class_weights, gamma=3
             )
         else:
             print(self.clas_loss_name + " loss not supported for classif")
-
+        logger.debug(f"Class loss fn: {type(self.clas_loss_fn)}")
         if self.dann_loss_name == "categorical_crossentropy":
             self.dann_loss_fn = tf.keras.losses.categorical_crossentropy
         else:

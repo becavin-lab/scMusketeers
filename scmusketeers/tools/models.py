@@ -332,16 +332,16 @@ class Autoencoder(keras.Model):
         super().build(batch_input_size)
 
     def call(self, inputs, training=None):
-        if (
-            type(inputs) != dict
-        ):  # In this case, inputs is only the count matrix
-            Z = inputs
-            sf_layer = np.array([1.0] * inputs.shape[-1]).astype(
-                float
-            )  # TODO : this doesn't work currently
-        else:
+        if isinstance(inputs, dict):
             Z = inputs["counts"]
             sf_layer = inputs["size_factors"]
+            if sf_layer.shape.ndims == 1:
+                sf_layer = tf.expand_dims(sf_layer, axis=-1)
+        else:
+            Z = inputs
+            # FIX APPLIED HERE: Creates sf_layer as a proper TensorFlow tensor
+            sf_layer = tf.ones((tf.shape(Z)[0], 1), dtype=Z.dtype)
+            
         enc_layer = self.enc(Z, training=training)
         dec_layer = self.dec(enc_layer, training=training)
         mean = self.ae_output_layer(dec_layer)
@@ -387,16 +387,16 @@ class Classif_Autoencoder(Autoencoder):
         )
 
     def call(self, inputs, training=None):
-        if (
-            type(inputs) != dict
-        ):  # In this case, inputs is only the count matrix
-            Z = inputs
-            sf_layer = np.array([1.0] * inputs.shape[-1]).astype(
-                float
-            )  # TODO : this doesn't work currently
-        else:
+        if isinstance(inputs, dict):
             Z = inputs["counts"]
             sf_layer = inputs["size_factors"]
+            if sf_layer.shape.ndims == 1:
+                sf_layer = tf.expand_dims(sf_layer, axis=-1)
+        else:
+            Z = inputs
+            # FIX APPLIED HERE: Creates sf_layer as a proper TensorFlow tensor
+            sf_layer = tf.ones((tf.shape(Z)[0], 1), dtype=Z.dtype)
+
         enc_layer = self.enc(Z, training=training)
         dec_layer = self.dec(enc_layer, training=training)
         clas_out = self.classifier(enc_layer, training=training)
@@ -440,16 +440,17 @@ class DANN_AE(Classif_Autoencoder):
         self.grad_reverse = GradReverse()
 
     def call(self, inputs, training=None):
-        if (
-            type(inputs) != dict
-        ):  # In this case, inputs is only the count matrix
-            Z = inputs
-            sf_layer = tf.ones(
-                inputs.shape
-            )  # TODO : this doesn't work currently
-        else:
+        if isinstance(inputs, dict):
             Z = inputs["counts"]
             sf_layer = inputs["size_factors"]
+            # Make sure sf_layer has compatible shape for multiplication (batch_size, 1)
+            # This reshape should ideally happen before passing to ColwiseMultLayer
+            if sf_layer.shape.ndims == 1: # If size_factors is (batch_size,)
+                sf_layer = tf.expand_dims(sf_layer, axis=-1) # Make it (batch_size, 1)
+        else:
+            Z = inputs
+            sf_layer = tf.ones((tf.shape(Z)[0], 1), dtype=Z.dtype) # Use Z.dtype for consistency
+            
         enc_layer = self.enc(Z, training=training)
         dec_layer = self.dec(enc_layer, training=training)
         clas_out = self.classifier(enc_layer, training=training)
