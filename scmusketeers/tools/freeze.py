@@ -7,6 +7,9 @@ def freeze_layers(layers_to_freeze):
     """
     for layer in layers_to_freeze:
         layer.trainable = False
+        if hasattr(layer, 'layers'): # If it's a nested model
+            for sub_l in layer.layers:  
+                sub_l.trainable = False
 
 
 def freeze_block(ae, strategy):
@@ -23,6 +26,10 @@ def freeze_block(ae, strategy):
             ae.dec,
             ae.ae_output_layer,
         ]
+    elif strategy == "warmup_dann":
+        #layers_to_freeze = []
+        layers_to_freeze = [ae.classifier]
+
     elif strategy == "all_but_dann_branch":
         layers_to_freeze = [
             ae.classifier,
@@ -51,3 +58,20 @@ def freeze_all(ae):
 def unfreeze_all(ae):
     for l in ae.layers:
         l.trainable = True
+        if hasattr(l, 'layers'): # If it's a nested model
+            for sub_l in l.layers:  
+                sub_l.trainable = True
+    ae.dann_discriminator.trainable = True
+    for l in ae.dann_discriminator.layers:
+        l.trainable = True
+        if hasattr(l, 'layers'): # If it's a nested model
+            for sub_l in l.layers:  
+                sub_l.trainable = True
+    ae.classifier.trainable = True
+    for l in ae.classifier.layers:
+        l.trainable = True
+        if hasattr(l, 'layers'): # If it's a nested model
+            for sub_l in l.layers:  
+                sub_l.trainable = True
+    
+

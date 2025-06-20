@@ -16,10 +16,10 @@ ref_dataset=data/Deprez-2020-ref-batch-0.2.h5ad
 query_dataset=data/Deprez-2020-query-batch-0.2.h5ad
 outname_query="Deprez-2020-query-0.2-pred"
 
-warmup_epoch=2   # default 100, help - Number of epoch to warmup DANN
-fullmodel_epoch=2   # default = 100, help = Number of epoch to train full model
-permonly_epoch=2 # default = 100, help = Number of epoch to train in permutation only mode
-classifier_epoch=2   # default = 50, help = Number of epoch to train te classifier only
+warmup_epoch=1   # default 100, help - Number of epoch to warmup DANN
+fullmodel_epoch=1   # default = 100, help = Number of epoch to train full model
+permonly_epoch=1 # default = 100, help = Number of epoch to train in permutation only mode
+classifier_epoch=1   # default = 50, help = Number of epoch to train te classifier only
 
 log_neptune=0
 neptune_name="sc-musketeers"

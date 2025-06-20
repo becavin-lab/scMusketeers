@@ -220,11 +220,6 @@ def get_training_scheme(training_scheme, run_file):
 
     if training_scheme == "training_scheme_debug_1":
         training_scheme = [
-            (
-                "warmup_dann",
-                1,
-                False,
-            ),
             ("classifier_branch", run_file.classifier_epoch, False),
         ]
 

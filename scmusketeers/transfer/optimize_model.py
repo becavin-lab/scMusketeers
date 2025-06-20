@@ -657,17 +657,20 @@ class Workflow:
             "warmup_dann_semisup",
         ]:
             group = "full"  # semi-supervised setting
-            ae.classifier.trainable = False  # Freezing classifier just to be sure but should not be necessary since gradient won't be propagating in this branch
+            layers_to_freeze = freeze.freeze_block(ae, "warmup_dann")
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "warmup_dann_train":
             group = "train"  # semi-supervised setting
-            ae.classifier.trainable = False  # Freezing classifier just to be sure but should not be necessary since gradient won't be propagating in this branch
+            layers_to_freeze = freeze.freeze_block(ae, "warmup_dann")
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "warmup_dann_no_rec":
             group = "full"
             layers_to_freeze = freeze.freeze_block(ae, "all_but_dann")
             freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "dann_with_ae":
             group = "train"
-            ae.classifier.trainable = False
+            layers_to_freeze = freeze.freeze_block(ae, "warmup_dann")
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "classifier_branch":
             group = "train"
             layers_to_freeze = freeze.freeze_block(
@@ -779,14 +782,13 @@ class Workflow:
 
         trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
 
-        """        logger.debug(f"Expected unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
-                for i, var in enumerate(trainable_unfrozen_variables):
-                    logger.debug(f"  Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
-                logger.debug(f"\n--- List of unfrozen trainable variables being checked ({len(trainable_unfrozen_variables)}): ---")
-                for i, var in enumerate(trainable_unfrozen_variables):
-                    logger.debug(f"  [{i}] Var: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}")
-        """
-
+        logger.debug(f"Expected unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
+        for i, var in enumerate(trainable_unfrozen_variables):
+            logger.debug(f"  Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
+        logger.debug(f"\n--- List of unfrozen trainable variables being checked ({len(trainable_unfrozen_variables)}): ---")
+        for i, var in enumerate(trainable_unfrozen_variables):
+            logger.debug(f"  [{i}] Var: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}")
+        
 
         # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
         with tf.GradientTape(persistent=True) as tape:
