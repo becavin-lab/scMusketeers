@@ -103,7 +103,7 @@ def create_argparser():
         "--out_name",
         type=str,
         nargs="?",
-        default=".",
+        default="scMusk_",
         help="The output naming",
     )
     workflow_group.add_argument(

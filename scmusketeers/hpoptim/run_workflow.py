@@ -26,7 +26,7 @@ except ImportError:
 # JSON_PATH_DEFAULT = '/home/acollin/scMusketeers/experiment_script/hp_ranges/'
 JSON_PATH_DEFAULT = "/home/becavin/scMusketeers/experiment_script/hp_ranges/"
 
-TOTAL_TRIAL = 20
+TOTAL_TRIAL = 3
 RANDOM_SEED = 40
 
 logger = logging.getLogger("Sc-Musketeers")
@@ -67,17 +67,8 @@ def run_workflow(run_file):
     logger.info(f"hp ranges: {hparam_path}")
     hparams = load_json(hparam_path)
 
-    ### Loop API
-    # best_parameters, values, experiment, model = optimize(
-    #     parameters=hparams,
-    #     evaluation_function=experiment.train,
-    #     objective_name=run_file.opt_metric,
-    #     minimize=False,
-    #     total_trials=experiment.total_trial,
-    #     random_seed=experiment.random_seed,
-    # )
 
-    ### Service API
+    ## Service API
     logger.info("#HP_optim--- Run AX Platform for hyperparameters optimization")
     ax_client = AxClient()
     ax_client.create_experiment(
@@ -96,7 +87,11 @@ def run_workflow(run_file):
 
     logger.info("#HP_optim--- Hyperparam optimization finished")
     best_parameters, values = ax_client.get_best_parameters()
-    logger.info(f" Best parameters {best_parameters}")
-    ## TO DO : SAVE best parameters
+    best_parameters = {'use_hvg': 654, 'batch_size': 357, 'clas_w': 75.9059544539962, 'dann_w': 0.0006800634789046336, 'learning_rate': 0.007181802826807251, 'weight_decay': 3.457969993736587e-05, 'warmup_epoch': 1, 'dropout': 0.17059661448001862, 'bottleneck': 42, 'layer2': 153, 'layer1': 905}
+    logger.debug(f"Best parameters {best_parameters}")
+    path_bestparam = os.path.join(run_file.out_dir,run_file.out_name+run_file.dataset_name+"_best_hp.json")
+    with open(path_bestparam, 'w') as json_file:
+        json.dump(best_parameters, json_file, indent=4)
+    logger.info(f"Best hyperparameters saved in {path_bestparam}")
 
     
