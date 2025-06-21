@@ -74,51 +74,7 @@ physical_devices = tf.config.list_physical_devices("GPU")
 for gpu_instance in physical_devices:
     tf.config.experimental.set_memory_growth(gpu_instance, True)
 
-PRED_METRICS_LIST = {
-    "acc": accuracy_score,
-    "mcc": matthews_corrcoef,
-    "f1_score": f1_score,
-    "KPA": cohen_kappa_score,
-    "ARI": adjusted_rand_score,
-    "NMI": normalized_mutual_info_score,
-    "AMI": adjusted_mutual_info_score,
-}
-
-PRED_METRICS_LIST_BALANCED = {
-    "balanced_acc": balanced_accuracy_score,
-    "balanced_mcc": balanced_matthews_corrcoef,
-    "balanced_f1_score": balanced_f1_score,
-    "balanced_KPA": balanced_cohen_kappa_score,
-}
-
-CLUSTERING_METRICS_LIST = {
-    "db_score": davies_bouldin_score
-}  #'clisi' : lisi_avg
-
-BATCH_METRICS_LIST = {"batch_mixing_entropy": batch_entropy_mixing_score}
-
 logger = logging.getLogger("Sc-Musketeers")
-
-# Reset Keras Session
-def reset_keras():
-    logger.debug("Reset Keras session")
-    sess = tf.compat.v1.keras.backend.get_session()
-    tf.compat.v1.keras.backend.clear_session()
-    sess.close()
-    sess = tf.compat.v1.keras.backend.get_session()
-
-    try:
-        del classifier  # this is from global space - change this as you need
-    except:
-        pass
-
-    logger.debug(f"GC collect: {gc.collect()}")
-
-    # use the same config as you used to create the session
-    config = tf.compat.v1.ConfigProto()
-    config.gpu_options.per_process_gpu_memory_fraction = 1
-    config.gpu_options.visible_device_list = "0"
-    tf.compat.v1.keras.backend.set_session(tf.compat.v1.Session(config=config))
 
 
 class Workflow:
@@ -167,7 +123,6 @@ class Workflow:
         self.rec_loss_fn = None
         self.num_classes = None
         self.num_batches = None
-        self.metrics = []
 
         self.pred_metrics_list = {
             "acc": accuracy_score,
@@ -240,29 +195,6 @@ class Workflow:
             self.training_scheme = params["training_scheme"]
         self.hp_params = params
 
-
-    def start_neptune_log(self, neptune_name):
-        if self.run_file.log_neptune:
-            self.run = neptune.init_run(
-                project="becavin-lab/"+neptune_name,
-                api_token=NEPTUNE_INFO[neptune_name],
-            )
-            self.run[f"parameters/model"] = "scMusketeers"
-            for par, val in self.run_file.__dict__.items():
-                self.run[f"parameters/{par}"] = stringify_unsupported(
-                    getattr(self, par)
-                )
-            if (
-                self.hp_params
-            ):  # Overwrites the defaults arguments contained in the runfile
-                for par, val in self.hp_params.items():
-                    self.run[f"parameters/{par}"] = stringify_unsupported(val)
-
-    def add_custom_log(self, name, value):
-        self.run[f"parameters/{name}"] = stringify_unsupported(value)
-
-    def stop_neptune_log(self):
-        self.run.stop()
 
     def split_train_test(self):
         self.dataset.test_split(
@@ -477,19 +409,16 @@ class Workflow:
         self.rec_loss_fn, self.clas_loss_fn, self.dann_loss_fn = (
             self.get_losses(y_list)
         )  # redundant
+        
         logger.debug("Setup training scheme")
-        training_scheme = self.get_scheme()
-
-        logger.debug(
-            "Bottleneck activation : " + self.dann_ae.ae_bottleneck_activation
-        )
+        training_scheme = get_training_scheme(self.run_file.training_scheme, self.run_file)
+        
         # Training
         logger.info(f"##-- Run model training")
         start_time = time.time()
         history = self.train_scheme(
             training_scheme=training_scheme,
             verbose=False,
-            ae=self.dann_ae,
             adata_list=adata_list,
             X_list=X_list,
             y_list=y_list,
@@ -506,8 +435,8 @@ class Workflow:
         logger.info("##-- Performing model prediction")
         if self.log_neptune:
             # TODO also make it on gpu with smaller batch size
-            self.run["evaluation/training_time"] = stop_time - start_time
-            neptune_run_id = self.run["sys/id"].fetch()
+            self.run_neptune["evaluation/training_time"] = stop_time - start_time
+            neptune_run_id = self.run_neptune["sys/id"].fetch()
             save_dir = os.path.join(self.run_file.out_dir,str(neptune_run_id))
             logger.info(f"Save results to: {save_dir}")
             if not os.path.exists(save_dir):
@@ -544,14 +473,14 @@ class Workflow:
                 if (
                     group == "full"
                 ):  # saving full predictions as probability output from the classifier
-                    logger.debug("Saving predicted matrix and embedding")
+                    logger.debug(f"Saving predicted matrix and embedding - {group}")
                     y_pred_proba = pd.DataFrame(
                         np.asarray(clas),
                         index=adata_list["full"].obs_names,
                         columns=self.dataset.ohe_celltype.categories_[0],
                     )
                     y_pred_proba.to_csv(os.path.join(save_dir,"y_pred_proba_full.csv"))
-                    self.run[
+                    self.run_neptune[
                         f"evaluation/{group}/y_pred_proba_full"
                     ].track_files(os.path.join(save_dir,"y_pred_proba_full.csv"))
 
@@ -582,44 +511,20 @@ class Workflow:
                 # save clustering metrics
                 metrics.metric_clustering(self, y_pred, group, enc)
 
-                logger.debug("Save all matrices and figures")
+                logger.debug(f"Save all matrices and figures - {group}")
                 if group == "full":
                     metrics.save_results(self, y_pred, y_true, adata_list, group, save_dir, split, enc)
 
         if self.opt_metric:
             split, metric = self.opt_metric.split("-")
-            self.run.wait()
-            opt_metric = self.run[f"evaluation/{split}/{metric}"].fetch()
+            self.run_neptune.wait()
+            opt_metric = self.run_neptune[f"evaluation/{split}/{metric}"].fetch()
             logger.debug(f"optimal metric:{opt_metric}")
         else:
             opt_metric = None
-        # Redondant, à priori c'est le mcc qu'on a déjà calculé au dessus.
-        # with tf.device('CPU'):
-        #     inp = scanpy_to_input(adata_list['val'],['size_factors'])
-        #     inp = {k:tf.convert_to_tensor(v) for k,v in inp.items()}
-        #     _, clas, dann, rec = self.dann_ae(inp, training=False).values()
-        #     clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
-        #     opt_metric = self.pred_metrics_list_balanced['balanced_mcc'](np.asarray(y_list['val'].argmax(axis=1)), clas.argmax(axis=1)) # We retrieve the last metric of interest
-        # if self.log_neptune:
-        #     self.run.stop()
-        del enc
-        del clas
-        del dann
-        del rec
-        # # del _
-        # del input_tensor
-        # # del inp
-        del self.dann_ae
-        # del self.dataset
-        del history
-        del self.optimizer
-        del self.rec_loss_fn
-        del self.clas_loss_fn
-        del self.dann_loss_fn
-
+    
         gc.collect()
-        tf.keras.backend.clear_session()
-
+    
         return opt_metric
     
 
@@ -642,15 +547,15 @@ class Workflow:
                 history[group][m] = []
 
         
-        # Run scMusketeers one after the other
+        # Run scMusketeers training_scheme one after the other
         total_epochs = np.sum([n_epochs for _, n_epochs, _ in training_scheme])
         running_epoch = 0
         scheme_index = 0
         for strategy, n_epochs, use_perm in training_scheme:
-            self.run_single_scheme(strategy, history, use_perm, loop_params, scheme_index, running_epoch, n_epochs, total_epochs)
+            running_epoch = self.run_single_scheme(strategy, history, use_perm, loop_params, scheme_index, running_epoch, n_epochs, total_epochs)
 
-        if self.log_neptune:
-            self.run[f"training/{group}/total_epochs"] = running_epoch
+        if self.run_file.log_neptune:
+            self.run_neptune[f"training/{group}/total_epochs"] = running_epoch
         return history
 
 
@@ -745,6 +650,67 @@ class Workflow:
                     loop_params["pseudo_y_list"][group] = memory[group]
                 memory = {}
 
+        # trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
+        # logger.debug(f"Before unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
+        # for i, var in enumerate(trainable_unfrozen_variables):
+        #     logger.debug(f"  Before Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
+        
+        freeze.unfreeze_all(self.dann_ae)  # resetting freeze state
+        
+        # trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
+        # logger.debug(f"After unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
+        # for i, var in enumerate(trainable_unfrozen_variables):
+        #     logger.debug(f"  After Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
+       
+        if strategy == "full_model":
+            group = "train"
+        elif strategy == "full_model_pseudolabels":
+            group = "full"
+        elif strategy == "encoder_classifier":
+            group = "train"
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_classifier")  # training only
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy in [
+            "warmup_dann",
+            "warmup_dann_pseudolabels",
+            "warmup_dann_semisup",
+        ]:
+            group = "full"  # semi-supervised setting
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "warmup_dann")
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy == "warmup_dann_train":
+            group = "train"  # semi-supervised setting
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "warmup_dann")
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy == "warmup_dann_no_rec":
+            group = "full"
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_dann")
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy == "dann_with_ae":
+            group = "train"
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "warmup_dann")
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy == "classifier_branch":
+            group = "train"
+            layers_to_freeze = freeze.freeze_block(
+                self.dann_ae, "all_but_classifier_branch"
+            )  # training only classifier branch
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy == "permutation_only":
+            group = "train"
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_autoencoder")
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy == "no_dann":
+            group = "train"
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "freeze_dann")
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy == "no_decoder":
+            group = "train"
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "freeze_dec")
+            freeze.freeze_layers(layers_to_freeze)
+
+        logger.debug(f"Use permutation strategy? use_perm = {use_perm}")
+
         for epoch in range(1, n_epochs + 1):
             running_epoch += 1
             logger.debug(
@@ -752,20 +718,22 @@ class Workflow:
             )
             history, _, _, _, _ = self.training_loop(
                 history=history,
+                group=group,
                 training_strategy=strategy,
                 use_perm=use_perm,
                 optimizer=optimizer,
                 **loop_params,
             )
 
-            if self.log_neptune:
+            if self.run_file.log_neptune:
                 for group in history:
                     for par, value in history[group].items():
-                        self.run[f"training/{group}/{par}"].append(
-                            value[-1]
-                        )
+                        if len(value) > 0:
+                            self.run_neptune[
+                                f"training/{group}/{par}"
+                            ].append(value[-1])
                         if physical_devices:
-                            self.run[
+                            self.run_neptune[
                                 "training/train/tf_GPU_memory"
                             ].append(
                                 tf.config.experimental.get_memory_info(
@@ -801,15 +769,16 @@ class Workflow:
                     )
                     self.dann_ae.set_weights(best_model)
                     break
-        
+
         time_out = time.time()
-        logger.debug(f"Strategy {strategy}duration : {time_out - time_in} s")
-        
+        logger.debug(f"Strategy {strategy} duration : {time_out - time_in} s")
+        return running_epoch
+
 
     def training_loop(
         self,
         history,
-        ae,
+        group,
         adata_list,
         X_list,
         y_list,
@@ -835,52 +804,6 @@ class Workflow:
             - permutation_only : trains the autoencoder with permutations, optimizing the reconstruction loss without the classifier
         use_perm : True by default except form "warmup_dann" training strategy. Note that for training strategies that don't involve the reconstruction, this parameter has no impact on training
         """
-
-        freeze.unfreeze_all(ae)  # resetting freeze state
-        if training_strategy == "full_model":
-            group = "train"
-        elif training_strategy == "full_model_pseudolabels":
-            group = "full"
-        elif training_strategy == "encoder_classifier":
-            group = "train"
-            layers_to_freeze = freeze.freeze_block(ae, "all_but_classifier")  # training only
-            freeze.freeze_layers(layers_to_freeze)
-        elif training_strategy in [
-            "warmup_dann",
-            "warmup_dann_pseudolabels",
-            "warmup_dann_semisup",
-        ]:
-            group = "full"  # semi-supervised setting
-            ae.classifier.trainable = False  # Freezing classifier just to be sure but should not be necessary since gradient won't be propagating in this branch
-        elif training_strategy == "warmup_dann_train":
-            group = "train"  # semi-supervised setting
-            ae.classifier.trainable = False  # Freezing classifier just to be sure but should not be necessary since gradient won't be propagating in this branch
-        elif training_strategy == "warmup_dann_no_rec":
-            group = "full"
-            layers_to_freeze = freeze.freeze_block(ae, "all_but_dann")
-            freeze.freeze_layers(layers_to_freeze)
-        elif training_strategy == "dann_with_ae":
-            group = "train"
-            ae.classifier.trainable = False
-        elif training_strategy == "classifier_branch":
-            group = "train"
-            layers_to_freeze = freeze.freeze_block(
-                ae, "all_but_classifier_branch"
-            )  # training only classifier branch
-            freeze.freeze_layers(layers_to_freeze)
-        elif training_strategy == "permutation_only":
-            group = "train"
-            layers_to_freeze = freeze.freeze_block(ae, "all_but_autoencoder")
-            freeze.freeze_layers(layers_to_freeze)
-        elif training_strategy == "no_dann":
-            group = "train"
-            layers_to_freeze = freeze.freeze_block(ae, "freeze_dann")
-            freeze.freeze_layers(layers_to_freeze)
-        elif training_strategy == "no_decoder":
-            group = "train"
-            layers_to_freeze = freeze.freeze_block(ae, "freeze_dec")
-            freeze.freeze_layers(layers_to_freeze)
-
         batch_generator = batch_generator_training_permuted(
             X=X_list[group],
             y=pseudo_y_list[
@@ -904,97 +827,23 @@ class Workflow:
         self.mean_dann_loss_fn.reset_state()
         self.mean_rec_loss_fn.reset_state()
 
+        # Batch steps
         for step in range(1, n_steps + 1):
-            input_batch, output_batch = next(batch_generator)
-            # X_batch, sf_batch = input_batch.values()
-            clas_batch, dann_batch, rec_batch = output_batch.values()
+            # self.tr = tracker.SummaryTracker()
+            self.batch_step(
+                step,
+                clas_loss_fn,
+                dann_loss_fn,
+                rec_loss_fn,
+                batch_generator,
+                training_strategy,
+                optimizer,
+                n_samples,
+                n_obs,
+            )
 
-            with tf.GradientTape() as tape:
-                # Forward pass
-                input_batch = {
-                    k: tf.convert_to_tensor(v) for k, v in input_batch.items()
-                }
-                enc, clas, dann, rec = ae(input_batch, training=True).values()
-
-                # Computing loss
-                clas_loss = tf.reduce_mean(clas_loss_fn(clas_batch, clas))
-                dann_loss = tf.reduce_mean(dann_loss_fn(dann_batch, dann))
-                rec_loss = tf.reduce_mean(rec_loss_fn(rec_batch, rec))
-                
-                if training_strategy in [
-                    "full_model",
-                    "full_model_pseudolabels",
-                ]:
-                    loss = tf.add_n(
-                        [self.clas_w * clas_loss]
-                        + [self.dann_w * dann_loss]
-                        + [self.rec_w * rec_loss]
-                        + ae.losses
-                    )
-                elif training_strategy in [
-                    "warmup_dann",
-                    "warmup_dann_pseudolabels",
-                    "warmup_dann_train",
-                    "warmup_dann_semisup",
-                ]:
-                    loss = tf.add_n(
-                        [self.dann_w * dann_loss]
-                        + [self.rec_w * rec_loss]
-                        + ae.losses
-                    )
-                elif training_strategy == "warmup_dann_no_rec":
-                    loss = tf.add_n([self.dann_w * dann_loss] + ae.losses)
-                elif training_strategy == "dann_with_ae":
-                    loss = tf.add_n(
-                        [self.dann_w * dann_loss]
-                        + [self.rec_w * rec_loss]
-                        + ae.losses
-                    )
-                elif training_strategy == "classifier_branch":
-                    loss = tf.add_n([self.clas_w * clas_loss] + ae.losses)
-                elif training_strategy == "encoder_classifier":
-                    loss = tf.add_n([self.clas_w * clas_loss] + ae.losses)
-                elif training_strategy == "permutation_only":
-                    loss = tf.add_n([self.rec_w * rec_loss] + ae.losses)
-                elif training_strategy == "no_dann":
-                    loss = tf.add_n(
-                        [self.rec_w * rec_loss]
-                        + [self.clas_w * clas_loss]
-                        + ae.losses
-                    )
-                elif training_strategy == "no_decoder":
-                    loss = tf.add_n(
-                        [self.dann_w * dann_loss]
-                        + [self.clas_w * clas_loss]
-                        + ae.losses
-                    )
-
-            # Backpropagation
-            n_samples += enc.shape[0]
-            gradients = tape.gradient(loss, ae.trainable_variables)
-
-            optimizer.apply_gradients(zip(gradients, ae.trainable_variables))
-
-            self.mean_loss_fn(loss.__float__())
-            self.mean_clas_loss_fn(clas_loss.__float__())
-            self.mean_dann_loss_fn(dann_loss.__float__())
-            self.mean_rec_loss_fn(rec_loss.__float__())
-
-            
-        self.print_status_bar(
-            n_samples,
-            n_obs,
-            [
-                self.mean_loss_fn,
-                self.mean_clas_loss_fn,
-                self.mean_dann_loss_fn,
-                self.mean_rec_loss_fn,
-            ],
-            self.metrics,
-        )
         history, _, clas, dann, rec = self.evaluation_pass(
             history,
-            ae,
             adata_list,
             X_list,
             y_list,
@@ -1003,14 +852,128 @@ class Workflow:
             dann_loss_fn,
             rec_loss_fn,
         )
-        del input_batch
         return history, _, clas, dann, rec
+
+    
+    def batch_step(
+        self,
+        step,
+        clas_loss_fn,
+        dann_loss_fn,
+        rec_loss_fn,
+        batch_generator,
+        training_strategy,
+        optimizer,
+        n_samples,
+        n_obs
+    ):
+        if self.run_file.log_neptune:
+            self.run_neptune["training/train/tf_GPU_memory_step"].append(
+                tf.config.experimental.get_memory_info("GPU:0")["current"]
+                / 1e6
+            )
+            self.run_neptune["training/train/step"].append(step)
+
+        input_batch, output_batch = next(batch_generator)
+        # X_batch, sf_batch = input_batch.values()
+        clas_batch, dann_batch, rec_batch = output_batch.values()
+        
+        with tf.GradientTape() as tape:
+            # Forward pass
+            input_batch_new = dict()
+            for k, v in input_batch.items():
+                input_batch_new[k] = tf.convert_to_tensor(v)
+            input_batch = input_batch_new
+            enc, clas, dann, rec = self.dann_ae(input_batch, training=True).values()
+
+            # Computing loss
+            clas_loss = tf.reduce_mean(clas_loss_fn(clas_batch, clas))
+            dann_loss = tf.reduce_mean(dann_loss_fn(dann_batch, dann))
+            rec_loss = tf.reduce_mean(rec_loss_fn(rec_batch, rec))
+            
+            if training_strategy in [
+                "full_model",
+                "full_model_pseudolabels",
+            ]:
+                loss = tf.add_n(
+                    [self.clas_w * clas_loss]
+                    + [self.dann_w * dann_loss]
+                    + [self.rec_w * rec_loss]
+                    + self.dann_ae.losses
+                )
+            elif training_strategy in [
+                "warmup_dann",
+                "warmup_dann_pseudolabels",
+                "warmup_dann_train",
+                "warmup_dann_semisup",
+            ]:
+                loss = tf.add_n(
+                    [self.dann_w * dann_loss]
+                    + [self.rec_w * rec_loss]
+                    + self.dann_ae.losses
+                )
+            elif training_strategy == "warmup_dann_no_rec":
+                loss = tf.add_n([self.dann_w * dann_loss] + self.dann_ae.losses)
+            elif training_strategy == "dann_with_ae":
+                loss = tf.add_n(
+                    [self.dann_w * dann_loss]
+                    + [self.rec_w * rec_loss]
+                    + self.dann_ae.losses
+                )
+            elif training_strategy == "classifier_branch":
+                loss = tf.add_n([self.clas_w * clas_loss])
+            elif training_strategy == "encoder_classifier":
+                loss = tf.add_n([self.clas_w * clas_loss] + self.dann_ae.losses)
+            elif training_strategy == "permutation_only":
+                loss = tf.add_n([self.rec_w * rec_loss] + self.dann_ae.losses)
+            elif training_strategy == "no_dann":
+                loss = tf.add_n(
+                    [self.rec_w * rec_loss]
+                    + [self.clas_w * clas_loss]
+                    + self.dann_ae.losses
+                )
+            elif training_strategy == "no_decoder":
+                loss = tf.add_n(
+                    [self.dann_w * dann_loss]
+                    + [self.clas_w * clas_loss]
+                    + self.dann_ae.losses
+                )
+        n_samples += enc.shape[0]
+        
+        # Backpropagation
+        # --- Main Gradients for the Total Loss ---
+        gradients = tape.gradient(loss, self.dann_ae.trainable_variables)
+
+        # logger.debug("\n--- Gradients from TOTAL LOSS ---")
+        # for grad, var in zip(gradients, ae.trainable_variables):
+        #     logger.debug(f"  - Var: {var.name}, Grad: {'None' if grad is None else 'OK (shape: '+str(grad.shape)+')'}")
+        
+        del tape # Don't forget to delete persistent tape
+    
+
+        optimizer.apply_gradients(zip(gradients, self.dann_ae.trainable_variables))
+
+        self.mean_loss_fn(loss.__float__())
+        self.mean_clas_loss_fn(clas_loss.__float__())
+        self.mean_dann_loss_fn(dann_loss.__float__())
+        self.mean_rec_loss_fn(rec_loss.__float__())
+
+        # print_status_bar(
+        #     n_samples,
+        #     n_obs,
+        #     [
+        #         self.mean_loss_fn,
+        #         self.mean_clas_loss_fn,
+        #         self.mean_dann_loss_fn,
+        #         self.mean_rec_loss_fn,
+        #     ],
+        #     self.metrics,
+        # )
 
 
     def evaluation_pass(
         self,
         history,
-        ae,
         adata_list,
         X_list,
         y_list,
@@ -1026,63 +989,58 @@ class Workflow:
         """
         for group in ["train", "val"]:  # evaluation round
             inp = scanpy_to_input(adata_list[group], ["size_factors"])
-            with tf.device("CPU"):
-                inp = {k: tf.convert_to_tensor(v) for k, v in inp.items()}
-                _, clas, dann, rec = ae(inp, training=False).values()
+            inp = {k: tf.convert_to_tensor(v) for k, v in inp.items()}
+            _, clas, dann, rec = self.dann_ae(inp, training=False).values()
 
-                #         return _, clas, dann, rec
-                clas_loss = tf.reduce_mean(
-                    clas_loss_fn(y_list[group], clas)
-                ).numpy()
-                history[group]["clas_loss"] += [clas_loss]
-                dann_loss = tf.reduce_mean(
-                    dann_loss_fn(batch_list[group], dann)
-                ).numpy()
-                history[group]["dann_loss"] += [dann_loss]
-                rec_loss = tf.reduce_mean(
-                    rec_loss_fn(X_list[group], rec)
-                ).numpy()
-                history[group]["rec_loss"] += [rec_loss]
-                history[group]["total_loss"] += [
-                    self.clas_w * clas_loss
-                    + self.dann_w * dann_loss
-                    + self.rec_w * rec_loss
-                    + np.sum(ae.losses)
-                ]  # using numpy to prevent memory leaks
-                # history[group]['total_loss'] += [tf.add_n([self.clas_w * clas_loss] + [self.dann_w * dann_loss] + [self.rec_w * rec_loss] + ae.losses).numpy()]
+            #         return _, clas, dann, rec
+            clas_loss = tf.reduce_mean(
+                clas_loss_fn(y_list[group], clas)
+            ).numpy()
+            history[group]["clas_loss"] += [clas_loss]
+            dann_loss = tf.reduce_mean(
+                dann_loss_fn(batch_list[group], dann)
+            ).numpy()
+            history[group]["dann_loss"] += [dann_loss]
+            rec_loss = tf.reduce_mean(
+                rec_loss_fn(X_list[group], rec)
+            ).numpy()
+            history[group]["rec_loss"] += [rec_loss]
+            history[group]["total_loss"] += [
+                self.clas_w * clas_loss
+                + self.dann_w * dann_loss
+                + self.rec_w * rec_loss
+                + np.sum(self.dann_ae.losses)
+            ]  # using numpy to prevent memory leaks
+            # history[group]['total_loss'] += [tf.add_n([self.clas_w * clas_loss] + [self.dann_w * dann_loss] + [self.rec_w * rec_loss] + ae.losses).numpy()]
 
-                clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
-                for (
-                    metric
-                ) in self.pred_metrics_list:  # only classification metrics ATM
-                    history[group][metric] += [
-                        self.pred_metrics_list[metric](
-                            np.asarray(y_list[group].argmax(axis=1)).reshape(
-                                -1,
-                            ),
-                            clas.argmax(axis=1),
-                        )
-                    ]  # y_list are onehot encoded
-                for (
-                    metric
-                ) in (
-                    self.pred_metrics_list_balanced
-                ):  # only classification metrics ATM
-                    history[group][metric] += [
-                        self.pred_metrics_list_balanced[metric](
-                            np.asarray(y_list[group].argmax(axis=1)).reshape(
-                                -1,
-                            ),
-                            clas.argmax(axis=1),
-                        )
-                    ]  # y_list are onehot encoded
+            clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
+            for (
+                metric
+            ) in self.pred_metrics_list:  # only classification metrics ATM
+                history[group][metric] += [
+                    self.pred_metrics_list[metric](
+                        np.asarray(y_list[group].argmax(axis=1)).reshape(
+                            -1,
+                        ),
+                        clas.argmax(axis=1),
+                    )
+                ]  # y_list are onehot encoded
+            for (
+                metric
+            ) in (
+                self.pred_metrics_list_balanced
+            ):  # only classification metrics ATM
+                history[group][metric] += [
+                    self.pred_metrics_list_balanced[metric](
+                        np.asarray(y_list[group].argmax(axis=1)).reshape(
+                            -1,
+                        ),
+                        clas.argmax(axis=1),
+                    )
+                ]  # y_list are onehot encoded
         del inp
         return history, _, clas, dann, rec
 
-
-    def get_scheme(self):
-        training_scheme = get_training_scheme(self.training_scheme, self.run_file)
-        return training_scheme
 
     def get_losses(self, y_list):
         if self.rec_loss_name == "MSE":
@@ -1105,7 +1063,7 @@ class Workflow:
                 alpha=class_weights, gamma=3
             )
         else:
-            print(self.clas_loss_name + " loss not supported for classif")
+            logger.debug(self.clas_loss_name + " loss not supported for classif")
 
         if self.dann_loss_name == "categorical_crossentropy":
             self.dann_loss_fn = tf.keras.losses.categorical_crossentropy
@@ -1127,7 +1085,6 @@ class Workflow:
         Returns:
             an optimizer object
         """
-        # TODO Add more optimizers
         logger.debug(f"Optimizer type: {optimizer_type}")
         if optimizer_type == "adam":
             optimizer = tf.keras.optimizers.Adam(

@@ -20,7 +20,7 @@ except ImportError:
 
 
 def metric_confusion_matrix(workflow, y_pred, y_true, group, save_dir):
-    logger.debug("Calculate confusion matrix")
+    logger.debug(f"Calculate confusion matrix - {group}")
     labels = list(
         set(np.unique(y_true)).union(set(np.unique(y_pred)))
     )
@@ -36,7 +36,7 @@ def metric_confusion_matrix(workflow, y_pred, y_true, group, save_dir):
     cm_to_plot = cm_to_plot.fillna(value=0)
     cm_to_save = cm_to_save.fillna(value=0)
     cm_to_save.to_csv(os.path.join(save_dir,f"confusion_matrix_{group}.csv"))
-    workflow.run[
+    workflow.run_neptune[
         f"evaluation/{group}/confusion_matrix_file"
     ].track_files(os.path.join(save_dir,f"confusion_matrix_{group}.csv"))
     size = len(labels)
@@ -57,11 +57,11 @@ def metric_confusion_matrix(workflow, y_pred, y_true, group, save_dir):
     ):
         text.set_visible(show_annot)
     # Upload matrix on Neptune
-    workflow.run[f"evaluation/{group}/confusion_matrix"].upload(f)
+    workflow.run_neptune[f"evaluation/{group}/confusion_matrix"].upload(f)
 
 
 def metric_batch_mixing(workflow, batch_list, group, enc, batches):
-    logger.debug("Save batch mixing metrics")
+    logger.debug(f"Save batch mixing metrics - {group}")
     if (
         len(
             np.unique(
@@ -71,7 +71,7 @@ def metric_batch_mixing(workflow, batch_list, group, enc, batches):
         >= 2
     ):  # If there are more than 2 batches in this group
         for metric in workflow.batch_metrics_list:
-            workflow.run[f"evaluation/{group}/{metric}"] = (
+            workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
                 workflow.batch_metrics_list[metric](enc, batches)
             )
             type_batchlist = type(workflow.batch_metrics_list[metric](enc, batches))
@@ -79,21 +79,21 @@ def metric_batch_mixing(workflow, batch_list, group, enc, batches):
 
 
 def metric_classification(workflow, y_pred, y_true, group, sizes):
-    logger.debug("Save classification metrics")
+    logger.debug(f"Save classification metrics - {group}")
     for metric in workflow.pred_metrics_list:
-        workflow.run[f"evaluation/{group}/{metric}"] = (
+        workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
             workflow.pred_metrics_list[metric](y_true, y_pred)
         )
 
     for metric in workflow.pred_metrics_list_balanced:
-        workflow.run[f"evaluation/{group}/{metric}"] = (
+        workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
             workflow.pred_metrics_list_balanced[metric](
                 y_true, y_pred
             )
         )
 
     # Metrics by size of ct
-    logger.debug("Save classification metrics by size of cell type")
+    logger.debug(f"Save classification metrics by size of cell type - {group}")
     for s in sizes:
         idx_s = np.isin(
             y_true, sizes[s]
@@ -101,7 +101,7 @@ def metric_classification(workflow, y_pred, y_true, group, sizes):
         y_true_sub = y_true[idx_s]
         y_pred_sub = y_pred[idx_s]
         for metric in workflow.pred_metrics_list:
-            workflow.run[f"evaluation/{group}/{s}/{metric}"] = (
+            workflow.run_neptune[f"evaluation/{group}/{s}/{metric}"] = (
                 nan_to_0(
                     workflow.pred_metrics_list[metric](
                         y_true_sub, y_pred_sub
@@ -110,7 +110,7 @@ def metric_classification(workflow, y_pred, y_true, group, sizes):
             )
 
         for metric in workflow.pred_metrics_list_balanced:
-            workflow.run[f"evaluation/{group}/{s}/{metric}"] = (
+            workflow.run_neptune[f"evaluation/{group}/{s}/{metric}"] = (
                 nan_to_0(
                     workflow.pred_metrics_list_balanced[metric](
                         y_true_sub, y_pred_sub
@@ -119,9 +119,9 @@ def metric_classification(workflow, y_pred, y_true, group, sizes):
             )
 
 def metric_clustering(workflow, y_pred, group, enc):
-    logger.debug("Save clustering metrics")
+    logger.debug(f"Save clustering metrics - {group}")
     for metric in workflow.clustering_metrics_list:
-        workflow.run[f"evaluation/{group}/{metric}"] = (
+        workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
             workflow.clustering_metrics_list[metric](enc, y_pred)
         )
 
@@ -137,10 +137,10 @@ def save_results(workflow, y_pred, y_true, adata_list, group, save_dir, split, e
     np.save(os.path.join(save_dir,f"latent_space_{group}.npy"), enc.numpy())
     y_pred_df.to_csv(os.path.join(save_dir,f"predictions_{group}.csv"))
     split.to_csv(os.path.join(save_dir,f"split_{group}.csv"))
-    workflow.run[
+    workflow.run_neptune[
         f"evaluation/{group}/latent_space"
     ].track_files(os.path.join(save_dir,f"latent_space_{group}.npy"))
-    workflow.run[
+    workflow.run_neptune[
         f"evaluation/{group}/predictions"
     ].track_files(os.path.join(save_dir,f"predictions_{group}.csv"))
 
@@ -160,7 +160,7 @@ def save_results(workflow, y_pred, y_true, adata_list, group, save_dir, split, e
         os.path.join(save_dir,f"umap_{group}.npy"),
         pred_adata.obsm["X_umap"],
     )
-    workflow.run[f"evaluation/{group}/umap"].track_files(
+    workflow.run_neptune[f"evaluation/{group}/umap"].track_files(
         os.path.join(save_dir,f"umap_{group}.npy")
     )
     sc.set_figure_params(figsize=(15, 10), dpi=300)
@@ -188,15 +188,15 @@ def save_results(workflow, y_pred, y_true, adata_list, group, save_dir, split, e
         size=10,
         return_fig=True,
     )
-    workflow.run[f"evaluation/{group}/true_umap"].upload(
+    workflow.run_neptune[f"evaluation/{group}/true_umap"].upload(
         fig_class
     )
-    workflow.run[f"evaluation/{group}/pred_umap"].upload(
+    workflow.run_neptune[f"evaluation/{group}/pred_umap"].upload(
         fig_pred
     )
-    workflow.run[f"evaluation/{group}/batch_umap"].upload(
+    workflow.run_neptune[f"evaluation/{group}/batch_umap"].upload(
         fig_batch
     )
-    workflow.run[f"evaluation/{group}/split_umap"].upload(
+    workflow.run_neptune[f"evaluation/{group}/split_umap"].upload(
         fig_split
     )

@@ -73,30 +73,8 @@ physical_devices = tf.config.list_physical_devices("GPU")
 for gpu_instance in physical_devices:
     tf.config.experimental.set_memory_growth(gpu_instance, True)
 
-PRED_METRICS_LIST = {
-    "acc": accuracy_score,
-    "mcc": matthews_corrcoef,
-    "f1_score": f1_score,
-    "KPA": cohen_kappa_score,
-    "ARI": adjusted_rand_score,
-    "NMI": normalized_mutual_info_score,
-    "AMI": adjusted_mutual_info_score,
-}
-
-PRED_METRICS_LIST_BALANCED = {
-    "balanced_acc": balanced_accuracy_score,
-    "balanced_mcc": balanced_matthews_corrcoef,
-    "balanced_f1_score": balanced_f1_score,
-    "balanced_KPA": balanced_cohen_kappa_score,
-}
-
-CLUSTERING_METRICS_LIST = {
-    "db_score": davies_bouldin_score
-}  #'clisi' : lisi_avg
-
-BATCH_METRICS_LIST = {"batch_mixing_entropy": batch_entropy_mixing_score}
-
 logger = logging.getLogger("Sc-Musketeers")
+
 
 class Workflow:
     def __init__(self, run_file):
@@ -177,6 +155,32 @@ class Workflow:
         self.rec_loss_fn = None
         self.num_classes = None
         self.num_batches = None
+
+        self.pred_metrics_list = {
+            "acc": accuracy_score,
+            "mcc": matthews_corrcoef,
+            "f1_score": f1_score,
+            "KPA": cohen_kappa_score,
+            "ARI": adjusted_rand_score,
+            "NMI": normalized_mutual_info_score,
+            "AMI": adjusted_mutual_info_score,
+        }
+
+        self.pred_metrics_list_balanced = {
+            "balanced_acc": balanced_accuracy_score,
+            "balanced_mcc": balanced_matthews_corrcoef,
+            "balanced_f1_score": balanced_f1_score,
+            "balanced_KPA": balanced_cohen_kappa_score,
+        }
+
+        self.clustering_metrics_list = {  #'clisi' : lisi_avg,
+            "db_score": davies_bouldin_score
+        }
+
+        self.batch_metrics_list = {
+            "batch_mixing_entropy": batch_entropy_mixing_score,
+            #'ilisi': lisi_avg
+        }
         self.metrics = []
 
         # This is a running average : it keeps the previous values in memory when
@@ -209,6 +213,7 @@ class Workflow:
 
     def process_dataset(self):
         # Loading dataset
+        logger.info(f"Load dataset {self.run_file.ref_path}")
         adata = load_dataset(
             ref_path=self.run_file.ref_path,
             query_path=self.run_file.query_path,
@@ -386,20 +391,24 @@ class Workflow:
             dann_output_activation=self.dann_param.dann_output_activation,
         )
 
+        logger.debug("Setup optimizer")
         self.optimizer = self.get_optimizer(
             self.learning_rate, self.weight_decay, self.optimizer_type
         )
+        logger.debug("Setup losses")
         self.rec_loss_fn, self.clas_loss_fn, self.dann_loss_fn = (
             self.get_losses(y_list)
         )  # redundant
+        
+        logger.debug("Setup training scheme")
         training_scheme = get_training_scheme(self.run_file.training_scheme, self.run_file)
-        start_time = time.time()
-
+        
         # Training
+        logger.info(f"##-- Run model training")
+        start_time = time.time()
         history = self.train_scheme(
             training_scheme=training_scheme,
             verbose=False,
-            ae=self.dann_ae,
             adata_list=adata_list,
             X_list=X_list,
             y_list=y_list,
@@ -412,6 +421,7 @@ class Workflow:
         )
 
         # predicting
+
         input_tensor = {
             k: tf.convert_to_tensor(v)
             for k, v in scanpy_to_input(
@@ -455,171 +465,244 @@ class Workflow:
                 "dann_loss": [],
                 "rec_loss": [],
             }
-            for m in PRED_METRICS_LIST:
+            for m in self.pred_metrics_list:
                 history[group][m] = []
-            for m in PRED_METRICS_LIST_BALANCED:
+            for m in self.pred_metrics_list_balanced:
                 history[group][m] = []
 
-        # if self.log_neptune:
-        #     for group in history:
-        #         for par,val in history[group].items():
-        #             self.run[f"training/{group}/{par}"] = []
-        i = 0
-
+        
+        # Run scMusketeers training_scheme one after the other
         total_epochs = np.sum([n_epochs for _, n_epochs, _ in training_scheme])
         running_epoch = 0
-
+        scheme_index = 0
         for strategy, n_epochs, use_perm in training_scheme:
-            optimizer = self.get_optimizer(
-                self.learning_rate, self.weight_decay, self.optimizer_type
-            )  # resetting optimizer state when switching strategy
-            if verbose:
-                logger.debug(
-                    f"Step number {i}, running {strategy} strategy with permutation = {use_perm} for {n_epochs} epochs"
-                )
-                time_in = time.time()
+            running_epoch = self.run_single_scheme(strategy, history, use_perm, loop_params, scheme_index, running_epoch, n_epochs, total_epochs)
 
-                # Early stopping for those strategies only
-            if strategy in [
-                "full_model",
-                "classifier_branch",
-                "permutation_only",
-            ]:
-                wait = 0
-                best_epoch = 0
-                patience = 20
-                min_delta = 0
-                if strategy == "permutation_only":
-                    monitored = "rec_loss"
-                    es_best = np.inf  # initialize early_stopping
-                else:
-                    split, metric = self.opt_metric.split("-")
-                    monitored = metric
-                    es_best = -np.inf
-            memory = {}
-            if strategy in [
-                "warmup_dann_pseudolabels",
-                "full_model_pseudolabels",
-            ]:  # We use the pseudolabels computed with the model
-                input_tensor = {
-                    k: tf.convert_to_tensor(v)
-                    for k, v in scanpy_to_input(
-                        loop_params["adata_list"]["full"], ["size_factors"]
-                    ).items()
-                }
-                enc, clas, dann, rec = self.dann_ae(
-                    input_tensor, training=False
-                ).values()  # Model predict
-                pseudo_full = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
-                pseudo_full[
-                    loop_params["adata_list"]["full"].obs["train_split"]
-                    == "train",
-                    :,
-                ] = loop_params["pseudo_y_list"][
-                    "train"
-                ]  # the true labels
-                loop_params["pseudo_y_list"]["full"] = pseudo_full
-                for group in ["val", "test"]:
-                    loop_params["pseudo_y_list"][group] = pseudo_full[
-                        loop_params["adata_list"]["full"].obs["train_split"]
-                        == group,
-                        :,
-                    ]  # the predicted labels in test and val
-
-            elif strategy in ["warmup_dann_semisup"]:
-                memory = {}
-                memory["pseudo_full"] = loop_params["pseudo_y_list"]["full"]
-                for group in ["val", "test"]:
-                    loop_params["pseudo_y_list"]["full"][
-                        loop_params["adata_list"]["full"].obs["train_split"]
-                        == group,
-                        :,
-                    ] = (
-                        self.run_file.unlabeled_category
-                    )  # set val and test to self.unlabeled_category
-                    loop_params["pseudo_y_list"][group] = pseudo_full[
-                        loop_params["adata_list"]["full"].obs["train_split"]
-                        == group,
-                        :,
-                    ]
-
-            else:
-                if (
-                    memory
-                ):  # In case we are no longer using semi sup config, we reset to the previous known pseudolabels
-                    for group in ["val", "test", "full"]:
-                        loop_params["pseudo_y_list"][group] = memory[group]
-                    memory = {}
-
-            for epoch in range(1, n_epochs + 1):
-                running_epoch += 1
-                logger.info(
-                    f"Epoch {running_epoch}/{total_epochs}, Current strat Epoch {epoch}/{n_epochs}"
-                )
-                history, _, _, _, _ = self.training_loop(
-                    history=history,
-                    training_strategy=strategy,
-                    use_perm=use_perm,
-                    optimizer=optimizer,
-                    **loop_params,
-                )
-
-                if self.run_file.log_neptune:
-                    for group in history:
-                        for par, value in history[group].items():
-                            if len(value) > 0:
-                                self.run_neptune[
-                                    f"training/{group}/{par}"
-                                ].append(value[-1])
-                            if physical_devices:
-                                self.run_neptune[
-                                    "training/train/tf_GPU_memory"
-                                ].append(
-                                    tf.config.experimental.get_memory_info(
-                                        "GPU:0"
-                                    )["current"]
-                                    / 1e6
-                                )
-                if strategy in [
-                    "full_model",
-                    "classifier_branch",
-                    "permutation_only",
-                ]:
-                    # Early stopping
-                    wait += 1
-                    monitored_value = history["val"][monitored][-1]
-
-                    if "loss" in monitored:
-                        if monitored_value < es_best - min_delta:
-                            best_epoch = epoch
-                            es_best = monitored_value
-                            wait = 0
-                            best_model = self.dann_ae.get_weights()
-                    else:
-                        if monitored_value > es_best + min_delta:
-                            best_epoch = epoch
-                            es_best = monitored_value
-                            wait = 0
-                            best_model = self.dann_ae.get_weights()
-                    if wait >= patience:
-                        logger.info(
-                            f"Early stopping at epoch {best_epoch}, restoring model parameters from this epoch"
-                        )
-                        self.dann_ae.set_weights(best_model)
-                        break
-            del optimizer
-
-            if verbose:
-                time_out = time.time()
-                logger.debug(f"Strategy duration : {time_out - time_in} s")
         if self.run_file.log_neptune:
             self.run_neptune[f"training/{group}/total_epochs"] = running_epoch
         return history
 
+
+    def run_single_scheme(self, strategy, history, use_perm, loop_params, scheme_index, running_epoch, n_epochs, total_epochs):
+        """
+        Run the training of one scMusketeers scheme given by the varialbe strategy
+        full_model,
+        classifier_branch
+        permutation_only
+        encoder_classifier
+        warmup_dann_pseudolabels
+        full_model_pseudolabels
+        warmup_dann_semisup
+        """
+        optimizer = self.get_optimizer(
+            self.learning_rate, self.weight_decay, self.optimizer_type
+        )  # resetting optimizer state when switching strategy
+        logger.debug(
+            f"##-- {strategy.upper()} - Step {scheme_index}, running {strategy} strategy with permutation = {use_perm} for {n_epochs} epochs"
+        )
+        time_in = time.time()
+        scheme_index += 1
+
+            # Early stopping for those strategies only
+        if strategy in [
+            "full_model",
+            "classifier_branch",
+            "permutation_only",
+            "encoder_classifier",
+        ]:
+            wait = 0
+            best_epoch = 0
+            patience = 20
+            min_delta = 0
+            if strategy == "permutation_only":
+                monitored = "rec_loss"
+                es_best = np.inf  # initialize early_stopping
+            else:
+                split, metric = self.opt_metric.split("-")
+                monitored = metric
+                es_best = -np.inf
+        memory = {}
+        if strategy in [
+            "warmup_dann_pseudolabels",
+            "full_model_pseudolabels",
+        ]:  # We use the pseudolabels computed with the model
+            input_tensor = {
+                k: tf.convert_to_tensor(v)
+                for k, v in scanpy_to_input(
+                    loop_params["adata_list"]["full"], ["size_factors"]
+                ).items()
+            }
+            enc, clas, dann, rec = self.dann_ae(
+                input_tensor, training=False
+            ).values()  # Model predict
+            pseudo_full = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
+            pseudo_full[
+                loop_params["adata_list"]["full"].obs["train_split"]
+                == "train",
+                :,
+            ] = loop_params["pseudo_y_list"][
+                "train"
+            ]  # the true labels
+            loop_params["pseudo_y_list"]["full"] = pseudo_full
+            for group in ["val", "test"]:
+                loop_params["pseudo_y_list"][group] = pseudo_full[
+                    loop_params["adata_list"]["full"].obs["train_split"]
+                    == group,
+                    :,
+                ]  # the predicted labels in test and val
+        elif strategy in ["warmup_dann_semisup"]:
+            memory = {}
+            memory["pseudo_full"] = loop_params["pseudo_y_list"]["full"]
+            for group in ["val", "test"]:
+                loop_params["pseudo_y_list"]["full"][
+                    loop_params["adata_list"]["full"].obs["train_split"]
+                    == group,
+                    :,
+                ] = (
+                    self.run_file.unlabeled_category
+                )  # set val and test to self.unlabeled_category
+                loop_params["pseudo_y_list"][group] = pseudo_full[
+                    loop_params["adata_list"]["full"].obs["train_split"]
+                    == group,
+                    :,
+                ]
+        else:
+            if (
+                memory
+            ):  # In case we are no longer using semi sup config, we reset to the previous known pseudolabels
+                for group in ["val", "test", "full"]:
+                    loop_params["pseudo_y_list"][group] = memory[group]
+                memory = {}
+
+        # trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
+        # logger.debug(f"Before unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
+        # for i, var in enumerate(trainable_unfrozen_variables):
+        #     logger.debug(f"  Before Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
+        
+        freeze.unfreeze_all(self.dann_ae)  # resetting freeze state
+        
+        # trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
+        # logger.debug(f"After unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
+        # for i, var in enumerate(trainable_unfrozen_variables):
+        #     logger.debug(f"  After Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
+       
+        if strategy == "full_model":
+            group = "train"
+        elif strategy == "full_model_pseudolabels":
+            group = "full"
+        elif strategy == "encoder_classifier":
+            group = "train"
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_classifier")  # training only
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy in [
+            "warmup_dann",
+            "warmup_dann_pseudolabels",
+            "warmup_dann_semisup",
+        ]:
+            group = "full"  # semi-supervised setting
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "warmup_dann")
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy == "warmup_dann_train":
+            group = "train"  # semi-supervised setting
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "warmup_dann")
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy == "warmup_dann_no_rec":
+            group = "full"
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_dann")
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy == "dann_with_ae":
+            group = "train"
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "warmup_dann")
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy == "classifier_branch":
+            group = "train"
+            layers_to_freeze = freeze.freeze_block(
+                self.dann_ae, "all_but_classifier_branch"
+            )  # training only classifier branch
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy == "permutation_only":
+            group = "train"
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_autoencoder")
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy == "no_dann":
+            group = "train"
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "freeze_dann")
+            freeze.freeze_layers(layers_to_freeze)
+        elif strategy == "no_decoder":
+            group = "train"
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "freeze_dec")
+            freeze.freeze_layers(layers_to_freeze)
+
+        logger.debug(f"Use permutation strategy? use_perm = {use_perm}")
+
+        for epoch in range(1, n_epochs + 1):
+            running_epoch += 1
+            logger.debug(
+                f"Epoch {running_epoch}/{total_epochs}, Current strat Epoch {epoch}/{n_epochs}"
+            )
+            history, _, _, _, _ = self.training_loop(
+                history=history,
+                group=group,
+                training_strategy=strategy,
+                use_perm=use_perm,
+                optimizer=optimizer,
+                **loop_params,
+            )
+
+            if self.run_file.log_neptune:
+                for group in history:
+                    for par, value in history[group].items():
+                        if len(value) > 0:
+                            self.run_neptune[
+                                f"training/{group}/{par}"
+                            ].append(value[-1])
+                        if physical_devices:
+                            self.run_neptune[
+                                "training/train/tf_GPU_memory"
+                            ].append(
+                                tf.config.experimental.get_memory_info(
+                                    "GPU:0"
+                                )["current"]
+                                / 1e6
+                            )
+            if strategy in [
+                "full_model",
+                "classifier_branch",
+                "permutation_only",
+                "encoder_classifier",
+            ]:
+                # Early stopping
+                wait += 1
+                monitored_value = history["val"][monitored][-1]
+
+                if "loss" in monitored:
+                    if monitored_value < es_best - min_delta:
+                        best_epoch = epoch
+                        es_best = monitored_value
+                        wait = 0
+                        best_model = self.dann_ae.get_weights()
+                else:
+                    if monitored_value > es_best + min_delta:
+                        best_epoch = epoch
+                        es_best = monitored_value
+                        wait = 0
+                        best_model = self.dann_ae.get_weights()
+                if wait >= patience:
+                    logger.debug(
+                        f"Early stopping at epoch {best_epoch}, restoring model parameters from this epoch"
+                    )
+                    self.dann_ae.set_weights(best_model)
+                    break
+
+        time_out = time.time()
+        logger.debug(f"Strategy {strategy} duration : {time_out - time_in} s")
+        return running_epoch
+
+
     def training_loop(
         self,
         history,
-        ae,
+        group,
         adata_list,
         X_list,
         y_list,
@@ -645,62 +728,6 @@ class Workflow:
             - permutation_only : trains the autoencoder with permutations, optimizing the reconstruction loss without the classifier
         use_perm : True by default except form "warmup_dann" training strategy. Note that for training strategies that don't involve the reconstruction, this parameter has no impact on training
         """
-        trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
-        logger.debug(f"Before unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
-        for i, var in enumerate(trainable_unfrozen_variables):
-            logger.debug(f"  Before Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
-        
-        
-        #freeze.unfreeze_all(ae)  # resetting freeze state
-        trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
-        logger.debug(f"After unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
-        for i, var in enumerate(trainable_unfrozen_variables):
-            logger.debug(f"  After Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
-       
-        if training_strategy == "full_model":
-            group = "train"
-        elif training_strategy == "full_model_pseudolabels":
-            group = "full"
-        elif training_strategy in [
-            "warmup_dann",
-            "warmup_dann_pseudolabels",
-            "warmup_dann_semisup",
-        ]:
-            group = "full"  # semi-supervised setting
-            layers_to_freeze = freeze.freeze_block(ae, "warmup_dann")
-            # freeze.freeze_layers(layers_to_freeze)
-        elif training_strategy == "warmup_dann_train":
-            group = "train"  # semi-supervised setting
-            layers_to_freeze = freeze.freeze_block(ae, "warmup_dann")
-            freeze.freeze_layers(layers_to_freeze)
-        elif training_strategy == "warmup_dann_no_rec":
-            group = "full"
-            layers_to_freeze = freeze.freeze_block(ae, "all_but_dann")
-            freeze.freeze_layers(layers_to_freeze)
-        elif training_strategy == "dann_with_ae":
-            group = "train"
-            layers_to_freeze = freeze.freeze_block(ae, "warmup_dann")
-            freeze.freeze_layers(layers_to_freeze)
-        elif training_strategy == "classifier_branch":
-            group = "train"
-            layers_to_freeze = freeze.freeze_block(
-                ae, "all_but_classifier_branch"
-            )  # training only classifier branch
-            # freeze.freeze_layers(layers_to_freeze)
-        elif training_strategy == "permutation_only":
-            group = "train"
-            layers_to_freeze = freeze.freeze_block(ae, "all_but_autoencoder")
-            freeze.freeze_layers(layers_to_freeze)
-        elif training_strategy == "no_dann":
-            group = "train"
-            layers_to_freeze = freeze.freeze_block(ae, "freeze_dann")
-            freeze.freeze_layers(layers_to_freeze)
-        elif training_strategy == "no_decoder":
-            group = "train"
-            layers_to_freeze = freeze.freeze_block(ae, "freeze_dec")
-            freeze.freeze_layers(layers_to_freeze)
-
-        logger.debug(f"Use permutation strategy? use_perm = {use_perm}")
         batch_generator = batch_generator_training_permuted(
             X=X_list[group],
             y=pseudo_y_list[
@@ -729,7 +756,6 @@ class Workflow:
             # self.tr = tracker.SummaryTracker()
             self.batch_step(
                 step,
-                ae,
                 clas_loss_fn,
                 dann_loss_fn,
                 rec_loss_fn,
@@ -740,20 +766,8 @@ class Workflow:
                 n_obs,
             )
 
-        print_status_bar(
-            n_samples,
-            n_obs,
-            [
-                self.mean_loss_fn,
-                self.mean_clas_loss_fn,
-                self.mean_dann_loss_fn,
-                self.mean_rec_loss_fn,
-            ],
-            self.metrics,
-        )
         history, _, clas, dann, rec = self.evaluation_pass(
             history,
-            ae,
             adata_list,
             X_list,
             y_list,
@@ -764,10 +778,10 @@ class Workflow:
         )
         return history, _, clas, dann, rec
 
+    
     def batch_step(
         self,
         step,
-        ae,
         clas_loss_fn,
         dann_loss_fn,
         rec_loss_fn,
@@ -775,7 +789,7 @@ class Workflow:
         training_strategy,
         optimizer,
         n_samples,
-        n_obs,
+        n_obs
     ):
         if self.run_file.log_neptune:
             self.run_neptune["training/train/tf_GPU_memory_step"].append(
@@ -789,33 +803,16 @@ class Workflow:
         # X_batch, sf_batch = input_batch.values()
         clas_batch, dann_batch, rec_batch = output_batch.values()
 
-        trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
-        """
-        logger.debug(f"Expected unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
-        for i, var in enumerate(trainable_unfrozen_variables):
-            logger.debug(f"  Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
-        logger.debug(f"\n--- List of unfrozen trainable variables being checked ({len(trainable_unfrozen_variables)}): ---")
-        for i, var in enumerate(trainable_unfrozen_variables):
-            logger.debug(f"  [{i}] Var: {var.name}, Shape: {var.shape}, Trainable: {var.trainable}")
-         """
-
-        # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
+        
         with tf.GradientTape(persistent=True) as tape:
-            # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
-            if training_strategy == "classifier_branch":
-                for i, var in enumerate(ae.classifier.trainable_variables): 
-                    if isinstance(var, tf.Variable):
-                        logger.debug(f"  Unfrozen Var {i}: {var.name}, Shape: {var.shape}")
-                        tape.watch(var)
-
-
+            
             input_batch_new = dict()
             for k, v in input_batch.items():
                 input_batch_new[k] = tf.convert_to_tensor(v)
             input_batch = input_batch_new
             # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
 
-            enc_layer, class_out, dann_out, rec_out = ae(input_batch, training=True).values()
+            enc_layer, class_out, dann_out, rec_out = self.dann_ae(input_batch, training=True).values()
             # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
             
 
@@ -823,152 +820,61 @@ class Workflow:
             dann_loss = tf.reduce_mean(dann_loss_fn(dann_batch, dann_out))
             rec_loss = tf.reduce_mean(rec_loss_fn(rec_batch, rec_out))
 
-            logger.debug(f"class loss: {class_loss}")
-            logger.debug(f"dann_loss loss: {dann_loss}")
-            logger.debug(f"rec_loss loss: {rec_loss}")
-            logger.debug(f"ae losses {ae.losses}")
+            # logger.debug(f"class loss: {class_loss}")
+            # logger.debug(f"dann_loss loss: {dann_loss}")
+            # logger.debug(f"rec_loss loss: {rec_loss}")
+            # logger.debug(f"ae losses {ae.losses}")
 
             if training_strategy == "full_model":
                 loss = tf.add_n(
                     [self.run_file.clas_w * class_loss]
                     + [self.run_file.dann_w * dann_loss]
                     + [self.run_file.rec_w * rec_loss]
-                    + ae.losses
+                    + self.dann_ae.losses
                 )
-                logger.debug(f"ae losses {len(ae.losses)} {ae.losses}")
             elif training_strategy == "warmup_dann":
                 loss = tf.add_n(
                     [self.run_file.dann_w * dann_loss]
                     + [self.run_file.rec_w * rec_loss]
-                    + ae.losses
+                    + self.dann_ae.losses
                 )
-                logger.debug(f"ae losses {len(ae.losses)} {ae.losses}")
             elif training_strategy == "warmup_dann_no_rec":
-                loss = tf.add_n([self.run_file.dann_w * dann_loss] + ae.losses)
+                loss = tf.add_n([self.run_file.dann_w * dann_loss] + self.dann_ae.losses)
             elif training_strategy == "dann_with_ae":
                 loss = tf.add_n(
                     [self.run_file.dann_w * dann_loss]
                     + [self.run_file.rec_w * rec_loss]
-                    + ae.losses
+                    + self.dann_ae.losses
                 )
             elif training_strategy == "classifier_branch":
-                logger.debug(f"Init clas_loss {class_loss}")
-                loss = tf.add_n([self.run_file.clas_w * class_loss] + ae.losses)
-                logger.debug(f"ae losses {len(ae.losses)} {ae.losses}")
+                loss = tf.add_n([self.run_file.clas_w * class_loss])
             elif training_strategy == "permutation_only":
-                loss = tf.add_n([self.run_file.rec_w * rec_loss] + ae.losses)
+                loss = tf.add_n([self.run_file.rec_w * rec_loss] + self.dann_ae.losses)
             elif training_strategy == "no_dann":
                 loss = tf.add_n(
                     [self.run_file.rec_w * rec_loss]
                     + [self.run_file.clas_w * class_loss]
-                    + ae.losses
+                    + self.dann_ae.losses
                 )
             elif training_strategy == "no_decoder":
                 loss = tf.add_n(
                     [self.run_file.dann_w * dann_loss]
                     + [self.run_file.clas_w * class_loss]
-                    + ae.losses
+                    + self.dann_ae.losses
                 )
-
-            
-        """             logger.debug(f"Current training strategy: {training_strategy}")
-                    logger.debug(f"Classification Weight (clas_w): {self.run_file.clas_w}") # Add this!
-                    logger.debug(f"Loss value: {loss.numpy() if hasattr(loss, 'numpy') else loss}")
-                    logger.debug(f"Classification Loss: {clas_loss.numpy() if hasattr(clas_loss, 'numpy') else clas_loss}")
-                    logger.debug(f"DANN Loss: {dann_loss.numpy() if hasattr(dann_loss, 'numpy') else dann_loss}") # Even if not used in this scheme, helps confirm its value
-                    logger.debug(f"Reconstruction Loss: {rec_loss.numpy() if hasattr(rec_loss, 'numpy') else rec_loss}") # Even if not used in this scheme
-        """
-        # After classifier output
-        logger.debug(f"Classifier output (clas_out) norm: {tf.norm(class_out)}")
-
-        # After loss calculation
-        logger.debug(f"Classification Loss norm: {tf.norm(class_loss)}")
-
-        # After loss calculation
-        logger.debug(f"Total Loss norm: {tf.norm(loss)}")
-
-        # --- Debugging Gradients for Individual Loss Components ---
-        # Gradients for Classifier branch wrt unfrozen vars (mainly encoder/classifier)
-        class_grads = tape.gradient(class_loss, trainable_unfrozen_variables)
-        logger.debug("\n--- Gradients from CLASSIFICATION LOSS ---")
-        for grad, var in zip(class_grads, trainable_unfrozen_variables):
-            if "classifier" in var.name: # Only focus on classifier variables
-                grad_status = 'None' if grad is None else f'OK (norm: {tf.norm(grad):.4f})'
-                logger.debug(f"  - Var: {var.name}, Shape: {var.shape}, Grad: {grad_status}")
-
-        # Gradients for DANN branch wrt unfrozen vars (mainly encoder)
-        dann_grads = tape.gradient(dann_loss, trainable_unfrozen_variables)
-        logger.debug("\n--- Gradients from DANN LOSS ---")
-        for grad, var in zip(dann_grads, trainable_unfrozen_variables):
-            logger.debug(f"  - Var: {var.name}, Grad: {'None' if grad is None else 'OK (shape: '+str(grad.shape)+')'}")
-
-        # Gradients for Reconstruction branch wrt unfrozen vars (mainly encoder)
-        # Note: If rec_loss is based on a frozen decoder, you'll still get None for decoder weights,
-        # but we care about encoder weights if they contribute to reconstruction.
-        rec_grads = tape.gradient(rec_loss, trainable_unfrozen_variables)
-        logger.debug("\n--- Gradients from RECONSTRUCTION LOSS ---")
-        for grad, var in zip(rec_grads, trainable_unfrozen_variables):
-            logger.debug(f"  - Var: {var.name}, Grad: {'None' if grad is None else 'OK (shape: '+str(grad.shape)+')'}")
-       
+            # logger.debug(f"Loss: {loss}")
+      
         # --- Main Gradients for the Total Loss ---
-        gradients = tape.gradient(loss, ae.trainable_variables) # Request only for unfrozen
-        """ logger.debug("\n--- Gradients from TOTAL LOSS ---")
-        for grad, var in zip(gradients, trainable_unfrozen_variables):
-            logger.debug(f"  - Var: {var.name}, Grad: {'None' if grad is None else 'OK (shape: '+str(grad.shape)+')'}")
-        """
+        gradients = tape.gradient(loss, self.dann_ae.trainable_variables) # Request only for unfrozen
+
+        # logger.debug("\n--- Gradients from TOTAL LOSS ---")
+        # for grad, var in zip(gradients, ae.trainable_variables):
+        #     logger.debug(f"  - Var: {var.name}, Grad: {'None' if grad is None else 'OK (shape: '+str(grad.shape)+')'}")
+        
         del tape # Don't forget to delete persistent tape
-        """ logger.debug("Variables being watched by tape:")
-        for var in ae.trainable_variables:
-            logger.debug(f"  - {var.name}, Trainable: {var.trainable}")
-            # Explicitly check if the tape is watching this variable
-            if not tape.watched_variables(): # This method is available in newer TF versions
-                # Alternatively, you can conceptually confirm it's being used inside the tape scope
-                pass """
-
-        # print(f"loss {asizeof.asizeof(loss)}")
-        # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
-        n_samples += enc_layer.shape[0]
-        # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
-        """ logger.debug(f"{training_strategy}")
-        logger.debug(f"AE trainable var: {type(ae.trainable_variables)}")
-        logger.debug(f"AE trainable var: {len(ae.trainable_variables)}")
-        logger.debug(f"Loss: {type(loss)}")
-        logger.debug(f"Loss: {loss}") """
-        #gradients = tape.gradient(loss, ae.trainable_variables)
-        """ logger.debug(f"gradient: {type(gradients)}")
-        logger.debug(f"gradient: {len(gradients)}")
-        logger.debug(f"Loss tensor device: {loss.device}")
-        logger.debug("Checking variable devices before gradient calculation:") """
-         
-        # print(f"gradients {asizeof.asizeof(gradients)}")
-        # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
-        """ for grad, var in zip(gradients, ae.trainable_variables):
-            logger.debug(f"Variable: {var.name}, Device: {var}")
-            if grad is None:
-                print("  - Gradient: None! (No path from loss to this variable)")
-                continue # Skip to the next gradient
-
-            # Check if the gradient is sparse or dense
-            if isinstance(grad, tf.IndexedSlices):
-                print("  - Type: tf.IndexedSlices (Sparse Gradient)")
-                print(f"  - Gradient Values Shape: {grad.values.shape}")
-                print(f"  - Gradient Indices Shape: {grad.indices.shape}")
-                print(f"  - Full Variable Dense Shape: {grad.dense_shape}")
-            else: # It's a tf.Tensor
-                print("  - Type: tf.Tensor (Dense Gradient)")
-                print(f"  - Gradient Shape: {grad.shape}")
-                print(f"  - Gradient DType: {grad.dtype}") """
-
-#        logger.debug(f"Loss type: {type(loss)}, device: {loss.device}, dtype: {loss.dtype}")
-#       logger.debug(f"First variable to check: {ae.trainable_variables[0].name}, type: {type(ae.trainable_variables[0])},  dtype: {ae.trainable_variables[0].dtype}")
-#        logger.debug(f"First variable to check: {ae.trainable_variables[0].name}, type: {type(ae.trainable_variables[0])}, device: {ae.trainable_variables[0].device}, dtype: {ae.trainable_variables[0].dtype}")
-        """ logger.debug(f"Length variables: {len(tape.watched_variables())} - {len(ae.trainable_variables)}")
-        if len(tape.watched_variables()) != len(ae.trainable_variables):
-            for var in tape.watched_variables():
-                logger.debug(f"Watched var: {var.name}")
-            for grad, var in zip(gradients, ae.trainable_variables):
-                logger.debug(f"Variable: {var.name}") """
-        optimizer.apply_gradients(zip(gradients, ae.trainable_variables))
+    
+    
+        optimizer.apply_gradients(zip(gradients, self.dann_ae.trainable_variables))
         # print(f"optimizer {asizeof.asizeof(optimizer)}")
         # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
         self.mean_loss_fn(loss.__float__())
@@ -976,23 +882,21 @@ class Workflow:
         self.mean_dann_loss_fn(dann_loss.__float__())
         self.mean_rec_loss_fn(rec_loss.__float__())
 
-        if self.run_file.verbose:
-            print_status_bar(
-                n_samples,
-                n_obs,
-                [
-                    self.mean_loss_fn,
-                    self.mean_clas_loss_fn,
-                    self.mean_dann_loss_fn,
-                    self.mean_rec_loss_fn,
-                ],
-                self.metrics,
-            )
+        # print_status_bar(
+        #     n_samples,
+        #     n_obs,
+        #     [
+        #         self.mean_loss_fn,
+        #         self.mean_clas_loss_fn,
+        #         self.mean_dann_loss_fn,
+        #         self.mean_rec_loss_fn,
+        #     ],
+        #     self.metrics,
+        # )
 
     def evaluation_pass(
         self,
         history,
-        ae,
         adata_list,
         X_list,
         y_list,
@@ -1009,8 +913,8 @@ class Workflow:
         for group in ["train", "val"]:  # evaluation round
             inp = scanpy_to_input(adata_list[group], ["size_factors"])
             inp = {k: tf.convert_to_tensor(v) for k, v in inp.items()}
-            _, clas, dann, rec = ae(inp, training=False).values()
-        
+            _, clas, dann, rec = self.dann_ae(inp, training=False).values()
+
             #         return _, clas, dann, rec
             clas_loss = tf.reduce_mean(
                 clas_loss_fn(y_list[group], clas)
@@ -1028,16 +932,16 @@ class Workflow:
                 self.clas_w * clas_loss
                 + self.dann_w * dann_loss
                 + self.rec_w * rec_loss
-                + np.sum(ae.losses)
+                + np.sum(self.dann_ae.losses)
             ]  # using numpy to prevent memory leaks
             # history[group]['total_loss'] += [tf.add_n([self.clas_w * clas_loss] + [self.dann_w * dann_loss] + [self.rec_w * rec_loss] + ae.losses).numpy()]
 
             clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
             for (
                 metric
-            ) in PRED_METRICS_LIST:  # only classification metrics ATM
+            ) in self.pred_metrics_list:  # only classification metrics ATM
                 history[group][metric] += [
-                    PRED_METRICS_LIST[metric](
+                    self.pred_metrics_list[metric](
                         np.asarray(y_list[group].argmax(axis=1)).reshape(
                             -1,
                         ),
@@ -1047,10 +951,10 @@ class Workflow:
             for (
                 metric
             ) in (
-                PRED_METRICS_LIST_BALANCED
+                self.pred_metrics_list_balanced
             ):  # only classification metrics ATM
                 history[group][metric] += [
-                    PRED_METRICS_LIST_BALANCED[metric](
+                    self.pred_metrics_list_balanced[metric](
                         np.asarray(y_list[group].argmax(axis=1)).reshape(
                             -1,
                         ),
@@ -1082,8 +986,8 @@ class Workflow:
                 alpha=class_weights, gamma=3
             )
         else:
-            print(self.clas_loss_name + " loss not supported for classif")
-        logger.debug(f"Class loss fn: {type(self.clas_loss_fn)}")
+            logger.debug(self.clas_loss_name + " loss not supported for classif")
+    
         if self.dann_loss_name == "categorical_crossentropy":
             self.dann_loss_fn = tf.keras.losses.categorical_crossentropy
         else:
@@ -1103,8 +1007,7 @@ class Workflow:
         Returns:
             an optimizer object
         """
-        # TODO Add more optimizers
-        print(optimizer_type)
+        logger.debug(f"Optimizer: {optimizer_type}")
         if optimizer_type == "adam":
             optimizer = tf.keras.optimizers.Adam(
                 learning_rate=learning_rate,

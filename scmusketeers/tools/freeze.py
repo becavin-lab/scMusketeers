@@ -9,7 +9,7 @@ def freeze_layers(layers_to_freeze):
     layers_to_freeze: List of layers to freeze.
     """
     for layer in layers_to_freeze:
-        logger.info(f"Freezing layer: {layer}")
+        logger.debug(f"Freezing layer: {layer}")
         layer.trainable = False
         if hasattr(layer, 'layers'): # If it's a nested model
             for sub_l in layer.layers:  
@@ -31,9 +31,8 @@ def freeze_block(ae, strategy):
             ae.ae_output_layer,
         ]
     elif strategy == "warmup_dann":
-        #layers_to_freeze = []
-        layers_to_freeze = [ae.classifier]
-
+        layers_to_freeze = []
+        # layers_to_freeze = [ae.classifier]
     elif strategy == "all_but_dann_branch":
         layers_to_freeze = [
             ae.classifier,
@@ -60,22 +59,25 @@ def freeze_all(ae):
 
 
 def unfreeze_all(ae):
-    for l in ae.layers:
-        l.trainable = True
-        if hasattr(l, 'layers'): # If it's a nested model
-            for sub_l in l.layers:  
+    for layer in ae.layers:
+        # logger.debug(f"Unfreezing layer: {layer}")
+        layer.trainable = True
+        if hasattr(layer, 'layers'): # If it's a nested model
+            for sub_l in layer.layers:  
                 sub_l.trainable = True
     ae.dann_discriminator.trainable = True
-    for l in ae.dann_discriminator.layers:
-        l.trainable = True
-        if hasattr(l, 'layers'): # If it's a nested model
-            for sub_l in l.layers:  
+    for layer in ae.dann_discriminator.layers:
+        # logger.debug(f"Unfreezing dann-discri layer: {layer}")
+        layer.trainable = True
+        if hasattr(layer, 'layers'): # If it's a nested model
+            for sub_l in layer.layers:  
                 sub_l.trainable = True
     ae.classifier.trainable = True
-    for l in ae.classifier.layers:
-        l.trainable = True
-        if hasattr(l, 'layers'): # If it's a nested model
-            for sub_l in l.layers:  
+    for layer in ae.classifier.layers:
+        # logger.debug(f"Unfreezing classifier layer: {layer}")
+        layer.trainable = True
+        if hasattr(layer, 'layers'): # If it's a nested model
+            for sub_l in layer.layers:  
                 sub_l.trainable = True
     
 

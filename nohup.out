@@ -1,0 +1,229 @@
+2025-06-20 23:40:36.104459: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2025-06-20 23:40:36.121807: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:467] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1750455636.143463 1009831 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1750455636.151624 1009831 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1750455636.168927 1009831 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1750455636.169680 1009831 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1750455636.170384 1009831 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1750455636.171137 1009831 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+2025-06-20 23:40:36.176413: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+|--- DEBUG       Program arguments: Namespace(process='transfer', ref_path='/workspace/cell/Review_scMusk/data/Deprez-Lung-unknown-0.2.h5ad', debug=True, class_key='celltype', batch_key='donor', query_path=None, out_dir='/workspace/cell/Review_scMusk', out_name='Deprez-Lung-unknown-0.2-pred', training_scheme='training_scheme_8', log_neptune=True, neptune_name='sc-musketeers', opt_metric='val-balanced_mcc', verbose=True, hparam_path=None, working_dir=None, dataset_name=None, unlabeled_category='Unknown', filter_min_counts=True, normalize_size_factors=True, size_factor='default', scale_input=False, logtrans_input=True, use_hvg=None, batch_size=430, test_split_key='TRAIN_TEST_split', test_obs=None, test_index_name=None, mode='percentage', pct_split=0.9, obs_key='manip', n_keep=None, split_strategy=None, keep_obs=None, train_test_random_seed=0, obs_subsample=None, make_fake=False, true_celltype=None, false_celltype=None, pct_false=None, weight_decay=9.447375593939065e-07, learning_rate=0.0009913638603687327, optimizer_type='adam', warmup_epoch=10, fullmodel_epoch=10, permonly_epoch=10, classifier_epoch=10, balance_classes=True, clas_loss_name='categorical_focal_crossentropy', dann_loss_name='categorical_crossentropy', rec_loss_name='MSE', clas_w=0.3066763716843436, dann_w=0.01865515471175812, rec_w=0.013070252184855429, dropout=0.27058450953709307, layer1=1151, layer2=235, bottleneck=84, ae_hidden_size=[128, 64, 128], ae_hidden_dropout=None, ae_activation='relu', ae_bottleneck_activation='linear', ae_output_activation='relu', ae_init='glorot_uniform', ae_batchnorm=True, ae_l1_enc_coef=None, ae_l2_enc_coef=None, class_hidden_size=[64], class_hidden_dropout=None, class_batchnorm=True, class_activation='relu', class_output_activation='softmax', dann_hidden_size=[64], dann_hidden_dropout=None, dann_batchnorm=True, dann_activation='relu', dann_output_activation='softmax')
+|--- INFO        Run transfer
+I0000 00:00:1750455641.730698 1009831 gpu_device.cc:2019] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 31134 MB memory:  -> device: 0, name: Tesla V100-SXM2-32GB, pci bus id: 0000:18:00.0, compute capability: 7.0
+|--- INFO        Use Neptune.ai log : True
+|--- INFO        Use Neptune project name = sc-musketeers
+[neptune] [info   ] Neptune initialized. Open in the app: https://app.neptune.ai/becavin-lab/sc-musketeers/e/SCMUS-178
+|--- INFO        Load /workspace/cell/Review_scMusk/data/Deprez-Lung-unknown-0.2.h5ad
+|--- DEBUG       Preprocess dataset - Normalization
+|--- DEBUG       Filter dataset
+|--- DEBUG       Normalize with total nb reads and calculate size factor
+|--- DEBUG       Log_1 transformation
+|--- DEBUG       Calculate size factor (default mode)
+/workspace/cell/scMusketeers/scmusketeers/transfer/dataset_tf.py:324: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+  self.adata_train_extended.obs["train_split"] = spl.values
+|--- DEBUG       Optimizer: adam
+|--- DEBUG       Class loss fn: <class 'keras.src.losses.losses.CategoricalFocalCrossentropy'>
+|--- DEBUG       Optimizer: adam
+|--- DEBUG       Step number 0, running warmup_dann strategy with permutation = True for 10 epochs
+|--- INFO        Epoch 1/30, Current strat Epoch 1/10
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Change the cell permutations
+/home/cbecavin/.conda/envs/scmusk/lib/python3.11/site-packages/keras/src/optimizers/base_optimizer.py:855: UserWarning: Gradients do not exist for variables ['dann_ae/Classifier/classifier_0/kernel', 'dann_ae/Classifier/classifier_0/bias', 'dann_ae/Classifier/batch_normalization_5/gamma', 'dann_ae/Classifier/batch_normalization_5/beta', 'dann_ae/Classifier/classifier_output/kernel', 'dann_ae/Classifier/classifier_output/bias'] when minimizing the loss. If using `model.compile()`, did you forget to provide a `loss` argument?
+  warnings.warn(
+|--- INFO        Epoch 2/30, Current strat Epoch 2/10
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Change the cell permutations
+/home/cbecavin/.conda/envs/scmusk/lib/python3.11/site-packages/keras/src/optimizers/base_optimizer.py:855: UserWarning: Gradients do not exist for variables ['dann_ae/Classifier/classifier_0/kernel', 'dann_ae/Classifier/classifier_0/bias', 'dann_ae/Classifier/batch_normalization_5/gamma', 'dann_ae/Classifier/batch_normalization_5/beta', 'dann_ae/Classifier/classifier_output/kernel', 'dann_ae/Classifier/classifier_output/bias'] when minimizing the loss. If using `model.compile()`, did you forget to provide a `loss` argument?
+  warnings.warn(
+|--- INFO        Epoch 3/30, Current strat Epoch 3/10
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Change the cell permutations
+/home/cbecavin/.conda/envs/scmusk/lib/python3.11/site-packages/keras/src/optimizers/base_optimizer.py:855: UserWarning: Gradients do not exist for variables ['dann_ae/Classifier/classifier_0/kernel', 'dann_ae/Classifier/classifier_0/bias', 'dann_ae/Classifier/batch_normalization_5/gamma', 'dann_ae/Classifier/batch_normalization_5/beta', 'dann_ae/Classifier/classifier_output/kernel', 'dann_ae/Classifier/classifier_output/bias'] when minimizing the loss. If using `model.compile()`, did you forget to provide a `loss` argument?
+  warnings.warn(
+|--- INFO        Epoch 4/30, Current strat Epoch 4/10
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Change the cell permutations
+/home/cbecavin/.conda/envs/scmusk/lib/python3.11/site-packages/keras/src/optimizers/base_optimizer.py:855: UserWarning: Gradients do not exist for variables ['dann_ae/Classifier/classifier_0/kernel', 'dann_ae/Classifier/classifier_0/bias', 'dann_ae/Classifier/batch_normalization_5/gamma', 'dann_ae/Classifier/batch_normalization_5/beta', 'dann_ae/Classifier/classifier_output/kernel', 'dann_ae/Classifier/classifier_output/bias'] when minimizing the loss. If using `model.compile()`, did you forget to provide a `loss` argument?
+  warnings.warn(
+|--- INFO        Epoch 5/30, Current strat Epoch 5/10
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Change the cell permutations
+/home/cbecavin/.conda/envs/scmusk/lib/python3.11/site-packages/keras/src/optimizers/base_optimizer.py:855: UserWarning: Gradients do not exist for variables ['dann_ae/Classifier/classifier_0/kernel', 'dann_ae/Classifier/classifier_0/bias', 'dann_ae/Classifier/batch_normalization_5/gamma', 'dann_ae/Classifier/batch_normalization_5/beta', 'dann_ae/Classifier/classifier_output/kernel', 'dann_ae/Classifier/classifier_output/bias'] when minimizing the loss. If using `model.compile()`, did you forget to provide a `loss` argument?
+  warnings.warn(
+|--- INFO        Epoch 6/30, Current strat Epoch 6/10
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Change the cell permutations
+/home/cbecavin/.conda/envs/scmusk/lib/python3.11/site-packages/keras/src/optimizers/base_optimizer.py:855: UserWarning: Gradients do not exist for variables ['dann_ae/Classifier/classifier_0/kernel', 'dann_ae/Classifier/classifier_0/bias', 'dann_ae/Classifier/batch_normalization_5/gamma', 'dann_ae/Classifier/batch_normalization_5/beta', 'dann_ae/Classifier/classifier_output/kernel', 'dann_ae/Classifier/classifier_output/bias'] when minimizing the loss. If using `model.compile()`, did you forget to provide a `loss` argument?
+  warnings.warn(
+|--- INFO        Epoch 7/30, Current strat Epoch 7/10
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Change the cell permutations
+/home/cbecavin/.conda/envs/scmusk/lib/python3.11/site-packages/keras/src/optimizers/base_optimizer.py:855: UserWarning: Gradients do not exist for variables ['dann_ae/Classifier/classifier_0/kernel', 'dann_ae/Classifier/classifier_0/bias', 'dann_ae/Classifier/batch_normalization_5/gamma', 'dann_ae/Classifier/batch_normalization_5/beta', 'dann_ae/Classifier/classifier_output/kernel', 'dann_ae/Classifier/classifier_output/bias'] when minimizing the loss. If using `model.compile()`, did you forget to provide a `loss` argument?
+  warnings.warn(
+|--- INFO        Epoch 8/30, Current strat Epoch 8/10
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Change the cell permutations
+/home/cbecavin/.conda/envs/scmusk/lib/python3.11/site-packages/keras/src/optimizers/base_optimizer.py:855: UserWarning: Gradients do not exist for variables ['dann_ae/Classifier/classifier_0/kernel', 'dann_ae/Classifier/classifier_0/bias', 'dann_ae/Classifier/batch_normalization_5/gamma', 'dann_ae/Classifier/batch_normalization_5/beta', 'dann_ae/Classifier/classifier_output/kernel', 'dann_ae/Classifier/classifier_output/bias'] when minimizing the loss. If using `model.compile()`, did you forget to provide a `loss` argument?
+  warnings.warn(
+|--- INFO        Epoch 9/30, Current strat Epoch 9/10
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Change the cell permutations
+/home/cbecavin/.conda/envs/scmusk/lib/python3.11/site-packages/keras/src/optimizers/base_optimizer.py:855: UserWarning: Gradients do not exist for variables ['dann_ae/Classifier/classifier_0/kernel', 'dann_ae/Classifier/classifier_0/bias', 'dann_ae/Classifier/batch_normalization_5/gamma', 'dann_ae/Classifier/batch_normalization_5/beta', 'dann_ae/Classifier/classifier_output/kernel', 'dann_ae/Classifier/classifier_output/bias'] when minimizing the loss. If using `model.compile()`, did you forget to provide a `loss` argument?
+  warnings.warn(
+|--- INFO        Epoch 10/30, Current strat Epoch 10/10
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Change the cell permutations
+/home/cbecavin/.conda/envs/scmusk/lib/python3.11/site-packages/keras/src/optimizers/base_optimizer.py:855: UserWarning: Gradients do not exist for variables ['dann_ae/Classifier/classifier_0/kernel', 'dann_ae/Classifier/classifier_0/bias', 'dann_ae/Classifier/batch_normalization_5/gamma', 'dann_ae/Classifier/batch_normalization_5/beta', 'dann_ae/Classifier/classifier_output/kernel', 'dann_ae/Classifier/classifier_output/bias'] when minimizing the loss. If using `model.compile()`, did you forget to provide a `loss` argument?
+  warnings.warn(
+|--- DEBUG       Strategy duration : 229.88001203536987 s
+|--- DEBUG       Optimizer: adam
+|--- DEBUG       Step number 0, running full_model strategy with permutation = False for 10 epochs
+|--- INFO        Epoch 11/30, Current strat Epoch 1/10
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 12/30, Current strat Epoch 2/10
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 13/30, Current strat Epoch 3/10
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 14/30, Current strat Epoch 4/10
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 15/30, Current strat Epoch 5/10
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 16/30, Current strat Epoch 6/10
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 17/30, Current strat Epoch 7/10
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 18/30, Current strat Epoch 8/10
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 19/30, Current strat Epoch 9/10
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 20/30, Current strat Epoch 10/10
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy duration : 78.89149308204651 s
+|--- DEBUG       Optimizer: adam
+|--- DEBUG       Step number 0, running classifier_branch strategy with permutation = False for 10 epochs
+|--- INFO        Epoch 21/30, Current strat Epoch 1/10
+|--- DEBUG       Freezing layer: <Classifier name=Dann_Discriminator, built=True>
+|--- DEBUG       Freezing layer: <Encoder name=Encoder, built=True>
+|--- DEBUG       Freezing layer: <Decoder name=Decoder, built=True>
+|--- DEBUG       Freezing layer: <Dense name=autoencoder_output, built=True>
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 22/30, Current strat Epoch 2/10
+|--- DEBUG       Freezing layer: <Classifier name=Dann_Discriminator, built=True>
+|--- DEBUG       Freezing layer: <Encoder name=Encoder, built=True>
+|--- DEBUG       Freezing layer: <Decoder name=Decoder, built=True>
+|--- DEBUG       Freezing layer: <Dense name=autoencoder_output, built=True>
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 23/30, Current strat Epoch 3/10
+|--- DEBUG       Freezing layer: <Classifier name=Dann_Discriminator, built=True>
+|--- DEBUG       Freezing layer: <Encoder name=Encoder, built=True>
+|--- DEBUG       Freezing layer: <Decoder name=Decoder, built=True>
+|--- DEBUG       Freezing layer: <Dense name=autoencoder_output, built=True>
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 24/30, Current strat Epoch 4/10
+|--- DEBUG       Freezing layer: <Classifier name=Dann_Discriminator, built=True>
+|--- DEBUG       Freezing layer: <Encoder name=Encoder, built=True>
+|--- DEBUG       Freezing layer: <Decoder name=Decoder, built=True>
+|--- DEBUG       Freezing layer: <Dense name=autoencoder_output, built=True>
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 25/30, Current strat Epoch 5/10
+|--- DEBUG       Freezing layer: <Classifier name=Dann_Discriminator, built=True>
+|--- DEBUG       Freezing layer: <Encoder name=Encoder, built=True>
+|--- DEBUG       Freezing layer: <Decoder name=Decoder, built=True>
+|--- DEBUG       Freezing layer: <Dense name=autoencoder_output, built=True>
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 26/30, Current strat Epoch 6/10
+|--- DEBUG       Freezing layer: <Classifier name=Dann_Discriminator, built=True>
+|--- DEBUG       Freezing layer: <Encoder name=Encoder, built=True>
+|--- DEBUG       Freezing layer: <Decoder name=Decoder, built=True>
+|--- DEBUG       Freezing layer: <Dense name=autoencoder_output, built=True>
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 27/30, Current strat Epoch 7/10
+|--- DEBUG       Freezing layer: <Classifier name=Dann_Discriminator, built=True>
+|--- DEBUG       Freezing layer: <Encoder name=Encoder, built=True>
+|--- DEBUG       Freezing layer: <Decoder name=Decoder, built=True>
+|--- DEBUG       Freezing layer: <Dense name=autoencoder_output, built=True>
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 28/30, Current strat Epoch 8/10
+|--- DEBUG       Freezing layer: <Classifier name=Dann_Discriminator, built=True>
+|--- DEBUG       Freezing layer: <Encoder name=Encoder, built=True>
+|--- DEBUG       Freezing layer: <Decoder name=Decoder, built=True>
+|--- DEBUG       Freezing layer: <Dense name=autoencoder_output, built=True>
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 29/30, Current strat Epoch 9/10
+|--- DEBUG       Freezing layer: <Classifier name=Dann_Discriminator, built=True>
+|--- DEBUG       Freezing layer: <Encoder name=Encoder, built=True>
+|--- DEBUG       Freezing layer: <Decoder name=Decoder, built=True>
+|--- DEBUG       Freezing layer: <Dense name=autoencoder_output, built=True>
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- INFO        Epoch 30/30, Current strat Epoch 10/10
+|--- DEBUG       Freezing layer: <Classifier name=Dann_Discriminator, built=True>
+|--- DEBUG       Freezing layer: <Encoder name=Encoder, built=True>
+|--- DEBUG       Freezing layer: <Decoder name=Decoder, built=True>
+|--- DEBUG       Freezing layer: <Dense name=autoencoder_output, built=True>
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy duration : 66.03284668922424 s
+[neptune] [info   ] Shutting down background jobs, please wait a moment...
+[neptune] [info   ] Done!
+[neptune] [info   ] Waiting for the remaining 1 operations to synchronize with Neptune. Do not kill this process.
+[neptune] [info   ] All 1 operations synced, thanks for waiting!
+[neptune] [info   ] Explore the metadata in the Neptune app: https://app.neptune.ai/becavin-lab/sc-musketeers/e/SCMUS-178/metadata
+|--- INFO        Save adata_pred to /workspace/cell/Review_scMusk/Deprez-Lung-unknown-0.2-pred.h5ad
+2025-06-20 23:48:20.412992: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2025-06-20 23:48:20.514653: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:467] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1750456100.571892 1010243 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1750456100.591152 1010243 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1750456100.696223 1010243 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1750456100.697067 1010243 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1750456100.697693 1010243 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1750456100.698305 1010243 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+2025-06-20 23:48:20.714504: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+|--- DEBUG       Program arguments: Namespace(process='transfer', ref_path='/workspace/cell/Review_scMusk/data/Deprez-Lung-unknown-0.2.h5ad', debug=True, class_key='celltype', batch_key='donor', query_path=None, out_dir='/workspace/cell/Review_scMusk', out_name='Deprez-Lung-unknown-0.2-pred', training_scheme='training_scheme_8', log_neptune=True, neptune_name='sc-musketeers', opt_metric='val-balanced_mcc', verbose=True, hparam_path=None, working_dir=None, dataset_name=None, unlabeled_category='Unknown', filter_min_counts=True, normalize_size_factors=True, size_factor='default', scale_input=False, logtrans_input=True, use_hvg=None, batch_size=430, test_split_key='TRAIN_TEST_split', test_obs=None, test_index_name=None, mode='percentage', pct_split=0.9, obs_key='manip', n_keep=None, split_strategy=None, keep_obs=None, train_test_random_seed=0, obs_subsample=None, make_fake=False, true_celltype=None, false_celltype=None, pct_false=None, weight_decay=9.447375593939065e-07, learning_rate=0.0009913638603687327, optimizer_type='adam', warmup_epoch=100, fullmodel_epoch=100, permonly_epoch=100, classifier_epoch=50, balance_classes=True, clas_loss_name='categorical_focal_crossentropy', dann_loss_name='categorical_crossentropy', rec_loss_name='MSE', clas_w=0.3066763716843436, dann_w=0.01865515471175812, rec_w=0.013070252184855429, dropout=0.27058450953709307, layer1=1151, layer2=235, bottleneck=84, ae_hidden_size=[128, 64, 128], ae_hidden_dropout=None, ae_activation='relu', ae_bottleneck_activation='linear', ae_output_activation='relu', ae_init='glorot_uniform', ae_batchnorm=True, ae_l1_enc_coef=None, ae_l2_enc_coef=None, class_hidden_size=[64], class_hidden_dropout=None, class_batchnorm=True, class_activation='relu', class_output_activation='softmax', dann_hidden_size=[64], dann_hidden_dropout=None, dann_batchnorm=True, dann_activation='relu', dann_output_activation='softmax')
+|--- INFO        Run transfer
+I0000 00:00:1750456107.615486 1010243 gpu_device.cc:2019] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 31134 MB memory:  -> device: 0, name: Tesla V100-SXM2-32GB, pci bus id: 0000:18:00.0, compute capability: 7.0
+|--- INFO        Use Neptune.ai log : True
+|--- INFO        Use Neptune project name = sc-musketeers
+[neptune] [info   ] Neptune initialized. Open in the app: https://app.neptune.ai/becavin-lab/sc-musketeers/e/SCMUS-179
+|--- INFO        Load /workspace/cell/Review_scMusk/data/Deprez-Lung-unknown-0.2.h5ad
+|--- DEBUG       Preprocess dataset - Normalization
+|--- DEBUG       Filter dataset
+|--- DEBUG       Normalize with total nb reads and calculate size factor
+|--- DEBUG       Log_1 transformation
+|--- DEBUG       Calculate size factor (default mode)
+/workspace/cell/scMusketeers/scmusketeers/transfer/dataset_tf.py:324: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+  self.adata_train_extended.obs["train_split"] = spl.values
+|--- DEBUG       Optimizer: adam
+|--- DEBUG       Class loss fn: <class 'keras.src.losses.losses.CategoricalFocalCrossentropy'>
+|--- DEBUG       Optimizer: adam
+|--- DEBUG       Step number 0, running warmup_dann strategy with permutation = True for 100 epochs
+|--- INFO        Epoch 1/250, Current strat Epoch 1/100
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Change the cell permutations
+/home/cbecavin/.conda/envs/scmusk/lib/python3.11/site-packages/keras/src/optimizers/base_optimizer.py:855: UserWarning: Gradients do not exist for variables ['dann_ae/Classifier/classifier_0/kernel', 'dann_ae/Classifier/classifier_0/bias', 'dann_ae/Classifier/batch_normalization_5/gamma', 'dann_ae/Classifier/batch_normalization_5/beta', 'dann_ae/Classifier/classifier_output/kernel', 'dann_ae/Classifier/classifier_output/bias'] when minimizing the loss. If using `model.compile()`, did you forget to provide a `loss` argument?
+  warnings.warn(
+|--- INFO        Epoch 2/250, Current strat Epoch 2/100
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Change the cell permutations

@@ -38,14 +38,13 @@ def start_neptune_log(workflow):
                 )
             # elif par in dir(workflow.ae_param):
             #    workflow.run_neptune[f"parameters/{par}"] = stringify_unsupported(getattr(workflow.ae_param, par))
-        
-    """     if (
-            workflow.run_file.hp_params
-        ):  # Overwrites the defaults arguments contained in the runfile
+
+   
+        if hasattr(workflow.run_file, 'hp_params'):
             for par, val in workflow.hp_params.items():
                 workflow.run_neptune[f"parameters/{par}"] = (
                     stringify_unsupported(val)
-                ) """
+                )
 
 
 def add_custom_log(workflow, name, value):

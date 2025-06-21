@@ -10,11 +10,16 @@ sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
 try:
     from ..arguments.neptune_log import NEPTUNE_INFO
+    from ..arguments.neptune_log import (start_neptune_log, add_custom_log,
+                                                stop_neptune_log)
     from ..arguments.runfile import set_hyperparameters
     from .dataset import Dataset, load_dataset
     from .hyperparameters import Workflow
+    
 except ImportError:
     from scmusketeers.arguments.neptune_log import NEPTUNE_INFO
+    from scmusketeers.arguments.neptune_log import (start_neptune_log,
+                                                stop_neptune_log)
     from scmusketeers.arguments.runfile import set_hyperparameters
     from scmusketeers.hpoptim.dataset import Dataset, load_dataset
     from scmusketeers.hpoptim.hyperparameters import Workflow
@@ -90,7 +95,7 @@ class MakeExperiment:
             logger.debug("Set hyparameters")
             self.workflow.set_hyperparameters(params)
             logger.debug("")
-            self.workflow.start_neptune_log(self.run_file.neptune_name)
+            start_neptune_log(self.workflow)
             logger.debug("")
             self.workflow.process_dataset()
             logger.debug("")
@@ -102,14 +107,14 @@ class MakeExperiment:
                 self.workflow.make_experiment()
             )  
             logger.debug("Log the trial on Neptune")
-            self.workflow.add_custom_log("task", "hp_optim_V2")
-            self.workflow.add_custom_log("total_trial", self.total_trial)
-            self.workflow.add_custom_log("hp_random_seed", self.random_seed)
-            self.workflow.add_custom_log("trial_count", self.trial_count)
-            self.workflow.add_custom_log(
-                "opt_metric", self.run_file.opt_metric
+            add_custom_log(self.workflow,"task", "hp_optim_V2")
+            add_custom_log(self.workflow,"total_trial", self.total_trial)
+            add_custom_log(self.workflow,"hp_random_seed", self.random_seed)
+            add_custom_log(self.workflow,"trial_count", self.trial_count)
+            add_custom_log(
+                self.workflow,"opt_metric", self.run_file.opt_metric
             )
-            self.workflow.stop_neptune_log()
+            stop_neptune_log(self.workflow)
             # del self.workflow  # Should not be necessary
             return opt_metric
         else:  # we return the already computed value

@@ -18,7 +18,7 @@ outname_query="Deprez-2020-query-0.2-pred"
 
 warmup_epoch=1   # default 100, help - Number of epoch to warmup DANN
 fullmodel_epoch=1   # default = 100, help = Number of epoch to train full model
-permonly_epoch=1 # default = 100, help = Number of epoch to train in permutation only mode
+permonly_epoch=100 # default = 100, help = Number of epoch to train in permutation only mode
 classifier_epoch=1   # default = 50, help = Number of epoch to train te classifier only
 
 log_neptune=0
@@ -28,7 +28,7 @@ neptune_name="sc-musketeers"
 # Transfer Cell annotation to all Unknown cells
 #sc-musketeers transfer ${dataset} --class_key=celltype --unlabeled_category="Unknown" --batch_key=manip --out_dir=${outdir} --out_name=${outname}
 # sc-musketeers transfer ${dataset} --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
-python scmusketeers/__main__.py transfer ${dataset} --training_scheme="training_scheme_8" --log_neptune=${log_neptune} --neptune_name=${neptune_name} --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
+python scmusketeers/__main__.py transfer ${dataset} --debug --training_scheme="training_scheme_8" --log_neptune=${log_neptune} --neptune_name=${neptune_name} --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
 # python sc-musketeers/__main__.py transfer ${dataset} --class_key=celltype --unlabeled_category="Unknown" --batch_key=manip --out_dir=${outdir} --out_name=${outname}
 
 # Transfer Cell annotation and remove batch to query adata
