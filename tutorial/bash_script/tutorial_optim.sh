@@ -17,7 +17,7 @@ fullmodel_epoch=1   # default = 100, help = Number of epoch to train full model
 permonly_epoch=1   # default = 100, help = Number of epoch to train in permutation only mode
 classifier_epoch=1   # default = 50, help = Number of epoch to train te classifier only
 
-training_scheme="training_scheme_24"
+training_scheme="training_scheme_8"
 
 python ${python_path} hp_optim ${dataset} --debug --log_neptune=${log_neptune} --neptune_name=${neptune_name} --out_dir=${out_dir} \
 --classifier_epoch=${classifier_epoch} --hparam_path ${hparam_path} --dataset_name ${dataset_name} \

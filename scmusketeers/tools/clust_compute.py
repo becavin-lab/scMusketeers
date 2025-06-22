@@ -413,7 +413,7 @@ def make_weight(y_true, reduction_type='inverse_frequency'):
         raise ValueError(f"Unknown reduction_type: {reduction_type}")
 
     # Map the class weights back to each sample
-    sample_weights = y_true_s.replace(class_weights).values
+    sample_weights = y_true_s.map(class_weights).values
 
     if is_tf_tensor:
         return tf.convert_to_tensor(sample_weights, dtype=tf.float32)

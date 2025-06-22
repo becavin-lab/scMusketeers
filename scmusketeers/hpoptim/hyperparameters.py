@@ -13,6 +13,7 @@ import pandas as pd
 import scanpy as sc
 import tensorflow as tf
 import functools
+import warnings
 
 from ax.service.managed_loop import optimize
 from neptune.utils import stringify_unsupported
@@ -70,10 +71,16 @@ except ImportError:
 # Setup settings
 
 f1_score = functools.partial(f1_score, average="macro")
-
 physical_devices = tf.config.list_physical_devices("GPU")
 for gpu_instance in physical_devices:
     tf.config.experimental.set_memory_growth(gpu_instance, True)
+# Suppress the specific Keras UserWarning about non-existent gradients
+warnings.filterwarnings(
+    'ignore',
+    message="Gradients do not exist for variables",
+    category=UserWarning,
+    module='keras.src.optimizers.base_optimizer' # This targets the specific source of the warning
+)
 
 logger = logging.getLogger("Sc-Musketeers")
 
