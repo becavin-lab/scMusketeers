@@ -1,5 +1,4 @@
 import argparse
-import functools
 import os
 import sys
 import gc
@@ -13,18 +12,18 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import tensorflow as tf
+import functools
 
 from ax.service.managed_loop import optimize
 from neptune.utils import stringify_unsupported
-# from ax import RangeParameter, SearchSpace, ParameterType, FixedParameter, ChoiceParameter
 import keras
-from sklearn.metrics import (accuracy_score, adjusted_mutual_info_score,
+from sklearn.utils import compute_class_weight
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import (confusion_matrix, accuracy_score, adjusted_mutual_info_score,
                              adjusted_rand_score, balanced_accuracy_score,
                              cohen_kappa_score, confusion_matrix,
                              davies_bouldin_score, f1_score, matthews_corrcoef,
                              normalized_mutual_info_score)
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.utils import compute_class_weight
 
 # Import scmusketeers library
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
@@ -38,15 +37,15 @@ try:
     from ..tools import freeze
     from . import metrics
     from ..tools.training_scheme import get_training_scheme
+    from ..tools.models import DANN_AE
+    from ..tools.permutation import batch_generator_training_permuted
+    from ..tools.utils import (check_dir, default_value, nan_to_0,
+                               scanpy_to_input, str2bool)
     from ..tools.clust_compute import (balanced_cohen_kappa_score,
                                        balanced_f1_score,
                                        balanced_matthews_corrcoef,
                                        batch_entropy_mixing_score, lisi_avg,
                                        nn_overlap)
-    from ..tools.models import DANN_AE
-    from ..tools.permutation import batch_generator_training_permuted
-    from ..tools.utils import (check_dir, default_value, nan_to_0,
-                               scanpy_to_input, str2bool)
 except ImportError:
     from scmusketeers.arguments.neptune_log import NEPTUNE_INFO
     from scmusketeers.arguments.ae_param import AE_PARAM
@@ -56,20 +55,22 @@ except ImportError:
     from scmusketeers.tools import freeze
     from scmusketeers.hpoptim import metrics
     from scmusketeers.tools.training_scheme import get_training_scheme
+    from scmusketeers.tools.models import DANN_AE
+    from scmusketeers.tools.permutation import batch_generator_training_permuted
+    from scmusketeers.tools.utils import (check_dir, default_value, nan_to_0,
+                             scanpy_to_input, str2bool)
     from scmusketeers.tools.clust_compute import (balanced_cohen_kappa_score,
                                      balanced_f1_score,
                                      balanced_matthews_corrcoef,
                                      batch_entropy_mixing_score, lisi_avg,
                                      nn_overlap)
-    from scmusketeers.tools.models import DANN_AE
-    from scmusketeers.tools.permutation import batch_generator_training_permuted
-    from scmusketeers.tools.utils import (check_dir, default_value, nan_to_0,
-                             scanpy_to_input, str2bool)
 
 
 
 # Setup settings
+
 f1_score = functools.partial(f1_score, average="macro")
+
 physical_devices = tf.config.list_physical_devices("GPU")
 for gpu_instance in physical_devices:
     tf.config.experimental.set_memory_growth(gpu_instance, True)
@@ -123,7 +124,7 @@ class Workflow:
         self.rec_loss_fn = None
         self.num_classes = None
         self.num_batches = None
-
+        
         self.pred_metrics_list = {
             "acc": accuracy_score,
             "mcc": matthews_corrcoef,
@@ -149,6 +150,7 @@ class Workflow:
             "batch_mixing_entropy": batch_entropy_mixing_score,
             #'ilisi': lisi_avg
         }
+        
         self.metrics = []
 
         # This is a running average : it keeps the previous values in memory when

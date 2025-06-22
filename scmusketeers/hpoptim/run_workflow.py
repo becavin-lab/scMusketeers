@@ -23,10 +23,9 @@ except ImportError:
     print("poetry install --with workflow")
     
 
-# JSON_PATH_DEFAULT = '/home/acollin/scMusketeers/experiment_script/hp_ranges/'
-JSON_PATH_DEFAULT = "/home/becavin/scMusketeers/experiment_script/hp_ranges/"
+JSON_PATH_DEFAULT = "experiment_script/hp_ranges/"
 
-TOTAL_TRIAL = 3
+TOTAL_TRIAL = 50
 RANDOM_SEED = 40
 
 logger = logging.getLogger("Sc-Musketeers")

@@ -4,12 +4,11 @@ import sys
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import functools
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import (confusion_matrix)
 
-
-logger = logging.getLogger("Sc-Musketeers")
 
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
@@ -17,6 +16,8 @@ try:
     from ..tools.utils import nan_to_0
 except ImportError:
     from scmusketeers.tools.utils import nan_to_0
+
+logger = logging.getLogger("Sc-Musketeers")
 
 
 def metric_confusion_matrix(workflow, y_pred, y_true, group, save_dir):
@@ -71,21 +72,22 @@ def metric_batch_mixing(workflow, batch_list, group, enc, batches):
         >= 2
     ):  # If there are more than 2 batches in this group
         for metric in workflow.batch_metrics_list:
+            logger.debug(f"{metric} calculation")
             workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
                 workflow.batch_metrics_list[metric](enc, batches)
             )
-            type_batchlist = type(workflow.batch_metrics_list[metric](enc, batches))
-            logger.debug(f"Printing type of batch_metrics_list {type_batchlist}")
-
+            
 
 def metric_classification(workflow, y_pred, y_true, group, sizes):
     logger.debug(f"Save classification metrics - {group}")
     for metric in workflow.pred_metrics_list:
+        logger.debug(f"{metric} calculation")
         workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
             workflow.pred_metrics_list[metric](y_true, y_pred)
         )
 
     for metric in workflow.pred_metrics_list_balanced:
+        logger.debug(f"{metric} calculation")
         workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
             workflow.pred_metrics_list_balanced[metric](
                 y_true, y_pred
@@ -101,6 +103,7 @@ def metric_classification(workflow, y_pred, y_true, group, sizes):
         y_true_sub = y_true[idx_s]
         y_pred_sub = y_pred[idx_s]
         for metric in workflow.pred_metrics_list:
+            logger.debug(f"{metric} calculation (per cell type size)")
             workflow.run_neptune[f"evaluation/{group}/{s}/{metric}"] = (
                 nan_to_0(
                     workflow.pred_metrics_list[metric](
@@ -110,6 +113,7 @@ def metric_classification(workflow, y_pred, y_true, group, sizes):
             )
 
         for metric in workflow.pred_metrics_list_balanced:
+            logger.debug(f"{metric} calculation (per cell type size)")
             workflow.run_neptune[f"evaluation/{group}/{s}/{metric}"] = (
                 nan_to_0(
                     workflow.pred_metrics_list_balanced[metric](
@@ -121,6 +125,7 @@ def metric_classification(workflow, y_pred, y_true, group, sizes):
 def metric_clustering(workflow, y_pred, group, enc):
     logger.debug(f"Save clustering metrics - {group}")
     for metric in workflow.clustering_metrics_list:
+        logger.debug(f"{metric} calculation")
         workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
             workflow.clustering_metrics_list[metric](enc, y_pred)
         )

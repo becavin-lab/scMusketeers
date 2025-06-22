@@ -5,19 +5,19 @@
 log_neptune=False
 neptune_name="scmusk-review"
 
-working_dir="/workspace/cell/Review_scMusk"
+working_dir="/workspace/cell/scMusketeers"
 out_dir=${working_dir}"/experiment_script/results"
-python_path="/workspace/cell/scMusketeers/scmusketeers/__main__.py"
-hparam_path="/workspace/cell/scMusketeers/experiment_script/hp_ranges/generic_r1_debug.json"
-dataset="/workspace/cell/Review_scMusk/data/celltypist_dataset/yoshida_2021/yoshida_2021.h5ad"
+python_path=${working_dir}"/scmusketeers/__main__.py"
+hparam_path=${working_dir}"/experiment_script/hp_ranges/generic_r1_debug.json"
+dataset=${working_dir}"/data/celltypist_dataset/yoshida_2021/yoshida_2021.h5ad"
 dataset_name=Yoshida_2021
 
-warmup_epoch=2   # default 100, help - Number of epoch to warmup DANN
-fullmodel_epoch=2   # default = 100, help = Number of epoch to train full model
-permonly_epoch=2   # default = 100, help = Number of epoch to train in permutation only mode
-classifier_epoch=2   # default = 50, help = Number of epoch to train te classifier only
+warmup_epoch=1   # default 100, help - Number of epoch to warmup DANN
+fullmodel_epoch=1   # default = 100, help = Number of epoch to train full model
+permonly_epoch=1   # default = 100, help = Number of epoch to train in permutation only mode
+classifier_epoch=1   # default = 50, help = Number of epoch to train te classifier only
 
-training_scheme="training_scheme_1"
+training_scheme="training_scheme_24"
 
 python ${python_path} hp_optim ${dataset} --debug --log_neptune=${log_neptune} --neptune_name=${neptune_name} --out_dir=${out_dir} \
 --classifier_epoch=${classifier_epoch} --hparam_path ${hparam_path} --dataset_name ${dataset_name} \

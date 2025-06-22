@@ -26,30 +26,30 @@ from sklearn.utils import compute_class_weight
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
 try:
-    from .dataset import Dataset, load_dataset
+    from ...scmusketeers.hpoptim.dataset import Dataset, load_dataset
 except ImportError:
-    from hpoptim.dataset import Dataset, load_dataset
+    from scmusketeers.hpoptim.dataset import Dataset, load_dataset
 
 try:
-    from ..tools.clust_compute import (balanced_cohen_kappa_score,
+    from ...scmusketeers.tools.clust_compute import (balanced_cohen_kappa_score,
                                        balanced_f1_score,
                                        balanced_matthews_corrcoef,
                                        batch_entropy_mixing_score, lisi_avg,
                                        nn_overlap)
-    from ..tools.models import DANN_AE
-    from ..tools.permutation import batch_generator_training_permuted
-    from ..tools.utils import (check_dir, default_value, nan_to_0,
+    from ...scmusketeers.tools.models import DANN_AE
+    from ...scmusketeers.tools.permutation import batch_generator_training_permuted
+    from ...scmusketeers.tools.utils import (check_dir, default_value, nan_to_0,
                                scanpy_to_input, str2bool)
 
 except ImportError:
-    from tools.clust_compute import (balanced_cohen_kappa_score,
+    from scmusketeers.tools.clust_compute import (balanced_cohen_kappa_score,
                                      balanced_f1_score,
                                      balanced_matthews_corrcoef,
                                      batch_entropy_mixing_score, lisi_avg,
                                      nn_overlap)
-    from tools.models import DANN_AE
-    from tools.permutation import batch_generator_training_permuted
-    from tools.utils import (check_dir, default_value, nan_to_0,
+    from scmusketeers.tools.models import DANN_AE
+    from scmusketeers.tools.permutation import batch_generator_training_permuted
+    from scmusketeers.tools.utils import (check_dir, default_value, nan_to_0,
                              scanpy_to_input, str2bool)
 
 

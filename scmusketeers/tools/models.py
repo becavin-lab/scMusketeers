@@ -465,6 +465,7 @@ class DANN_AE(Classif_Autoencoder):
             "classifier": class_out,
             "batch_discriminator": dann_out,
             "reconstruction": rec_out,
+            
         }
 
     # def build_graph(
