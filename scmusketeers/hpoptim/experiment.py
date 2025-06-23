@@ -61,10 +61,11 @@ class MakeExperiment:
 
         logger.debug("Load checkpoint")
         self.trial_count += 1
+        trial_name = f"HyperParam_Optim_{self.run_file.dataset_name}_{self.trial_count}/{self.total_trial}"
         checkpoint = {"parameters/" + k: i for k, i in params.items()}
         checkpoint["parameters/dataset_name"] = self.run_file.dataset_name
         checkpoint["parameters/opt_metric"] = self.run_file.opt_metric
-        checkpoint["parameters/task"] = "hp_optim_V2"
+        checkpoint["parameters/task"] = trial_name
         #logger.debug(checkpoint)
         
         # common columns runs_table_df and checkpoint
@@ -96,6 +97,14 @@ class MakeExperiment:
             self.workflow.set_hyperparameters(params)
             logger.debug("")
             start_neptune_log(self.workflow)
+            logger.debug("Log the trial on Neptune")
+            trial_name = f"HyperParam_Optim_{self.run_file.task}_{self.run_file.dataset_name}_{self.trial_count}/{self.total_trial}"
+            logger.debug(f" -- {trial_name} -- ")
+            add_custom_log(self.workflow,"task", trial_name)
+            add_custom_log(self.workflow,"total_trial", self.total_trial)
+            add_custom_log(self.workflow,"hp_random_seed", self.random_seed)
+            add_custom_log(self.workflow,"trial_count", self.trial_count)
+            
             logger.debug("")
             self.workflow.process_dataset()
             logger.debug("")
@@ -106,11 +115,7 @@ class MakeExperiment:
             opt_metric = (
                 self.workflow.make_experiment()
             )  
-            logger.debug("Log the trial on Neptune")
-            add_custom_log(self.workflow,"task", "hp_optim_V2")
-            add_custom_log(self.workflow,"total_trial", self.total_trial)
-            add_custom_log(self.workflow,"hp_random_seed", self.random_seed)
-            add_custom_log(self.workflow,"trial_count", self.trial_count)
+            logger.debug("Log the trial metrics on Neptune")
             add_custom_log(
                 self.workflow,"opt_metric", self.run_file.opt_metric
             )

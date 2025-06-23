@@ -1,15 +1,16 @@
 #!/bin/sh
 #
 #SBATCH --account=cell     # The account name for the job.
-#SBATCH --output=logs/ajrccm_hyperparam_2.log # Important to retrieve the port where the notebook is running, if not included a slurm file with the job-id will be outputted. 
 
 #dataset_name=$1
 #class_key=$2
 #batch_key=$3
+#task=$4
 ### Tests
 dataset_name="ajrccm_by_batch"
 class_key="celltype"
 batch_key="manip"
+task="hp_tscheme"
 
 ### Sc-Musketeers parameters
 neptune_name="scmusk-review"
@@ -17,7 +18,8 @@ working_dir="/workspace/cell/scMusketeers"
 out_dir=${working_dir}"/experiment_script/results"
 python_path=${working_dir}"/scmusketeers/__main__.py"
 data_path=${working_dir}"/data"
-hparam_path=${working_dir}"/experiment_script/hp_ranges/generic_r1_debug.json"
+hparam_path=${working_dir}"/experiment_script/hp_ranges/besthp_tscheme.json"
+#hparam_path=${working_dir}"/experiment_script/hp_ranges/generic_r1.json"
 
 
 # Read dataset json to get h5ad path
@@ -54,7 +56,7 @@ classifier_epoch=1   # default = 50, help = Number of epoch to train te classifi
 
 
 
-python ${python_path} hp_optim ${h5ad_path} --debug --training_scheme="training_scheme_debug_1" --neptune_name ${neptune_name} --out_dir ${out_dir} \
+python ${python_path} hp_optim ${h5ad_path} --debug --training_scheme="training_scheme_8" --task ${task} --neptune_name ${neptune_name} --out_dir ${out_dir} \
 --hparam_path ${hparam_path} --dataset_name ${dataset_name} \
 --class_key $class_key --batch_key $batch_key --test_obs $test_obs \
 --mode entire_condition --obs_key $batch_key --keep_obs $keep_obs \

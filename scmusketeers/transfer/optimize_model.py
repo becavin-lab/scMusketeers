@@ -80,6 +80,12 @@ warnings.filterwarnings(
     category=UserWarning,
     module='keras.src.optimizers.base_optimizer' # This targets the specific source of the warning
 )
+# Suppress the warning about y_pred containing classes not in y_true
+warnings.filterwarnings(
+    'ignore',
+    message="y_pred contains classes not in y_true",
+    category=UserWarning
+)
 
 logger = logging.getLogger("Sc-Musketeers")
 

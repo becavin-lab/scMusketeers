@@ -36,7 +36,7 @@ def run_sc_musketeers():
         workflow.train_val_split()
         adata_pred, model, history, X_scCER, query_pred = (
             workflow.make_experiment()
-        )
+        )        
         stop_neptune_log(workflow)
         adata_pred_path = os.path.join(
             run_file.out_dir, f"{run_file.out_name}.h5ad"

@@ -110,7 +110,7 @@ def create_argparser():
         "--training_scheme",
         type=str,
         nargs="?",
-        default="training_scheme_8",
+        default="training-scheme-8",
         help="",
     )
     workflow_group.add_argument(
@@ -147,6 +147,9 @@ def create_argparser():
     )
     hparam_group.add_argument(
         "--dataset_name", type=str, nargs="?", default=None, help=""
+    )
+    hparam_group.add_argument(
+        "--task", type=str, nargs="?", default=None, help="Name of the task for Neptune log"
     )
 
 

@@ -81,6 +81,12 @@ warnings.filterwarnings(
     category=UserWarning,
     module='keras.src.optimizers.base_optimizer' # This targets the specific source of the warning
 )
+# Suppress the warning about y_pred containing classes not in y_true
+warnings.filterwarnings(
+    'ignore',
+    message="y_pred contains classes not in y_true",
+    category=UserWarning
+)
 
 logger = logging.getLogger("Sc-Musketeers")
 
@@ -420,7 +426,7 @@ class Workflow:
         )  # redundant
         
         logger.debug("Setup training scheme")
-        training_scheme = get_training_scheme(self.run_file.training_scheme, self.run_file)
+        training_scheme = get_training_scheme(self.training_scheme, self.run_file)
         
         # Training
         logger.info(f"##-- Run model training")

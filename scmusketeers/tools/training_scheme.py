@@ -222,12 +222,12 @@ def get_training_scheme(training_scheme_id, run_file):
             ("classifier_branch", run_file.classifier_epoch, False),
         ]
 
-    if training_scheme_id == "training_scheme_debug_1":
+    if training_scheme_id == "training_scheme_debug-1":
         training_scheme = [
             ("classifier_branch", run_file.classifier_epoch, False),
         ]
 
-    if training_scheme_id == "training_scheme_debug_2":
+    if training_scheme_id == "training_scheme_debug-2":
         training_scheme = [
             ("encoder_classifier", run_file.classifier_epoch, False),
         ]
