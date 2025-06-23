@@ -123,5 +123,5 @@ class MakeExperiment:
             # del self.workflow  # Should not be necessary
             return opt_metric
         else:  # we return the already computed value
-            print(f"Trial {self.trial_count} already exists, retrieving value")
+            logger.info(f"Trial {self.trial_count} already exists, retrieving value")
             return result.loc[:, f"evaluation/{split}/{metric}"].iloc[0]
