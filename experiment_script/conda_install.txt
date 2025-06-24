@@ -5,6 +5,9 @@ pip install poetry
 cd sc_musketeers/
 poetry install
 
+# Development version
 poetry install --with dev
 
+# HPoptimization and workflow
+poetry install --with workflow
 
