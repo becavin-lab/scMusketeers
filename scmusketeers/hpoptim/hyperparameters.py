@@ -14,8 +14,6 @@ import scanpy as sc
 import tensorflow as tf
 import functools
 import warnings
-
-from ax.service.managed_loop import optimize
 from neptune.utils import stringify_unsupported
 import keras
 from sklearn.utils import compute_class_weight
@@ -66,6 +64,13 @@ except ImportError:
                                      batch_entropy_mixing_score, lisi_avg,
                                      nn_overlap)
 
+logger = logging.getLogger("Sc-Musketeers")
+try:
+    from ax.service.managed_loop import optimize
+except ImportError:
+    logger.warning("Tried import scmusketeers.workflow but AX Platform not installed")
+    logger.warning("Please consider installing AxPlatform if you want to perform hyperparameters optimization")
+    logger.warning("poetry install --with workflow")
 
 
 # Setup settings
@@ -88,7 +93,6 @@ warnings.filterwarnings(
     category=UserWarning
 )
 
-logger = logging.getLogger("Sc-Musketeers")
 
 
 class Workflow:

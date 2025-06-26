@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 #SBATCH --account=cell     # The account name for the job.
 
@@ -14,16 +14,19 @@ task="hp_tscheme"
 
 ### Sc-Musketeers parameters
 neptune_name="scmusk-review"
-working_dir="/workspace/cell/scMusketeers"
-out_dir=${working_dir}"/experiment_script/results"
-python_path=${working_dir}"/scmusketeers/__main__.py"
+#working_dir="/workspace/cell/scMusketeers"
+#working_dir="/data/analysis/data_becavin/scMusketeers"
+working_dir="/data/analysis/data_becavin/scMusketeers-data"
+scmusk_path="/data/analysis/data_becavin/scMusketeers"
+out_dir=${working_dir}"/results"
+python_path=${scmusk_path}"/scmusketeers/__main__.py"
 data_path=${working_dir}"/data"
-hparam_path=${working_dir}"/experiment_script/hp_ranges/besthp_tscheme.json"
+hparam_path=${scmusk_path}"/experiment_script/hp_ranges/besthp_tscheme.json"
 #hparam_path=${working_dir}"/experiment_script/hp_ranges/generic_r1.json"
 
 
 # Read dataset json to get h5ad path
-json_dataset_h5ad_path=${working_dir}"/experiment_script/datasets_h5ad.json"
+json_dataset_h5ad_path=${scmusk_path}"/experiment_script/datasets_h5ad.json"
 declare -A MY_SH_DICT
 while IFS='=' read -r key value; do
     MY_SH_DICT["$key"]="$value"

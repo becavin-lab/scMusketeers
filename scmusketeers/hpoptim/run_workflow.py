@@ -15,12 +15,14 @@ except ImportError:
                                                 get_default_param, get_runfile)
     from scmusketeers.hpoptim.experiment import MakeExperiment
     
+logger = logging.getLogger("Sc-Musketeers")
+
 try:
     from ax.service.ax_client import AxClient, ObjectiveProperties
 except ImportError:
-    print("Tried import scmusketeers.workflow but AX Platform not installed")
-    print("Please consider installing AxPlatform for hyperparameters optimization")
-    print("poetry install --with workflow")
+    logger.warning("Tried import scmusketeers.workflow but AX Platform not installed")
+    logger.warning("Please consider installing AxPlatform if you want to perform hyperparameters optimization")
+    logger.warning("poetry install --with workflow")
     
 
 JSON_PATH_DEFAULT = "experiment_script/hp_ranges/"
@@ -28,7 +30,6 @@ JSON_PATH_DEFAULT = "experiment_script/hp_ranges/"
 TOTAL_TRIAL = 50
 RANDOM_SEED = 40
 
-logger = logging.getLogger("Sc-Musketeers")
 
 def load_json(hparam_path):
     """

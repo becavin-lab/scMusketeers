@@ -4,6 +4,7 @@ import pandas as pd
 import scanpy as sc
 from sklearn import svm
 from sklearn.neighbors import KNeighborsClassifier
+import logging
 
 try:
     import celltypist
@@ -21,10 +22,10 @@ try:
 except ImportError:
     from scmusketeers.tools.utils import densify
 
-# from tools.utils import densify
+logger = logging.getLogger("Sc-Musketeers")
 
 
-# print("Last run with scvi-tools version:", scvi.__version__)
+logger.debug("Last run with scvi-tools version:", scvi.__version__)
 
 
 def svm_label(X_full, y_list, assign, pred_full=True):

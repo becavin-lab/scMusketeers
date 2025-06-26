@@ -4,8 +4,8 @@ from sklearn.model_selection import GroupShuffleSplit
 import pandas as pd
 import neptune
 
-WD_PATH = '/home/acollin/scPermut/'
-sys.path.append(WD_PATH)
+#WD_PATH = '/dhome/acollin/scPermut/'
+#sys.path.append(WD_PATH)
 
 from scmusketeers.tools.utils import str2bool
 print(str2bool('True'))

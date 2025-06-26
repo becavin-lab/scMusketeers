@@ -5,6 +5,9 @@ pip install poetry
 cd sc_musketeers/
 poetry install
 
+# Be sure to have tensorflow and cuda installed for GPU
+pip install tensorflow[and-cuda]
+
 # Development version
 poetry install --with dev
 

@@ -1,57 +1,16 @@
-##########
-# Deprecated
-###########
-# 
-# 
-# 
-# # except ImportError:
-#     from dataset import Dataset, load_dataset
-#     from scpermut.tools.utils import str2bool
-#     from scpermut.tools.clust_compute import batch_entropy_mixing_score,lisi_avg
-#     from benchmark_models import pca_svm, harmony_svm, scanvi,uce,scmap_cells, scmap_cluster,celltypist_model
-# from dca.utils import str2bool,tuple_to_scalar
-import argparse
-import functools
 import os
 import sys
+import time
+import functools
+import matplotlib.pyplot as plt
+import neptune
+import numpy as np
+import pandas as pd
+import scanpy as sc
+import seaborn as sns
 
-# try :
-#     from .dataset import Dataset, load_dataset
-#     from ..tools.utils import str2bool
-#     from ..tools.clust_compute import batch_entropy_mixing_score,lisi_avg
-#     from .benchmark_models import pca_svm, harmony_svm, scanvi,uce, scmap_cells, scmap_cluster,celltypist_model
 
-sys.path.insert(1, os.path.join(sys.path[0], ".."))
-
-try:
-    from .benchmark_models import (celltypist_model, harmony_svm, pca_knn,
-                                   pca_svm, scanvi, scBalance_model,
-                                   scmap_cells, scmap_cluster, uce)
-    from .dataset import Dataset, load_dataset
-except ImportError:
-    from workflow.benchmark_models import (celltypist_model, harmony_svm,
-                                           pca_svm, scanvi, scBalance_model,
-                                           scmap_cells, scmap_cluster, uce)
-    from hpoptim.dataset import Dataset, load_dataset
-
-try:
-    from ..tools.clust_compute import (balanced_cohen_kappa_score,
-                                       balanced_f1_score,
-                                       balanced_matthews_corrcoef,
-                                       batch_entropy_mixing_score, lisi_avg,
-                                       nn_overlap)
-    from ..tools.utils import nan_to_0, str2bool
-except ImportError:
-    from tools.utils import str2bool
-    from tools.clust_compute import (
-        nn_overlap,
-        batch_entropy_mixing_score,
-        lisi_avg,
-        balanced_matthews_corrcoef,
-        balanced_f1_score,
-        balanced_cohen_kappa_score,
-    )
-
+from neptune.utils import stringify_unsupported
 from sklearn.metrics import (accuracy_score, adjusted_mutual_info_score,
                              adjusted_rand_score, balanced_accuracy_score,
                              cohen_kappa_score, confusion_matrix,
@@ -59,20 +18,29 @@ from sklearn.metrics import (accuracy_score, adjusted_mutual_info_score,
                              normalized_mutual_info_score)
 from sklearn.model_selection import GroupKFold
 
+
+sys.path.insert(1, os.path.join(sys.path[0], ".."))
+
+try:
+    from .benchmark_models import (celltypist_model, harmony_svm, pca_knn,
+                                   pca_svm, scanvi, scBalance_model,
+                                   scmap_cells, scmap_cluster, uce)
+    from ..transfer.dataset_tf import Dataset, load_dataset
+    from ..tools.clust_compute import (balanced_cohen_kappa_score,
+                                       balanced_f1_score,
+                                       balanced_matthews_corrcoef,
+                                       batch_entropy_mixing_score, lisi_avg,
+                                       nn_overlap)
+    from ..tools.utils import nan_to_0, str2bool
+except ImportError:
+    from scmusketeers.benchmark.benchmark_models import (celltypist_model, harmony_svm,
+                                           pca_svm, scanvi, scBalance_model,
+                                           scmap_cells, scmap_cluster, uce)
+    from scmusketeers.transfer.dataset_tf import Dataset, load_dataset
+
+
 f1_score = functools.partial(f1_score, average="macro")
 
-import os
-import sys
-import time
-
-import matplotlib.pyplot as plt
-import neptune
-import numpy as np
-import pandas as pd
-import scanpy as sc
-import seaborn as sns
-# from numba import cuda
-from neptune.utils import stringify_unsupported
 
 
 def train_dummy(X_list, y_list, batch_list, train_plit, **kwargs):
@@ -254,6 +222,7 @@ class Workflow:
             f"sum : {len(self.y_list['train']) + len(self.y_list['test']) + len(self.y_list['val'])}"
         )
         print(f"full: {len(self.y_list['full'])}")
+
 
     def train_model(self, model, **kwds):
         if self.log_neptune:
