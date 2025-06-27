@@ -241,7 +241,8 @@ class Workflow:
         # Loading dataset
         logger.info(f"Load dataset {self.run_file.ref_path}")
         adata = load_dataset(
-            ref_path=self.run_file.ref_path)
+            ref_path=self.run_file.ref_path,
+            query_path='',class_key='',unlabeled_category='')
 
         self.dataset = Dataset(
             adata=adata,
@@ -268,7 +269,6 @@ class Workflow:
         self.dataset.normalize()
 
     def train_val_split(self):
-        logger.info("train_val_split ntrain_val_split train_val_split train_val_split train_val_split train_val_split train_val_split train_val_split")
         self.dataset.train_val_split()
         self.dataset.create_inputs()
 
@@ -535,17 +535,17 @@ class Workflow:
                     metrics.save_results(self, y_pred, y_true, adata_list, group, save_dir, split, enc)
 
         if self.opt_metric:
+            logger.debug(f"opt_metric {self.opt_metric}")
             split, metric = self.opt_metric.split("-")
+            logger.debug("get optmetric")
             self.run_neptune.wait()
+            logger.debug("get optmetric 2")
             opt_metric = self.run_neptune[f"evaluation/{split}/{metric}"].fetch()
             logger.debug(f"optimal metric:{opt_metric}")
         else:
             opt_metric = None
-    
-        gc.collect()
-    
         return opt_metric
-    
+        
 
     def train_scheme(self, training_scheme, verbose=True, **loop_params):
         """

@@ -1,7 +1,7 @@
 # Get GPU
 # srun -A cell -p gpu -t 10:00:00 --gres=gpu:1 --pty bash -i
 
-outdir="/workspace/cell/Review_scMusk"
+outdir="/data/analysis/data_becavin/scMusketeers-data"
 dataset=${outdir}"/data/Deprez-Lung-unknown-0.2.h5ad"
 outname=Deprez-Lung-unknown-0.2-pred
 classkey="celltype"
@@ -28,7 +28,9 @@ neptune_name="sc-musketeers"
 # Transfer Cell annotation to all Unknown cells
 #sc-musketeers transfer ${dataset} --class_key=celltype --unlabeled_category="Unknown" --batch_key=manip --out_dir=${outdir} --out_name=${outname}
 # sc-musketeers transfer ${dataset} --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
-python scmusketeers/__main__.py transfer ${dataset} --debug --training_scheme="training_scheme_8" --log_neptune=${log_neptune} --neptune_name=${neptune_name} --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
+python scmusketeers/__main__.py transfer ${dataset} --debug --training_scheme="training_scheme_8" --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
+
+# python scmusketeers/__main__.py transfer ${dataset} --debug --training_scheme="training_scheme_8" --log_neptune=${log_neptune} --neptune_name=${neptune_name} --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
 # python sc-musketeers/__main__.py transfer ${dataset} --class_key=celltype --unlabeled_category="Unknown" --batch_key=manip --out_dir=${outdir} --out_name=${outname}
 
 # Transfer Cell annotation and remove batch to query adata

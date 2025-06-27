@@ -117,13 +117,14 @@ def create_argparser():
         "--log_neptune",
         type=bool,
         nargs="?",
-        default=True,
+        default=False,
         help="",
     )
     workflow_group.add_argument(
         "--neptune_name",
         type=str,
         nargs="?",
+        default="sc-musketeers",
         help="Name of the neptune project : Exemple sc-permut-packaging",
     )
     workflow_group.add_argument(

@@ -101,7 +101,6 @@ def get_hvg_common(
         adata.var["highly_variable_nbatches"] == n_batches
     ]  # Starts with genes hvg for every batches
     dispersion_nbatches = dispersion_nbatches.sort_values(ascending=False)
-    # logger.debug(f"Searching for highly variable genes in {n_batches} batches")
     if (
         len(dispersion_nbatches) >= n_hvg
     ):  # If there are already enough hvg in every batch, returns them
@@ -110,9 +109,6 @@ def get_hvg_common(
             return adata[:, top_genes]
         else:
             return top_genes
-    # logger.debug(
-    #    f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches"
-    # )
     top_genes = list(
         dispersion_nbatches.index
     )  # top_genes is the final selection of genes
@@ -123,7 +119,6 @@ def get_hvg_common(
         n_batches = (
             n_batches - 1
         )  # Looks for genes hvg for one fewer batch at each iteration
-        # logger.debug(f"Searching for highly variable genes in {n_batches} batches")
         remaining_genes = n_hvg - len(top_genes)  # nb of genes left to find
         dispersion_nbatches = adata.var["dispersions_norm"][
             adata.var["highly_variable_nbatches"] == n_batches
@@ -132,16 +127,9 @@ def get_hvg_common(
         if (
             len(dispersion_nbatches) > remaining_genes
         ):  # Enough genes to fill in the rest
-            #logger.debug(
-            #    f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches. Selecting top {remaining_genes}"
-            #)
-            # print(dispersion_nbatches)
             top_genes += list(dispersion_nbatches[:remaining_genes].index)
             enough = True
         else:
-            #logger.debug(
-            #    f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches"
-            #)
             top_genes += list(dispersion_nbatches.index)
 
     if reduce_adata:
@@ -150,10 +138,15 @@ def get_hvg_common(
     return top_genes
 
 
-def load_dataset(ref_path):
-    
-    logger.debug(f"Load h5ad: {ref_path}")
-    adata = sc.read_h5ad(ref_path)
+def load_dataset(ref_path, query_path, class_key, unlabeled_category):
+    if not query_path:
+        logger.info(f"Load {ref_path}")
+        adata = sc.read_h5ad(ref_path)
+    else:
+        ref = sc.read_h5ad(ref_path)
+        query = sc.read_h5ad(query_path)
+        query.obs[class_key] = unlabeled_category
+        adata = ref.concatenate(query, join="inner")
     if not adata.raw:
         adata.raw = adata
     return adata
@@ -441,7 +434,7 @@ class Dataset:
             self.obs_key = obs_key
             self.keep_obs = keep_obs
             logger.debug(
-                f"Splitting the adata for train/val"
+                f"splitting this adata train/val : {self.adata_train_extended}"
             )
             keep_idx = self.adata_train_extended.obs[obs_key].isin(
                 self.keep_obs
@@ -726,3 +719,65 @@ class Dataset:
         self.adata_test = self.adata[
             self.adata.obs["train_split"] == "test"
         ].copy()
+
+
+
+def process_dataset(workflow):
+    """
+    Used for hyperparameters optimization processes
+    """
+    adata = load_dataset(workflow.run_file.ref_path,
+                         workflow.run_file.query_path,
+                         workflow.run_file.class_key, 
+                         workflow.run_file.unlabeled_category       
+    )
+
+    workflow.dataset = Dataset(
+        adata=adata,
+        class_key=workflow.run_file.class_key,
+        batch_key=workflow.run_file.batch_key,
+        filter_min_counts=workflow.run_file.filter_min_counts,
+        normalize_size_factors=workflow.run_file.normalize_size_factors,
+        size_factor=workflow.run_file.size_factor,
+        scale_input=workflow.run_file.scale_input,
+        logtrans_input=workflow.run_file.logtrans_input,
+        use_hvg=workflow.run_file.use_hvg,
+        unlabeled_category=workflow.run_file.unlabeled_category,
+        test_split_key=workflow.run_file.test_split_key,
+        train_test_random_seed=workflow.run_file.train_test_random_seed
+    )
+
+    if not "X_pca" in workflow.dataset.adata.obsm:
+        logger.debug("Did not find existing PCA, computing it")
+        sc.tl.pca(workflow.dataset.adata)
+        workflow.dataset.adata.obsm["X_pca"] = np.asarray(
+            workflow.dataset.adata.obsm["X_pca"]
+        )
+    
+    # Processing dataset. Splitting train/test.
+    workflow.dataset.normalize()
+
+
+## deprecated
+def split_train_test_yo(workflow):
+    workflow.dataset.test_split(
+        test_obs=workflow.run_file.test_obs,
+        test_index_name=workflow.run_file.test_index_name,
+    )
+
+## deprecated
+def split_train_val_yo(workflow):
+    workflow.dataset.train_split(
+        mode=workflow.run_file.mode,
+        pct_split=workflow.run_file.pct_split,
+        obs_key=workflow.run_file.obs_key,
+        n_keep=workflow.run_file.n_keep,
+        keep_obs=workflow.run_file.keep_obs,
+        split_strategy=workflow.run_file.split_strategy,
+        obs_subsample=workflow.run_file.obs_subsample,
+        train_test_random_seed=workflow.run_file.train_test_random_seed,
+    )
+
+    logger.debug("dataset has been splitted train/test/val")
+    workflow.dataset.create_inputs()
+

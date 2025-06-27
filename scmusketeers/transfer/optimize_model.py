@@ -225,44 +225,7 @@ class Workflow:
         self.training_scheme = params["training_scheme"]
         self.hp_params = params
 
-    def process_dataset(self):
-        # Loading dataset
-        logger.info(f"Load dataset {self.run_file.ref_path}")
-        adata = load_dataset(
-            ref_path=self.run_file.ref_path,
-            query_path=self.run_file.query_path,
-            class_key=self.run_file.class_key,
-            unlabeled_category=self.run_file.unlabeled_category,
-        )
-
-        self.dataset = Dataset(
-            adata=adata,
-            class_key=self.run_file.class_key,
-            batch_key=self.run_file.batch_key,
-            filter_min_counts=self.run_file.filter_min_counts,
-            normalize_size_factors=self.run_file.normalize_size_factors,
-            size_factor=self.size_factor,
-            scale_input=self.scale_input,
-            logtrans_input=self.logtrans_input,
-            use_hvg=self.use_hvg,
-            unlabeled_category=self.run_file.unlabeled_category,
-            test_split_key=self.run_file.test_split_key,
-            train_test_random_seed=self.run_file.train_test_random_seed,
-        )
-
-        if not "X_pca" in self.dataset.adata.obsm:
-            logger.info("Did not find existing PCA, computing it")
-            sc.tl.pca(self.dataset.adata)
-            self.dataset.adata.obsm["X_pca"] = np.asarray(
-                self.dataset.adata.obsm["X_pca"]
-            )
-        # Processing dataset. Splitting train/test.
-        self.dataset.normalize()
-
-    def train_val_split(self):
-        self.dataset.train_val_split()
-        self.dataset.create_inputs()
-
+    
     def make_experiment(self):
         if self.layer1:
             self.ae_param.ae_hidden_size = [

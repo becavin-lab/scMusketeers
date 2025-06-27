@@ -48,7 +48,8 @@ def start_neptune_log(workflow):
 
 
 def add_custom_log(workflow, name, value):
-    workflow.run_neptune[f"parameters/{name}"] = stringify_unsupported(value)
+    if workflow.run_file.log_neptune:
+        workflow.run_neptune[f"parameters/{name}"] = stringify_unsupported(value)
 
 
 def stop_neptune_log(workflow):

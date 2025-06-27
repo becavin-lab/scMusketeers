@@ -7,6 +7,7 @@ from scmusketeers.arguments.runfile import (PROCESS_TYPE, create_argparser,
                                             get_default_param, get_runfile)
 from scmusketeers.hpoptim.experiment import MakeExperiment
 from scmusketeers.transfer.optimize_model import Workflow
+from scmusketeers.transfer.dataset_tf import process_dataset
 from scmusketeers.hpoptim.run_workflow import run_workflow
 
 logger = logging.getLogger("Sc-Musketeers")
@@ -32,8 +33,9 @@ def run_sc_musketeers():
         # Transfer data
         workflow = Workflow(run_file=run_file)
         start_neptune_log(workflow)
-        workflow.process_dataset()
-        workflow.train_val_split()
+        process_dataset(workflow)
+        workflow.dataset.train_val_split()
+        workflow.dataset.create_inputs()
         adata_pred, model, history, X_scCER, query_pred = (
             workflow.make_experiment()
         )        
