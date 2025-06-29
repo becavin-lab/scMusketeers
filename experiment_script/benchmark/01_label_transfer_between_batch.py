@@ -60,7 +60,9 @@ def run_benchmark():
     parser.add_argument('--log_neptune', type=str2bool, nargs='?',const=True, default=True , help ='')
     parser.add_argument('--neptune_name', type=str, nargs='?', default="scmusk-review" , help ='')
     parser.add_argument('--gpu_models', type=str2bool, nargs='?',const=False, default=True , help ='')
+
     working_dir = "/data/analysis/data_becavin/scMusketeers-data"
+    #working_dir = '/workspace/cell/scMusketeers'
     parser.add_argument('--working_dir', type=str, nargs='?', default=working_dir, help ='')
     # parser.add_argument('--working_dir', type=str, nargs='?',const='/workspace/cell/scMusketeers', default='/workspace/cell/scMusketeers', help ='')
     parser.add_argument(
