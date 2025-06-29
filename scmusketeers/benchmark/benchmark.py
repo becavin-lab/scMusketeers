@@ -264,7 +264,7 @@ class Workflow:
             neptune_run_id = self.run_neptune["sys/id"].fetch()
             save_dir = (
                 self.working_dir
-                + "experiment_script/results/"
+                + "/experiment_script/results/"
                 + str(neptune_run_id)
                 + "/"
             )

@@ -11,8 +11,8 @@ from scmusketeers.tools.utils import str2bool
 print(str2bool('True'))
 from scmusketeers.hpoptim.benchmark import Workflow
 
-model_list_cpu = ['uce','celltypist'] #'scmap_cells', 'scmap_cluster', 'pca_svm', 'pca_knn','harmony_svm','celltypist','uce']
-model_list_gpu = ['scanvi', ]
+model_list_cpu = ['uce','celltypist'] #'scmap_cells', 'scmap_cluster', 'pca_svm', 'pca_knn','harmony_svm','uce']
+model_list_gpu = ['scanvi', 'celltypist']
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -114,8 +114,6 @@ if __name__ == '__main__':
                     'parameters/model': model, 'parameters/test_fold_nb':i,'parameters/val_fold_nb':j}
                 result = runs_table_df[runs_table_df[list(checkpoint.keys())].eq(list(checkpoint.values())).all(axis=1)]
                 if result.empty:
-                    print(checkpoint)
-                    print(f'Running {model}')
                     experiment.start_neptune_log()
                     experiment.add_custom_log('test_fold_nb',i)
                     experiment.add_custom_log('val_fold_nb',j)

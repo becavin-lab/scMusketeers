@@ -26,8 +26,8 @@ except ImportError:
 
 logger = logging.getLogger("Sc-Musketeers")
 
-model_list_cpu = ['harmony_svm']#'scmap_cells','scmap_cluster', 'pca_svm', 'pca_knn']#,'harmony_svm','celltypist','uce']
-model_list_gpu = ['scanvi', ]
+model_list_cpu = ['scmap_cells','scmap_cluster', 'pca_svm', 'pca_knn']#,'harmony_svm','uce']
+model_list_gpu = ['scanvi', 'celltypist',]
 
 def run_benchmark():
     parser = argparse.ArgumentParser()
@@ -36,7 +36,7 @@ def run_benchmark():
     logger.setLevel(getattr(logging, "DEBUG"))
     # parser.add_argument('--run_file', type = , default = , help ='')
     # parser.add_argument('--workflow_ID', type = , default = , help ='')
-    parser.add_argument('--dataset_name', type = str, default = 'ajrccm_by_batch_uce_adata', help ='Name of the dataset to use, should indicate a raw h5ad AnnData file')
+    parser.add_argument('--dataset_name', type = str, default = 'ajrccm_by_batch', help ='Name of the dataset to use, should indicate a raw h5ad AnnData file')
     parser.add_argument('--class_key', type = str, default = 'celltype', help ='Key of the class to classify')
     parser.add_argument('--batch_key', type = str, default = 'manip', help ='Key of the batches')
     parser.add_argument('--filter_min_counts', type=str2bool, nargs='?',const=True, default=True, help ='Filters genes with <1 counts')# TODO :remove, we always want to do that
@@ -59,13 +59,15 @@ def run_benchmark():
     
     parser.add_argument('--log_neptune', type=str2bool, nargs='?',const=True, default=True , help ='')
     parser.add_argument('--neptune_name', type=str, nargs='?', default="scmusk-review" , help ='')
-    parser.add_argument('--gpu_models', type=str2bool, nargs='?',const=False, default=False , help ='')
-    parser.add_argument('--working_dir', type=str, nargs='?',const='/workspace/cell/scMusketeers', default='/workspace/cell/scMusketeers', help ='')
+    parser.add_argument('--gpu_models', type=str2bool, nargs='?',const=False, default=True , help ='')
+    working_dir = "/data/analysis/data_becavin/scMusketeers-data"
+    parser.add_argument('--working_dir', type=str, nargs='?', default=working_dir, help ='')
+    # parser.add_argument('--working_dir', type=str, nargs='?',const='/workspace/cell/scMusketeers', default='/workspace/cell/scMusketeers', help ='')
     parser.add_argument(
         "--ref_path",
         type=str,
         help="Path of the referent adata file (example : data/ajrccm.h5ad",
-        default="data/ajrccm_by_batch_uce_adata.h5ad",
+        default=os.path.join(working_dir,"data","ajrccm_by_batch.h5ad"),
     )
 
     run_file = parser.parse_args()
@@ -100,12 +102,15 @@ def run_benchmark():
     random_seed = 2
 
     logger.info("Get all datasets settings (train/test/split)")
+    TOTAL_SPLIT_TEST = 1
+    TOTAL_SPLIT_VAL = 1
+    
     X = experiment.dataset.adata.X
     classes = experiment.dataset.adata.obs[experiment.class_key]
     groups = experiment.dataset.adata.obs[experiment.batch_key]
     n_batches = len(groups.unique())
     nfold_test = max(1,round(n_batches/5)) # if less than 8 batches, this comes to 1 batch per fold, otherwise, 20% of the number of batches for test
-    kf_test = GroupShuffleSplit(n_splits=3, test_size=nfold_test, random_state=random_seed)
+    kf_test = GroupShuffleSplit(n_splits=TOTAL_SPLIT_TEST, test_size=nfold_test, random_state=random_seed)
     test_split_key = experiment.dataset.test_split_key
 
     logger.info(f"Loop on kf_test {kf_test}")
@@ -116,7 +121,7 @@ def run_benchmark():
 
         experiment.dataset.test_split(test_obs = test_obs) # splits the train and test dataset
         nfold_val = max(1,round((n_batches-len(test_obs))/5)) # represents 20% of the remaining train set
-        kf_val = GroupShuffleSplit(n_splits=5, test_size=nfold_val, random_state=random_seed)
+        kf_val = GroupShuffleSplit(n_splits=TOTAL_SPLIT_VAL, test_size=nfold_val, random_state=random_seed)
 
         logger.info(f"Setup train and value datasets")
         X_train_val = experiment.dataset.adata_train_extended.X
@@ -162,6 +167,9 @@ def run_benchmark():
                     logger.debug(f'Running model - {model}')
                     logger.debug(f"Checkpoint: {checkpoint}")
                     start_neptune_log(experiment)
+                    trial_name = f"Task1_{model}_{run_file.dataset_name}_test_{i}_val_{j}"
+                    logger.debug(f" -- {trial_name} -- ")
+                    add_custom_log(experiment,"task", trial_name)
                     add_custom_log(experiment,'test_fold_nb',i)
                     add_custom_log(experiment,'val_fold_nb',j)
                     add_custom_log(experiment,'test_obs',test_obs)

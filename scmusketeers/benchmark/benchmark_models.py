@@ -219,7 +219,7 @@ def celltypist_model(
 
     sc.tl.pca(adata)
     X_pca = adata.obsm["X_pca"]
-
+    start_train = time.time()
     logger.debug("Start train model")
     if adata_train.n_obs > 100000:
         model = celltypist.train(
@@ -233,15 +233,18 @@ def celltypist_model(
         )
     else:
         model = celltypist.train(
-            adata_train, "celltype", n_jobs=n_jobs, check_expression=False
+            adata_train, "celltype", n_jobs=n_jobs,
+            use_GPU=True, check_expression=False
         )
     # .X = expect log1p normalized expression to 10000 counts per cell
     # if not -> check_expression = False
+    training_time = time.time() - start_train
 
     logger.debug("Start annotate dataset")
+    start_inference = time.time()
     predictions = celltypist.annotate(adata, model=model)
     # majority_voting = False default
-
+    inference_time = time.time() - start_inference
     adata = adata_list[
         "full"
     ]  # adding PCA to adata_list['full'] the first time and reuses it for the next function calls
@@ -280,6 +283,7 @@ def scmap_cluster(
     adata_train = adata[assign == "train", :]
     adata_test_val = adata[assign.isin(["test", "val"]), :]
 
+    start_train = time.time()
     adata_train, adata_test_val = common_genes(
         adata_train, adata_test_val, "Gene_names", remove_unmached=True
     )
@@ -297,6 +301,9 @@ def scmap_cluster(
         similarity_threshold=0.7,
         key_added="scmap_annotation",
     )
+    training_time = time.time() - start_train
+    # measure inference time, but in fact it is encapsulated in scmap algorithm
+    start_infer = time.time()
     y_pred = pd.Series(y_pred, index=adata_test_val.obs_names)
     y_pred = pd.concat([y_pred, y_list["train"]])
     y_pred = y_pred[
@@ -319,6 +326,8 @@ def scmap_cluster(
         group: y_pred[assign == group] for group in np.unique(assign)
     }
     y_pred_list["full"] = y_pred
+    inference_time = time.time() - start_infer
+
     return X_pca_list, y_pred_list, training_time, inference_time
 
 
@@ -339,6 +348,7 @@ def scmap_cells(
     adata_train = adata[assign == "train", :]
     adata_test_val = adata[assign.isin(["test", "val"]), :]
 
+    start_train = time.time()
     adata_train, adata_test_val = common_genes(
         adata_train, adata_test_val, "Gene_names", remove_unmached=True
     )
@@ -355,6 +365,9 @@ def scmap_cells(
         similarity_threshold=0.7,
         key_added="scmap_annotation"
     )
+    training_time = time.time() - start_train
+    # measure inference time, but in fact it is encapsulated in scmap algorithm
+    start_infer = time.time()
     y_pred = pd.Series(y_pred, index=adata_test_val.obs_names)
     y_pred = pd.concat([y_pred, y_list["train"]])
     y_pred = y_pred[
@@ -378,15 +391,20 @@ def scmap_cells(
     }
     y_pred_list["full"] = y_pred
     training_time = time.time() - start_training
+    inference_time = time.time() - start_infer
+
     return X_pca_list, y_pred_list, training_time, inference_time
 
 
 def uce(X_list, y_list, batch_list, assign, adata_list, pred_full=True):
     """
-    Since UCE embedding is fully unsupervised and deterministic, it is computed beforehand. Hence, this function implies that a 'X_uce' field with UCE embedding already exists in adata.
+    Since UCE embedding is fully unsupervised and deterministic, it is 
+    computed beforehand. Hence, this function implies that a 
+    'X_uce' field with UCE embedding already exists in adata.
     """
     training_time=0
     inference_time=0
+    start_train = time.time()
     logger.debug(f"Load uce data")
     X_uce = adata_list["full"].obsm["X_uce"].copy()
     y_pred = svm_label(X_uce, y_list, assign, pred_full=pred_full)
@@ -402,6 +420,8 @@ def uce(X_list, y_list, batch_list, assign, adata_list, pred_full=True):
         group: y_pred[assign == group] for group in np.unique(assign)
     }
     y_pred_list["full"] = y_pred
+    training_time = time.time() - start_train
+    inference_time = training_time
 
     return X_uce_list, y_pred_list, training_time, inference_time
 
@@ -444,6 +464,7 @@ def scanvi(X_list, y_list, batch_list, assign, adata_list):
     # adata.layers['count'] = adata.X
 
     # Run scvi
+    start_train = time.time()
     scvi.model.SCVI.setup_anndata(
         adata,
         # layer = "count",
@@ -459,10 +480,10 @@ def scanvi(X_list, y_list, batch_list, assign, adata_list):
         validation_size=None,
         # shuffle_set_split = False,
         max_epochs=200,
-        early_stopping=True,
+        # early_stopping=True,
         # shuffle_set_split = False
     )
-
+    
     # Run scanvi
     scanvi_model = scvi.model.SCANVI.from_scvi_model(
         scvi_model,
@@ -478,6 +499,8 @@ def scanvi(X_list, y_list, batch_list, assign, adata_list):
         # validation_size=None,  # ,
         # shuffle_set_split = False
     )
+    training_time = time.time() - start_train
+    start_inference = time.time()
 
     adata.obsm[SCANVI_LATENT_KEY] = scanvi_model.get_latent_representation(
         adata
@@ -498,6 +521,8 @@ def scanvi(X_list, y_list, batch_list, assign, adata_list):
         for group in np.unique(assign)
     }
     y_pred_list["full"] = adata.obs[SCANVI_PREDICTION_KEY]
+    inference_time = time.time() - start_inference
+
     return latent_list, y_pred_list, training_time, inference_time
 
 
