@@ -9,8 +9,8 @@
 sbatch --partition=gpu --gres=gpu:1 --time=35:00:00 --job-name t4_cell_lv3 benchmark_task_4.sh tenx_hlca_par_cell ann_level_3 dataset True
 sbatch --partition=cpucourt --time=71:00:00 --job-name t4_cell_lv3 benchmark_task_4.sh tenx_hlca_par_cell ann_level_3 dataset False
 
-sbatch --partition=gpu --gres=gpu:1 --time=35:00:00 --job-name t4_nuc_lv3 benchmark_task_4.sh tenx_hlca_par_nuc ann_level_3 dataset True
-sbatch --partition=cpucourt --time=71:00:00 --job-name t4_nuc_lv3 benchmark_task_4.sh tenx_hlca_par_nuc ann_level_3 dataset False
+#sbatch --partition=gpu --gres=gpu:1 --time=35:00:00 --job-name t4_nuc_lv3 benchmark_task_4.sh tenx_hlca_par_nuc ann_level_3 dataset True
+#sbatch --partition=cpucourt --time=71:00:00 --job-name t4_nuc_lv3 benchmark_task_4.sh tenx_hlca_par_nuc ann_level_3 dataset False
 
 # sbatch --partition=gpu --gres=gpu:1 --time=35:00:00 --job-name t4_bench_tenx_lv4 benchmark_task_4.sh tenx_hlca_par ann_level_4 dataset True
 # sbatch --partition=cpucourt --time=71:00:00 --job-name t4_bench_tenx_lv4 benchmark_task_4.sh tenx_hlca_par ann_level_4 dataset False

@@ -199,7 +199,7 @@ class Dataset:
         self.obs_key = str()
         self.n_keep = int()
         self.keep_obs = str()
-        self.train_test_random_seed = float()
+        self.train_test_random_seed = int()
         self.obs_subsample = []
         self.true_celltype = str()
         self.false_celltype = str()
@@ -269,6 +269,70 @@ class Dataset:
         # print(self.adata_train_extended)
         # print(self.adata_train_extended.obs[self.class_key].value_counts())
         # self.adata_train = self.adata_train_extended.copy()
+
+
+
+    def train_val_split_transfer(self):
+        """
+        Create train and validate split for transfer function
+        """
+        self.adata_train_extended = self.adata[
+            self.adata.obs[self.class_key] != self.unlabeled_category
+        ]  # Contains the train and to-be-defined val data
+
+        # Splits the train in val and train in a stratified way, 80/20
+        pct_split = 0.2
+        # Dirty workaround for celltypes with 1 cell only, which is a rare case
+        stratification = self.adata_train_extended.obs[self.class_key].copy()
+        if min(stratification.value_counts()) == 1:
+            solo_ct = list(
+                stratification.value_counts()[
+                    stratification.value_counts() == 1
+                ].index
+            )
+            max_ct = list(
+                stratification.value_counts()[
+                    stratification.value_counts()
+                    == stratification.value_counts().max()
+                ].index
+            )[0]
+            mapping = {}
+            for i in solo_ct:
+                w = np.where(stratification == i)[0]
+                stratification.iloc[w] = max_ct
+                mapping[i] = w
+        train_idx, val_idx = train_test_split(
+            np.arange(self.adata_train_extended.n_obs),
+            train_size=pct_split,
+            stratify=stratification,
+            random_state=self.train_test_random_seed,
+        )  # split on the index
+        if min(stratification.value_counts()) == 1:
+            for ct, w in mapping.items():
+                # Adding the single celltype to the training dataset.
+                if not w in train_idx:
+                    train_idx = np.append(train_idx, w)
+                    val_idx = val_idx[val_idx != w]
+
+        spl = pd.Series(
+            ["train"] * self.adata_train_extended.n_obs,
+            index=self.adata_train_extended.obs.index,
+        )
+        spl.iloc[val_idx] = "val"
+        self.adata_train_extended.obs["train_split"] = spl.values
+        test_idx = (
+            self.adata.obs[self.class_key] == self.unlabeled_category
+        )  # boolean
+        split = pd.Series(
+            ["train"] * self.adata.n_obs, index=self.adata.obs.index
+        )
+        split[test_idx] = "test"
+
+        split[self.adata_train_extended.obs_names] = (
+            self.adata_train_extended.obs["train_split"]
+        )
+        self.adata.obs["train_split"] = split
+
 
     def test_split(self, test_index_name=None, test_obs=None):
 

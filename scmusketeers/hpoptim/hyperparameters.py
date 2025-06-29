@@ -12,7 +12,9 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import tensorflow as tf
+import keras
 import functools
+import warnings
 import warnings
 from neptune.utils import stringify_unsupported
 import keras
@@ -74,7 +76,6 @@ except ImportError:
 
 
 # Setup settings
-
 f1_score = functools.partial(f1_score, average="macro")
 physical_devices = tf.config.list_physical_devices("GPU")
 for gpu_instance in physical_devices:
@@ -93,6 +94,7 @@ warnings.filterwarnings(
     category=UserWarning
 )
 
+logger = logging.getLogger("Sc-Musketeers")
 
 
 class Workflow:
@@ -268,7 +270,7 @@ class Workflow:
         # Processing dataset. Splitting train/test.
         self.dataset.normalize()
 
-    def train_val_split(self):
+    def train_val_split_yo(self):
         self.dataset.train_val_split()
         self.dataset.create_inputs()
 
@@ -359,65 +361,66 @@ class Workflow:
             .astype(float)
             .todense(),
         }
-        
-        adata_dict = {i: adata_list[i] for i in adata_list}
-        # logger.debug(f"adata_dict {adata_dict}")
-        y_dict = {i: len(y_list[i]) for i in y_list}
-        # logger.debug(f"y_dict {y_dict}")
-        # logger.debug(f"Number of cells : {len(y_list['train']) + len(y_list['test']) + len(y_list['val'])}")
-        # logger.debug(f"full: {len(y_list['full'])}")
 
         self.num_classes = len(np.unique(self.dataset.y_train))
         self.num_batches = len(np.unique(self.dataset.batch))
 
-        # SEtup model layers param
+        # Setup model layers param
         logger.debug("Setup model settings")
-        self.ae_hidden_size = [
-            self.layer1,
-            self.layer2,
-            self.run_file.bottleneck,
-            self.layer2,
-            self.layer1,
-        ]
-        (
-            self.dann_hidden_dropout,
-            self.class_hidden_dropout,
-            self.ae_hidden_dropout,
-        ) = (self.dropout, self.dropout, self.dropout)
+        if self.layer1:
+            self.ae_param.ae_hidden_size = [
+                self.layer1,
+                self.layer2,
+                self.bottleneck,
+                self.layer2,
+                self.layer1,
+            ]
+
+        if self.dropout:
+            (
+                self.dann_param.dann_hidden_dropout,
+                self.class_param.class_hidden_dropout,
+                self.ae_param.ae_hidden_dropout,
+            ) = (self.dropout, self.dropout, self.dropout)
+        # Correct size of layers depending on the number of classes and
+        # on the bottleneck size
         bottleneck_size = int(
-            self.ae_hidden_size[int(len(self.ae_hidden_size) / 2)]
+            self.ae_param.ae_hidden_size[
+                int(len(self.run_file.ae_hidden_size) / 2)
+            ]
         )
-        self.class_hidden_size = default_value(
-            self.class_hidden_size, (bottleneck_size + self.num_classes) / 2
+        self.class_param.class_hidden_size = default_value(
+            self.class_param.class_hidden_size,
+            (bottleneck_size + self.num_classes) / 2,
         )  # default value [(bottleneck_size + num_classes)/2]
-        self.dann_hidden_size = default_value(
-            self.dann_hidden_size, (bottleneck_size + self.num_batches) / 2
+        self.dann_param.dann_hidden_size = default_value(
+            self.dann_param.dann_hidden_size,
+            (bottleneck_size + self.num_batches) / 2,
         )  # default value [(bottleneck_size + num_batches)/2]
 
         # Creation of model
-        logger.debug("Create the model: DANN_AE")
         self.dann_ae = DANN_AE(
-            ae_hidden_size=self.ae_hidden_size,
-            ae_hidden_dropout=self.ae_hidden_dropout,
-            ae_activation=self.ae_activation,
-            ae_output_activation=self.ae_output_activation,
-            ae_bottleneck_activation=self.ae_bottleneck_activation,
-            ae_init=self.ae_init,
-            ae_batchnorm=self.ae_batchnorm,
-            ae_l1_enc_coef=self.ae_l1_enc_coef,
-            ae_l2_enc_coef=self.ae_l2_enc_coef,
+            ae_hidden_size=self.ae_param.ae_hidden_size,
+            ae_hidden_dropout=self.ae_param.ae_hidden_dropout,
+            ae_activation=self.ae_param.ae_activation,
+            ae_output_activation=self.ae_param.ae_output_activation,
+            ae_bottleneck_activation=self.ae_param.ae_bottleneck_activation,
+            ae_init=self.ae_param.ae_init,
+            ae_batchnorm=self.ae_param.ae_batchnorm,
+            ae_l1_enc_coef=self.ae_param.ae_l1_enc_coef,
+            ae_l2_enc_coef=self.ae_param.ae_l2_enc_coef,
             num_classes=self.num_classes,
-            class_hidden_size=self.class_hidden_size,
-            class_hidden_dropout=self.class_hidden_dropout,
-            class_batchnorm=self.class_batchnorm,
-            class_activation=self.class_activation,
-            class_output_activation=self.class_output_activation,
+            class_hidden_size=self.class_param.class_hidden_size,
+            class_hidden_dropout=self.class_param.class_hidden_dropout,
+            class_batchnorm=self.class_param.class_batchnorm,
+            class_activation=self.class_param.class_activation,
+            class_output_activation=self.class_param.class_output_activation,
             num_batches=self.num_batches,
-            dann_hidden_size=self.dann_hidden_size,
-            dann_hidden_dropout=self.dann_hidden_dropout,
-            dann_batchnorm=self.dann_batchnorm,
-            dann_activation=self.dann_activation,
-            dann_output_activation=self.dann_output_activation,
+            dann_hidden_size=self.dann_param.dann_hidden_size,
+            dann_hidden_dropout=self.dann_param.dann_hidden_dropout,
+            dann_batchnorm=self.dann_param.dann_batchnorm,
+            dann_activation=self.dann_param.dann_activation,
+            dann_output_activation=self.dann_param.dann_output_activation,
         )
 
         logger.debug("Setup optimizer")
@@ -550,7 +553,7 @@ class Workflow:
     def train_scheme(self, training_scheme, verbose=True, **loop_params):
         """
         training scheme : dictionnary explaining the succession of strategies to use as keys with the corresponding number of epochs and use_perm as values.
-                        ex :  training_scheme_3 = {"warmup_dann" : (10, False), "full_model":(10, False)}
+                        x :  training_scheme_3 = {"warmup_dann" : (10, False), "full_model":(10, False)}
         """
         history = {"train": {}, "val": {}}  # initialize history
         for group in history.keys():

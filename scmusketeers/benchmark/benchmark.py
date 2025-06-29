@@ -552,7 +552,7 @@ if __name__ == "__main__":
         "--keep_obs", type=str, nargs="+", default=None, help=""
     )
     parser.add_argument(
-        "--train_test_random_seed", type=float, nargs="?", default=0, help=""
+        "--train_test_random_seed", type=int, nargs="?", default=0, help=""
     )
     parser.add_argument(
         "--obs_subsample", type=str, nargs="?", default=None, help=""

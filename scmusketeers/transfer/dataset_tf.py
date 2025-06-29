@@ -197,6 +197,7 @@ class Dataset:
         self.obs_key = str()
         self.n_keep = int()
         self.keep_obs = str()
+        self.train_test_random_seed = int()
         self.obs_subsample = []
         self.true_celltype = str()
         self.false_celltype = str()
@@ -262,7 +263,7 @@ class Dataset:
             self.adata.obs["size_factors"] = 1.0
 
 
-    def train_val_split(self):
+    def train_val_split_transfer(self):
         """
         Create train and validate split for transfer function
         """
@@ -322,96 +323,6 @@ class Dataset:
             self.adata_train_extended.obs["train_split"]
         )
         self.adata.obs["train_split"] = split
-
-    def create_inputs(self):
-        """
-        Must be called after train_split
-        """
-        self.adata_train = self.adata[
-            self.adata.obs["train_split"] == "train"
-        ].copy()
-        self.adata_val = self.adata[
-            self.adata.obs["train_split"] == "val"
-        ].copy()
-        self.adata_test = self.adata[
-            self.adata.obs["train_split"] == "test"
-        ].copy()
-        self.X = densify(self.adata.X)
-        self.X_train = densify(self.adata_train.X)
-        self.X_val = densify(self.adata_val.X)
-        self.X_test = densify(self.adata_test.X)
-        self.y = self.adata.obs[f"true_{self.class_key}"]
-        self.y_train = self.adata_train.obs[f"true_{self.class_key}"]
-        self.y_val = self.adata_val.obs[f"true_{self.class_key}"]
-        self.y_test = self.adata_test.obs[f"true_{self.class_key}"]
-        self.ohe_celltype = OneHotEncoder(
-            handle_unknown="ignore"
-        )  # TODO : handle the case where there can be unknown celltypes in val, pex adding an output node for 'UNK'
-        y = np.array(self.y_train).reshape(-1, 1)
-        self.ohe_celltype.fit(y)
-        self.y_one_hot = (
-            self.ohe_celltype.transform(np.array(self.y).reshape(-1, 1))
-            .astype(float)
-            .todense()
-        )
-        self.y_train_one_hot = (
-            self.ohe_celltype.transform(np.array(self.y_train).reshape(-1, 1))
-            .astype(float)
-            .todense()
-        )
-        self.y_val_one_hot = (
-            self.ohe_celltype.transform(np.array(self.y_val).reshape(-1, 1))
-            .astype(float)
-            .todense()
-        )
-        self.y_test_one_hot = (
-            self.ohe_celltype.transform(np.array(self.y_test).reshape(-1, 1))
-            .astype(float)
-            .todense()
-        )
-        self.batch = self.adata.obs[self.batch_key]
-        self.batch_train = self.adata_train.obs[self.batch_key]
-        self.batch_val = self.adata_val.obs[self.batch_key]
-        self.batch_test = self.adata_test.obs[self.batch_key]
-        self.ohe_batches = OneHotEncoder()
-        batch_ID = np.array(self.batch).reshape(
-            -1, 1
-        )  # We know batches from the whole dataset so we fit on the entire dataset
-        self.ohe_batches.fit_transform(batch_ID).astype(float).todense()
-        self.batch_one_hot = (
-            self.ohe_batches.transform(np.array(self.batch).reshape(-1, 1))
-            .astype(float)
-            .todense()
-        )
-        self.batch_train_one_hot = (
-            self.ohe_batches.transform(
-                np.array(self.batch_train).reshape(-1, 1)
-            )
-            .astype(float)
-            .todense()
-        )
-        self.batch_val_one_hot = (
-            self.ohe_batches.transform(np.array(self.batch_val).reshape(-1, 1))
-            .astype(float)
-            .todense()
-        )
-        self.batch_test_one_hot = (
-            self.ohe_batches.transform(
-                np.array(self.batch_test).reshape(-1, 1)
-            )
-            .astype(float)
-            .todense()
-        )
-        self.sf = self.adata.obs["size_factors"].values  # .reshape(-1,1)
-        self.sf_train = self.adata_train.obs[
-            "size_factors"
-        ].values  # .reshape(-1,1)
-        self.sf_val = self.adata_val.obs[
-            "size_factors"
-        ].values  # .reshape(-1,1)
-        self.sf_test = self.adata_test.obs[
-            "size_factors"
-        ].values  # .reshape(-1,1)
 
 
     def test_split(self, test_index_name=None, test_obs=None):

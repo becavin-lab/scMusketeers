@@ -101,7 +101,7 @@ def get_training_scheme(training_scheme_id, run_file):
             ("classifier_branch", run_file.classifier_epoch, False),
             (
                 "full_model_pseudolabels",
-                100,
+                run_file.fullmodel_epoch,
                 True,
             ),  # using permutations on plabels for full training
             ("classifier_branch", run_file.classifier_epoch, False),
@@ -222,12 +222,18 @@ def get_training_scheme(training_scheme_id, run_file):
             ("classifier_branch", run_file.classifier_epoch, False),
         ]
 
-    if training_scheme_id == "training_scheme_debug-1":
+    if training_scheme_id == "training_scheme_debug_1":
         training_scheme = [
-            ("classifier_branch", run_file.classifier_epoch, False),
+            (
+                "warmup_dann",
+                run_file.warmup_epoch,
+                False,
+            ),  # Permutating with pseudo labels during warmup
+            #("full_model", run_file.fullmodel_epoch, False),
+            ("full_model_pseudolabels", run_file.fullmodel_epoch, True),
         ]
 
-    if training_scheme_id == "training_scheme_debug-2":
+    if training_scheme_id == "training_scheme_debug_2":
         training_scheme = [
             ("encoder_classifier", run_file.classifier_epoch, False),
         ]

@@ -10,7 +10,8 @@
 #     sbatch --partition=gpu --gres=gpu:1  --nodelist=gpu03 --time=36:00:00 --job-name hp_$dataset 01_hp_optim.sh $dataset Original_annotation batch
 # done
 
-sbatch --partition=gpu --gres=gpu:1 --output=logs/ajrccm_by_batch_hyperparam.log --time=35:00:00 --job-name hp_ajrccm_by_batch 01_hp_optim.sh ajrccm_by_batch celltype manip
-#sbatch --partition=gpu --gres=gpu:1 --output=logs/htap_hyperparam.log --time=35:00:00 --job-name hp_htap 01_hp_optim.sh htap ann_finest_level donor
+#sbatch --partition=gpu --gres=gpu:1 --output=logs/ajrccm_by_batch_hyperparam.log --time=35:00:00 --job-name hp_ajrccm_by_batch 01_hp_optim.sh ajrccm_by_batch celltype manip
+dataset="htap"
+sbatch --partition=gpu --gres=gpu:1 --output=logs/${dataset}_hyperparam.log --time=35:00:00 --job-name hp_${dataset} 01_hp_optim.sh ${dataset} ann_finest_level donor
 # sbatch --partition=gpu --gres=gpu:1 --nodelist=gpu03 --time=35:00:00 --job-name hp_hlca_par_dataset_harmonized 01_hp_optim.sh hlca_par_dataset_harmonized ann_finest_level dataset
 # sbatch --partition=gpu --gres=gpu:1 --nodelist=gpu03 --time=35:00:00 --job-name hp_hlca_trac_dataset_harmonized 01_hp_optim.sh hlca_trac_dataset_harmonized ann_finest_level dataset

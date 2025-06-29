@@ -137,22 +137,26 @@ def create_tuto_data(
 
 if __name__ == "__main__":
     path_adata = "data/ajrccm_by_batch.h5ad"
-    name = "Deprez-2020"
+    working_dir = "/workspace/cell/scMusketeers"
+    name = "Deprez-Lung"
     class_key = "celltype"
     unlabeled_category = "Unknown"
     batch_key = "manip"
 
     sampling_percentage = 0.2
+    subsample = 0.3
     create_tuto_data(
+        subsample,
         sampling_percentage,
         path_adata,
+        working_dir,
         name,
         class_key,
         batch_key,
         unlabeled_category,
     )
 
-    sampling_percentage = 0.4
+    """ sampling_percentage = 0.4
     create_tuto_data(
         sampling_percentage,
         path_adata,
@@ -160,4 +164,4 @@ if __name__ == "__main__":
         class_key,
         batch_key,
         unlabeled_category,
-    )
+    ) """

@@ -1,26 +1,22 @@
 import argparse
-import functools
 import os
 import sys
-from unittest import TestResult
 import gc
 import json
-import os
 import subprocess
 import sys
 import time
 import logging
-
-import matplotlib.pyplot as plt
 import neptune
 import numpy as np
 import pandas as pd
 import scanpy as sc
-import seaborn as sns
 import tensorflow as tf
 import keras
+import functools
 import warnings
-
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.metrics import (accuracy_score, adjusted_mutual_info_score,
                              adjusted_rand_score, balanced_accuracy_score,
                              cohen_kappa_score, confusion_matrix,
@@ -68,6 +64,7 @@ except ImportError:
 
 
 
+
 # Setup settings
 f1_score = functools.partial(f1_score, average="macro")
 physical_devices = tf.config.list_physical_devices("GPU")
@@ -101,52 +98,19 @@ class Workflow:
         self.class_param = CLASS_PARAM(run_file)
         self.dann_param = DANN_PARAM(run_file)
         self.training_scheme = self.run_file.training_scheme
-        # normalization parameters
-        self.normalize_size_factors = self.run_file.normalize_size_factors
-        self.size_factor = self.run_file.size_factor
-        self.scale_input = self.run_file.scale_input
-        self.logtrans_input = self.run_file.logtrans_input
-        self.use_hvg = self.run_file.use_hvg
-        self.batch_size = self.run_file.batch_size
-        # self.optimizer = self.run_file.optimizer
-        # self.verbose = self.run_file[model_training_spec][verbose] # TODO : not implemented yet for DANN_AE
-        # self.threads = self.run_file[model_training_spec][threads] # TODO : not implemented yet for DANN_AE
-        self.learning_rate = self.run_file.learning_rate
+
+        # get attributes from run_file
+        for par, val_from_runfile in self.run_file.__dict__.items():
+            # logger.debug(f"Processing parameter '{par}' from run_file:")
+            # Check if 'self' has an attribute with the same name
+            if not hasattr(self, par):
+                setattr(self, par, val_from_runfile)
+                #logger.debug(f"  - '{par}' from run_file DOES NOT exist in 'self'.")
+                #logger.debug(f"    - Creating 'self.{par}' with value: {val_from_runfile} (from run_file).")
+                
         self.n_perm = 1
         self.semi_sup = False  # TODO : Not yet handled by DANN_AE, the case wwhere unlabeled cells are reconstructed as themselves
         # train test split # TODO : Simplify this, or at first only use the case where data is split according to batch
-        self.test_split_key = self.run_file.test_split_key
-        self.test_obs = self.run_file.test_obs
-        self.test_index_name = self.run_file.test_index_name
-        self.mode = self.run_file.mode
-        self.pct_split = self.run_file.pct_split
-        self.obs_key = self.run_file.obs_key
-        self.n_keep = self.run_file.n_keep
-        self.split_strategy = self.run_file.split_strategy
-        self.keep_obs = self.run_file.keep_obs
-        self.train_test_random_seed = self.run_file.train_test_random_seed
-        # self.use_TEST = self.run_file[dataset_train_split][use_TEST] # TODO : remove, obsolete in the case of DANN_AE
-        self.obs_subsample = self.run_file.obs_subsample
-        # Create fake annotations
-        self.make_fake = self.run_file.make_fake
-        self.true_celltype = self.run_file.true_celltype
-        self.false_celltype = self.run_file.false_celltype
-        self.pct_false = self.run_file.pct_false
-        self.clas_loss_name = self.run_file.clas_loss_name
-        self.balance_classes = self.run_file.balance_classes
-        self.dann_loss_name = self.run_file.dann_loss_name
-        self.rec_loss_name = self.run_file.rec_loss_name
-        self.weight_decay = self.run_file.weight_decay
-        self.optimizer_type = self.run_file.optimizer_type
-        self.clas_w = self.run_file.clas_w
-        self.dann_w = self.run_file.dann_w
-        self.rec_w = self.run_file.rec_w
-        self.warmup_epoch = self.run_file.warmup_epoch
-        self.dropout = self.run_file.dropout  # alternate way to give dropout
-        self.layer1 = self.run_file.layer1
-        self.layer2 = self.run_file.layer2
-        self.bottleneck = self.run_file.bottleneck
-        self.training_scheme = self.run_file.training_scheme
 
         ### Hyperamateres attributes
         self.hparam_path = self.run_file.hparam_path
@@ -195,6 +159,7 @@ class Workflow:
             "batch_mixing_entropy": batch_entropy_mixing_score,
             #'ilisi': lisi_avg
         }
+
         self.metrics = []
 
         # This is a running average : it keeps the previous values in memory when
@@ -206,43 +171,47 @@ class Workflow:
 
     def set_hyperparameters(self, params):
 
-        logger.debug(f"setting hparams {params}")
-        self.use_hvg = params["use_hvg"]
-        self.batch_size = params["batch_size"]
-        self.clas_w = params["clas_w"]
-        self.dann_w = params["dann_w"]
-        self.rec_w = params["rec_w"]
-        self.ae_bottleneck_activation = params["ae_bottleneck_activation"]
-        self.clas_loss_name = params["clas_loss_name"]
-        self.size_factor = params["size_factor"]
-        self.weight_decay = params["weight_decay"]
-        self.learning_rate = params["learning_rate"]
-        self.warmup_epoch = params["warmup_epoch"]
-        self.dropout = params["dropout"]
-        self.layer1 = params["layer1"]
-        self.layer2 = params["layer2"]
-        self.bottleneck = params["bottleneck"]
-        self.training_scheme = params["training_scheme"]
+        logger.debug(f"Setting hparams {params}")
+        if "use_hvg" in params:
+            self.use_hvg = params["use_hvg"]
+        if "batch_size" in params:
+            self.batch_size = params["batch_size"]
+        if "clas_w" in params:
+            self.clas_w = params["clas_w"]
+        if "dann_w" in params:
+            self.dann_w = params["dann_w"]
+        if "rec_w" in params:
+            self.rec_w = params["rec_w"]
+        if "ae_bottleneck_activation" in params:
+            self.ae_bottleneck_activation = params["ae_bottleneck_activation"]
+        if "clas_loss_name" in params:
+            self.clas_loss_name = params["clas_loss_name"]
+        if "size_factor" in params:
+            self.size_factor = params["size_factor"]
+        if "weight_decay" in params:
+            self.weight_decay = params["weight_decay"]
+        if "learning_rate" in params:
+            self.learning_rate = params["learning_rate"]
+        if "warmup_epoch" in params:
+            self.warmup_epoch = params["warmup_epoch"]
+        if "dropout" in params:
+            self.dropout = params["dropout"]
+        if "layer1" in params:
+            self.layer1 = params["layer1"]
+        if "layer2" in params:
+            self.layer2 = params["layer2"]
+        if "bottleneck" in params:
+            self.bottleneck = params["bottleneck"]
+        if "training_scheme" in params:
+            self.training_scheme = params["training_scheme"]
         self.hp_params = params
 
-    
+
     def make_experiment(self):
-        if self.layer1:
-            self.ae_param.ae_hidden_size = [
-                self.layer1,
-                self.layer2,
-                self.bottleneck,
-                self.layer2,
-                self.layer1,
-            ]
+        logger.info("##-- Create scmusketeers model and the train/test/val datasets:")
+        logger.debug("hyperparameters.make_experiment()")
 
-        if self.dropout:
-            (
-                self.dann_param.dann_hidden_dropout,
-                self.class_param.class_hidden_dropout,
-                self.ae_param.ae_hidden_dropout,
-            ) = (self.dropout, self.dropout, self.dropout)
-
+        logger.debug("Setup X,Y")
         adata_list = {
             "full": self.dataset.adata,
             "train": self.dataset.adata_train,
@@ -285,7 +254,8 @@ class Workflow:
             "test": self.dataset.adata_test.obsm["X_pca"],
         }
 
-        # Initialization of pseudolabels
+        # Create pesudo labels
+        logger.debug("Create pseudo-labels pseudo_y_list")
         knn_cl = KNeighborsClassifier(n_neighbors=5)
         knn_cl.fit(X_pca_list["train"], y_nooh_list["train"])
 
@@ -327,6 +297,23 @@ class Workflow:
         self.num_classes = len(np.unique(self.dataset.y_train))
         self.num_batches = len(np.unique(self.dataset.batch))
 
+        # Setup model layers param
+        logger.debug("Setup model settings")
+        if self.layer1:
+            self.ae_param.ae_hidden_size = [
+                self.layer1,
+                self.layer2,
+                self.bottleneck,
+                self.layer2,
+                self.layer1,
+            ]
+
+        if self.dropout:
+            (
+                self.dann_param.dann_hidden_dropout,
+                self.class_param.class_hidden_dropout,
+                self.ae_param.ae_hidden_dropout,
+            ) = (self.dropout, self.dropout, self.dropout)
         # Correct size of layers depending on the number of classes and
         # on the bottleneck size
         bottleneck_size = int(

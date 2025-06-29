@@ -12,8 +12,13 @@ from scmusketeers.hpoptim.run_workflow import run_workflow
 
 logger = logging.getLogger("Sc-Musketeers")
 
-def run_sc_musketeers():
+from pycallgraph2 import PyCallGraph
+from pycallgraph2.output import GraphvizOutput
+from pycallgraph2 import Config
+from pycallgraph2 import GlobbingFilter
 
+
+def run_sc_musketeers():
     # Set up logging
     logging.basicConfig(format="|--- %(levelname)-8s    %(message)s")
 
@@ -34,7 +39,7 @@ def run_sc_musketeers():
         workflow = Workflow(run_file=run_file)
         start_neptune_log(workflow)
         process_dataset(workflow)
-        workflow.dataset.train_val_split()
+        workflow.dataset.train_val_split_transfer()
         workflow.dataset.create_inputs()
         adata_pred, model, history, X_scCER, query_pred = (
             workflow.make_experiment()
@@ -56,6 +61,7 @@ def run_sc_musketeers():
     else:
         # No process
         logger.info("Process not recognized")
+
 
 if __name__ == "__main__":
     run_sc_musketeers()

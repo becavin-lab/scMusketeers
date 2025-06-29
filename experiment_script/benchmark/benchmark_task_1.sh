@@ -5,15 +5,14 @@
 
 # Example: experiment_script/benchmark/benchmark_task_1.sh ajrccm_by_batch celltype manip True
 neptune_name="scmusk-review"
-#working_dir="/workspace/cell/scMusketeers"
+working_dir="/workspace/cell/scMusketeers"
 #working_dir="/data/analysis/data_becavin/scMusketeers"
-working_dir="/data/analysis/data_becavin/scMusketeers-data"
-scmusk_path="/data/analysis/data_becavin/scMusketeers"
+#working_dir="/data/analysis/data_becavin/scMusketeers-data"
+#scmusk_path="/data/analysis/data_becavin/scMusketeers"
+scmusk_path=$working_dir
 out_dir=${working_dir}"/results"
 python_path=${scmusk_path}"/scmusketeers/__main__.py"
 data_path=${working_dir}"/data"
-hparam_path=${scmusk_path}"/experiment_script/hp_ranges/besthp_tscheme.json"
-#hparam_path=${working_dir}"/experiment_script/hp_ranges/generic_r1.json"
 
 #dataset_name=$1
 #class_key=$2

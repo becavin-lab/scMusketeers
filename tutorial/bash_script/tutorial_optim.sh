@@ -2,7 +2,7 @@
 # Get GPU
 # srun -A cell -p gpu -t 10:00:00 --gres=gpu:1 --pty bash -i
 
-log_neptune=False
+log_neptune=True
 neptune_name="scmusk-review"
 
 working_dir="/workspace/cell/scMusketeers"
