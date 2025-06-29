@@ -12,12 +12,6 @@ from scmusketeers.hpoptim.run_workflow import run_workflow
 
 logger = logging.getLogger("Sc-Musketeers")
 
-from pycallgraph2 import PyCallGraph
-from pycallgraph2.output import GraphvizOutput
-from pycallgraph2 import Config
-from pycallgraph2 import GlobbingFilter
-
-
 def run_sc_musketeers():
     # Set up logging
     logging.basicConfig(format="|--- %(levelname)-8s    %(message)s")

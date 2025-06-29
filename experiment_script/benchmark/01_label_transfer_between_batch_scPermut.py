@@ -4,15 +4,34 @@ import sys
 from sklearn.model_selection import GroupShuffleSplit
 import pandas as pd
 import neptune
+import logging
+import os
 
 WD_PATH = '/home/acollin/scPermut/'
 sys.path.append(WD_PATH)
 
-from scmusketeers.tools.utils import str2bool, load_json
-print(str2bool('True'))
-from scmusketeers.hpoptim.hyperparameters import Workflow
+sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
-if __name__ == '__main__':
+try:
+    from ..scmusketeers.arguments.neptune_log import (start_neptune_log,
+                                                    stop_neptune_log)
+    from ..scmusketeers.arguments.runfile import (PROCESS_TYPE, create_argparser,
+                                                get_default_param, get_runfile)
+    from ..scmusketeers.tools.utils import str2bool
+    from ..scmusketeers.transfer.optimize_model import Workflow
+except ImportError:
+    from scmusketeers.arguments.neptune_log import (start_neptune_log,
+                                                    stop_neptune_log, add_custom_log)
+    from scmusketeers.tools.utils import str2bool
+    from scmusketeers.transfer.optimize_model import Workflow
+
+
+logger = logging.getLogger("Sc-Musketeers")
+
+model_list_cpu = ['pca_knn']#'scmap_cells', 'scmap_cluster', 'pca_svm', 'pca_knn']#,'harmony_svm','celltypist','uce']
+model_list_gpu = ['scanvi', ]
+
+def run_benchmark():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--working_dir', type=str, nargs='?', default='', help ='The working directory')
@@ -91,9 +110,9 @@ if __name__ == '__main__':
     parser.add_argument('--opt_metric', type=str, nargs='?', default='val-balanced_acc', help ='The metric used for early stopping as well as optimizes in hp search. Should be formatted as it appears in neptune (split-metricname)')
 
     run_file = parser.parse_args()
-    print(run_file.class_key, run_file.batch_key)
+    logger.debug(run_file.class_key, run_file.batch_key)
     working_dir = run_file.working_dir
-    print(f'working directory : {working_dir}')
+    logger.debug(f'working directory : {working_dir}')
 
     project = neptune.init_project(
             project="becavin-lab/benchmark",
@@ -111,9 +130,9 @@ if __name__ == '__main__':
                             'parameters/val_fold_nb',
                             'parameters/deprecated_status',
                             'parameters/debug_status']).to_pandas()
-    print('run table : ')
-    print(runs_table_df.shape)
-    print(runs_table_df['parameters/debug_status'].head())
+    logger.debug('run table : ')
+    logger.debug(runs_table_df.shape)
+    logger.debug(runs_table_df['parameters/debug_status'].head())
     project.stop()
     
     experiment = Workflow(run_file=run_file, working_dir=working_dir)
@@ -156,15 +175,15 @@ if __name__ == '__main__':
                 experiment.keep_obs = list(groups_train_val[train_index].unique()) # keeping only train idx
                 val_obs = list(groups_train_val[val_index].unique())
 
-                print(f"Fold {i,j}:")
-                print(f"train = {list(groups_train_val.iloc[train_index].unique())}, len = {len(groups_train_val.iloc[train_index].unique())}")
-                print(f"val = {list(groups_train_val.iloc[val_index].unique())}, len = {len(groups_train_val.iloc[val_index].unique())}")
-                print(f"test = {list(groups.iloc[test_index].unique())}, len = {len(groups.iloc[test_index].unique())}")
+                logger.debug(f"Fold {i,j}:")
+                logger.debug(f"train = {list(groups_train_val.iloc[train_index].unique())}, len = {len(groups_train_val.iloc[train_index].unique())}")
+                logger.debug(f"val = {list(groups_train_val.iloc[val_index].unique())}, len = {len(groups_train_val.iloc[val_index].unique())}")
+                logger.debug(f"test = {list(groups.iloc[test_index].unique())}, len = {len(groups.iloc[test_index].unique())}")
 
                 
-                print(set(groups_train_val.iloc[train_index].unique()) & set(groups.iloc[test_index].unique()))
-                print(set(groups_train_val.iloc[train_index].unique()) & set(groups_train_val.iloc[val_index].unique()))
-                print(set(groups_train_val.iloc[val_index].unique()) & set(groups.iloc[test_index].unique()))
+                logger.debug(set(groups_train_val.iloc[train_index].unique()) & set(groups.iloc[test_index].unique()))
+                logger.debug(set(groups_train_val.iloc[train_index].unique()) & set(groups_train_val.iloc[val_index].unique()))
+                logger.debug(set(groups_train_val.iloc[val_index].unique()) & set(groups.iloc[test_index].unique()))
 
                 experiment.split_train_val()
                 checkpoint={'parameters/dataset_name': experiment.dataset_name, 
@@ -179,11 +198,12 @@ if __name__ == '__main__':
                             'parameters/debug_status': 'fixed_1'}
                 # for k, v in vars(run_file).items():
                 #     checkpoint['parameters/' + k] = v
-                print(f'checkpoint : {checkpoint}')
+                logger.debug(f'checkpoint : {checkpoint}')
                 result = runs_table_df[runs_table_df[list(checkpoint.keys())].eq(list(checkpoint.values())).all(axis=1)]
                 if result.empty:
-                    print(f'Running {model}')
-                    experiment.start_neptune_log()
+                    logger.debug(f'Running model - {model}')
+                    logger.debug(f"Checkpoint: {checkpoint}")
+                    start_neptune_log(experiment)
                     experiment.make_experiment()
                     experiment.add_custom_log('test_fold_nb',i)
                     experiment.add_custom_log('val_fold_nb',j)
@@ -194,3 +214,7 @@ if __name__ == '__main__':
                     experiment.add_custom_log('deprecated_status', False)
                     experiment.add_custom_log('debug_status', "fixed_1")
                     experiment.stop_neptune_log()
+
+
+if __name__ == '__main__':
+    run_benchmark()

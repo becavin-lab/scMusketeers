@@ -5,6 +5,7 @@ import scanpy as sc
 from sklearn import svm
 from sklearn.neighbors import KNeighborsClassifier
 import logging
+import time
 
 try:
     import celltypist
@@ -29,25 +30,35 @@ logger.debug("Last run with scvi-tools version:", scvi.__version__)
 
 
 def svm_label(X_full, y_list, assign, pred_full=True):
+    training_time=0
+    inference_time=0
     X_train = X_full[assign == "train", :]
     X_test_val = X_full[assign != "train", :]
 
     y_train = y_list["full"][assign == "train"]
     #    y_train = y_list['train']
     # y_test = y_list['full'][assign != 'train']
-
+    start_train = time.time()
     clf = svm.SVC()  # default rbf ok ? or Linear Kernel ?
     clf.fit(X_train, y_train)
-
+    stop_train = time.time()
+    
+    start_infer = time.time()
     if pred_full:
         y_pred = clf.predict(X_full)
     else:
         y_pred = clf.predict(X_test_val)
+    stop_infer = time.time()
 
-    return y_pred
+    training_time = stop_train - start_train
+    inference_time = stop_infer - start_infer
+
+    return y_pred, training_time, inference_time
 
 
 def knn_label(X_full, y_list, assign, pred_full=True):
+    training_time=0
+    inference_time=0
     X_train = X_full[assign == "train", :]
     X_test_val = X_full[assign != "train", :]
 
@@ -55,17 +66,24 @@ def knn_label(X_full, y_list, assign, pred_full=True):
     #    y_train = y_list['train']
     # y_test = y_list['full'][assign != 'train']
 
+    start_train = time.time()
     clf = KNeighborsClassifier(
         n_neighbors=5
     )  # default rbf ok ? or Linear Kernel ?
     clf.fit(X_train, y_train)
-
+    stop_train = time.time()
+    
+    start_infer = time.time()
     if pred_full:
         y_pred = clf.predict(X_full)
     else:
         y_pred = clf.predict(X_test_val)
+    stop_infer = time.time()
 
-    return y_pred
+    training_time = stop_train - start_train
+    inference_time = stop_infer - start_infer
+    
+    return y_pred, training_time, inference_time
 
 
 def pca_knn(X_list, y_list, batch_list, assign, adata_list, pred_full=True):
@@ -74,6 +92,8 @@ def pca_knn(X_list, y_list, batch_list, assign, adata_list, pred_full=True):
     return :
         - latent = X_pca
         - y_pred = prediction for all cells"""
+    training_time=0
+    inference_time=0
     # adata = sc.AnnData(X = X_list['full'],
     #                    obs = pd.DataFrame({
     #                        'celltype': y_list['full'],
@@ -83,10 +103,10 @@ def pca_knn(X_list, y_list, batch_list, assign, adata_list, pred_full=True):
         "full"
     ]  # adding PCA to adata_list['full'] the first time and reuses it for the next function calls
     if not "X_pca" in adata.obsm:
-        print("Did not find existing PCA, computing it")
+        logger.debug("Did not find existing PCA, computing it")
         sc.tl.pca(adata)
     X_pca = adata.obsm["X_pca"]
-    y_pred = knn_label(X_pca, y_list, assign, pred_full=pred_full)
+    y_pred, training_time, inference_time = knn_label(X_pca, y_list, assign, pred_full=pred_full)
 
     X_pca_list = {
         group: X_pca[assign == group, :] for group in np.unique(assign)
@@ -96,7 +116,7 @@ def pca_knn(X_list, y_list, batch_list, assign, adata_list, pred_full=True):
         group: y_pred[assign == group] for group in np.unique(assign)
     }
     y_pred_list["full"] = y_pred
-    return X_pca_list, y_pred_list
+    return X_pca_list, y_pred_list, training_time, inference_time
 
 
 def pca_svm(X_list, y_list, batch_list, assign, adata_list, pred_full=True):
@@ -110,11 +130,13 @@ def pca_svm(X_list, y_list, batch_list, assign, adata_list, pred_full=True):
     #                        'celltype': y_list['full'],
     #                        'batch': batch_list['full'],
     #                        'split': assign},index =  y_list['full'].index))
+    training_time=0
+    inference_time=0
     adata = adata_list[
         "full"
     ]  # adding PCA to adata_list['full'] the first time and reuses it for the next function calls
     if not "X_pca" in adata.obsm:
-        print("Did not find existing PCA, computing it")
+        logger.debug("Did not find existing PCA, computing it")
         sc.tl.pca(adata)
     X_pca = adata.obsm["X_pca"]
     y_pred = svm_label(X_pca, y_list, assign, pred_full=pred_full)
@@ -127,7 +149,7 @@ def pca_svm(X_list, y_list, batch_list, assign, adata_list, pred_full=True):
         group: y_pred[assign == group] for group in np.unique(assign)
     }
     y_pred_list["full"] = y_pred
-    return X_pca_list, y_pred_list
+    return X_pca_list, y_pred_list, training_time, inference_time
 
 
 def harmony_svm(
@@ -144,19 +166,23 @@ def harmony_svm(
     #                        'celltype': y_list['full'],
     #                        'batch': batch_list['full'],
     #                        'split': assign},index =  y_list['full'].index))
-
+    training_time=0
+    inference_time=0
     adata = adata_list[
         "full"
     ]  # adding PCA to adata_list['full'] the first time and reuses it for the next function calls
     adata.obs["batch"] = batch_list["full"]
     if not "X_pca" in adata.obsm:
-        print("Did not find existing PCA, computing it")
+        logger.debug("Did not find existing PCA, computing it")
         sc.tl.pca(adata)
+    start_train = time.time()
     if not "X_pca_harmony" in adata.obsm:
-        print("Did not find existing harmony, computing it")
+        logger.debug("Did not find existing harmony, computing it")
         sce.pp.harmony_integrate(adata, "batch")
+    harmony_time = time.time() - start_train
     X_pca_harmony = adata.obsm["X_pca_harmony"].copy()
-    y_pred = svm_label(X_pca_harmony, y_list, assign, pred_full=pred_full)
+    y_pred, training_time, inference_times = svm_label(X_pca_harmony, y_list, assign, pred_full=pred_full)
+    training_time = training_time + harmony_time
 
     X_pca_harmony_list = {
         group: X_pca_harmony[assign == group, :] for group in np.unique(assign)
@@ -166,7 +192,7 @@ def harmony_svm(
         group: y_pred[assign == group] for group in np.unique(assign)
     }
     y_pred_list["full"] = y_pred
-    return X_pca_harmony_list, y_pred_list
+    return X_pca_harmony_list, y_pred_list, training_time, inference_time
 
 
 def celltypist_model(
@@ -175,6 +201,8 @@ def celltypist_model(
     """Perform label transfer using CellTypist :
     - latent = X_pca
     - y_pred = prediction for all cells"""
+    training_time=0
+    inference_time=0
     adata = sc.AnnData(
         X=X_list["full"].copy(),
         obs=pd.DataFrame(
@@ -192,7 +220,7 @@ def celltypist_model(
     sc.tl.pca(adata)
     X_pca = adata.obsm["X_pca"]
 
-    print("Start train model")
+    logger.debug("Start train model")
     if adata_train.n_obs > 100000:
         model = celltypist.train(
             adata_train,
@@ -210,7 +238,7 @@ def celltypist_model(
     # .X = expect log1p normalized expression to 10000 counts per cell
     # if not -> check_expression = False
 
-    print("Start annotate dataset")
+    logger.debug("Start annotate dataset")
     predictions = celltypist.annotate(adata, model=model)
     # majority_voting = False default
 
@@ -218,7 +246,7 @@ def celltypist_model(
         "full"
     ]  # adding PCA to adata_list['full'] the first time and reuses it for the next function calls
     if not "X_pca" in adata.obsm:
-        print("Did not find existing PCA, computing it")
+        logger.debug("Did not find existing PCA, computing it")
         sc.tl.pca(adata)
     X_pca = adata.obsm["X_pca"]
 
@@ -233,12 +261,14 @@ def celltypist_model(
         for group in np.unique(assign)
     }
     y_pred_list["full"] = predictions.predicted_labels["predicted_labels"]
-    return X_pca_list, y_pred_list
+    return X_pca_list, y_pred_list, training_time, inference_time
 
 
 def scmap_cluster(
     X_list, y_list, batch_list, assign, adata_list, pred_full=True
 ):
+    training_time=0
+    inference_time=0
     adata = sc.AnnData(
         X=densify(X_list["full"]),
         obs=pd.DataFrame(
@@ -277,7 +307,7 @@ def scmap_cluster(
         "full"
     ]  # adding PCA to adata_list['full'] the first time and reuses it for the next function calls
     if not "X_pca" in adata.obsm:
-        print("Did not find existing PCA, computing it")
+        logger.debug("Did not find existing PCA, computing it")
         sc.tl.pca(adata)
     X_pca = adata.obsm["X_pca"]
 
@@ -289,12 +319,15 @@ def scmap_cluster(
         group: y_pred[assign == group] for group in np.unique(assign)
     }
     y_pred_list["full"] = y_pred
-    return X_pca_list, y_pred_list
+    return X_pca_list, y_pred_list, training_time, inference_time
 
 
 def scmap_cells(
     X_list, y_list, batch_list, assign, adata_list, pred_full=True
 ):
+    training_time=0
+    inference_time=0
+    start_training = time.time()
     adata = sc.AnnData(
         X=densify(X_list["full"]),
         obs=pd.DataFrame(
@@ -311,7 +344,6 @@ def scmap_cells(
     )
 
     sc.pp.highly_variable_genes(adata_train)
-
     y_pred = scmap_annotate(
         adata_test_val,
         adata_train,  # train is the ref, test_val is the query
@@ -321,7 +353,7 @@ def scmap_cells(
         algorithm_flavor="cell",
         gene_selection_flavor="HVGs",
         similarity_threshold=0.7,
-        key_added="scmap_annotation",
+        key_added="scmap_annotation"
     )
     y_pred = pd.Series(y_pred, index=adata_test_val.obs_names)
     y_pred = pd.concat([y_pred, y_list["train"]])
@@ -333,7 +365,7 @@ def scmap_cells(
         "full"
     ]  # adding PCA to adata_list['full'] the first time and reuses it for the next function calls
     if not "X_pca" in adata.obsm:
-        print("Did not find existing PCA, computing it")
+        logger.debug("Did not find existing PCA, computing it")
         sc.tl.pca(adata)
     X_pca = adata.obsm["X_pca"]
 
@@ -345,25 +377,33 @@ def scmap_cells(
         group: y_pred[assign == group] for group in np.unique(assign)
     }
     y_pred_list["full"] = y_pred
-    return X_pca_list, y_pred_list
+    training_time = time.time() - start_training
+    return X_pca_list, y_pred_list, training_time, inference_time
 
 
 def uce(X_list, y_list, batch_list, assign, adata_list, pred_full=True):
     """
     Since UCE embedding is fully unsupervised and deterministic, it is computed beforehand. Hence, this function implies that a 'X_uce' field with UCE embedding already exists in adata.
     """
+    training_time=0
+    inference_time=0
+    logger.debug(f"Load uce data")
     X_uce = adata_list["full"].obsm["X_uce"].copy()
     y_pred = svm_label(X_uce, y_list, assign, pred_full=pred_full)
 
+    logger.debug(f"Load uce list of cells")
     X_uce_list = {
         group: X_uce[assign == group, :] for group in np.unique(assign)
     }
     X_uce_list["full"] = X_uce
+
+    logger.debug(f"Get uce prediction")
     y_pred_list = {
         group: y_pred[assign == group] for group in np.unique(assign)
     }
     y_pred_list["full"] = y_pred
-    return X_uce_list, y_pred_list
+
+    return X_uce_list, y_pred_list, training_time, inference_time
 
 
 def scanvi(X_list, y_list, batch_list, assign, adata_list):
@@ -377,6 +417,8 @@ def scanvi(X_list, y_list, batch_list, assign, adata_list):
     unlabeled_category = "UNK"
     SCANVI_LATENT_KEY = "X_scANVI"
     SCANVI_PREDICTION_KEY = "pred_scANVI"  # "C_scANVI"
+    training_time=0
+    inference_time=0
 
     adata = sc.AnnData(
         X=X_list["full"].copy(),
@@ -411,7 +453,7 @@ def scanvi(X_list, y_list, batch_list, assign, adata_list):
     scvi_model = scvi.model.SCVI(
         adata, n_layers=1, n_latent=50  # default = 10  or 50 ?
     )  # default = 1
-    print("start train scvi")
+    logger.debug("Start train scvi")
     scvi_model.train(
         train_size=1,
         validation_size=None,
@@ -428,7 +470,7 @@ def scanvi(X_list, y_list, batch_list, assign, adata_list):
         unlabeled_category=unlabeled_category,
         labels_key="celltype",
     )
-    print("start train scanvi")
+    logger.debug("start train scanvi")
     scanvi_model.train(
         max_epochs=20,
         n_samples_per_label=100,
@@ -456,10 +498,12 @@ def scanvi(X_list, y_list, batch_list, assign, adata_list):
         for group in np.unique(assign)
     }
     y_pred_list["full"] = adata.obs[SCANVI_PREDICTION_KEY]
-    return latent_list, y_pred_list
+    return latent_list, y_pred_list, training_time, inference_time
 
 
 def scBalance_model(X_list, y_list, batch_list, assign, adata_list):
+    training_time=0
+    inference_time=0
     full, reference, ref_label = ss.Scanpy_Obj_IO(
         test_obj=adata_list["full"],
         ref_obj=adata_list["train"],
@@ -467,12 +511,12 @@ def scBalance_model(X_list, y_list, batch_list, assign, adata_list):
         scale=False,
     )
     y_pred_full = sb.scBalance(full, reference, ref_label, "cpu")
-    print(len(y_pred_full))
+    logger.debug(len(y_pred_full))
     adata = adata_list[
         "full"
     ]  # adding PCA to adata_list['full'] the first time and reuses it for the next function calls
     if not "X_pca" in adata.obsm:
-        print("Did not find existing PCA, computing it")
+        logger.debug("Did not find existing PCA, computing it")
         sc.tl.pca(adata)
     X_pca = adata.obsm["X_pca"]
 
@@ -484,4 +528,4 @@ def scBalance_model(X_list, y_list, batch_list, assign, adata_list):
         group: y_pred_full[assign == group] for group in np.unique(assign)
     }
     y_pred_list["full"] = y_pred_full
-    return X_pca_list, y_pred_list
+    return X_pca_list, y_pred_list, training_time, inference_time
