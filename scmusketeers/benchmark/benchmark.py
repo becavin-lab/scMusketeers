@@ -25,7 +25,7 @@ try:
     from .benchmark_models import (celltypist_model, harmony_svm, pca_knn,
                                    pca_svm, scanvi, scBalance_model,
                                    scmap_cells, scmap_cluster, uce)
-    from ..transfer.dataset_tf import Dataset, load_dataset
+    from ..transfer.dataset_tf import (Dataset, load_dataset, get_gene_symbol_celltypist)
     from ..tools.clust_compute import (balanced_cohen_kappa_score,
                                        balanced_f1_score,
                                        balanced_matthews_corrcoef,
@@ -36,7 +36,13 @@ except ImportError:
     from scmusketeers.benchmark.benchmark_models import (celltypist_model, harmony_svm,
                                            pca_svm, scanvi, scBalance_model,
                                            scmap_cells, scmap_cluster, uce)
-    from scmusketeers.transfer.dataset_tf import Dataset, load_dataset
+    from scmusketeers.transfer.dataset_tf import (Dataset, load_dataset, get_gene_symbol_celltypist)
+    from scmusketeers.tools.clust_compute import (balanced_cohen_kappa_score,
+                                       balanced_f1_score,
+                                       balanced_matthews_corrcoef,
+                                       batch_entropy_mixing_score, lisi_avg,
+                                       nn_overlap)
+    from scmusketeers.tools.utils import nan_to_0, str2bool
 
 
 f1_score = functools.partial(f1_score, average="macro")
@@ -148,10 +154,15 @@ class Workflow:
         self.stop_time = 0
 
 
-    def process_dataset(self):
+    def process_dataset(self, model_list):
         # Loading dataset
         adata = load_dataset(self.run_file.ref_path, query_path="", class_key="", unlabeled_category="")
 
+        if "celltypist" in model_list:
+            adata = get_gene_symbol_celltypist(adata)
+        
+        logger.debug("Create Dataset")
+        print(adata.var['gene_ids'])
         self.dataset = Dataset(
             adata=adata,
             class_key=self.class_key,
@@ -168,7 +179,10 @@ class Workflow:
         )
 
         # Processing dataset.
-        self.dataset.normalize()
+        if "celltypist" in model_list:
+            self.dataset.normalize_celltypist()
+        else:
+            self.dataset.normalize()
 
     def split_train_test(self):
         self.dataset.test_split(

@@ -10,10 +10,8 @@
 dataset_name="ajrccm_by_batch"
 class_key="celltype"
 batch_key="manip"
-task="hp_tscheme"
 
 ### Sc-Musketeers directory parameters
-neptune_name="scmusk-scheme"
 #working_dir="/workspace/cell/scMusketeers"
 #working_dir="/data/analysis/data_becavin/scMusketeers"
 working_dir="/data/analysis/data_becavin/scMusketeers-data"
@@ -24,8 +22,17 @@ scmusk_path="/data/analysis/data_becavin/scMusketeers"
 out_dir=${working_dir}"/results"
 python_path=${scmusk_path}"/scmusketeers/__main__.py"
 data_path=${working_dir}"/data"
-hparam_path=${scmusk_path}"/experiment_script/hp_ranges/besthp_tscheme.json"
-#hparam_path=${working_dir}"/experiment_script/hp_ranges/generic_r1_debug.json"
+
+### task specific
+# For hyperparameters optimiziation
+task="hp_hpparam"
+neptune_name="scmusk-hp"
+hparam_path=${scmusk_path}"/experiment_script/hp_ranges/generic_r1.json"
+
+# For training_scheme comparison
+#task="hp_tscheme"
+#neptune_name="scmusk-scheme"
+#hparam_path=${scmusk_path}"/experiment_script/hp_ranges/besthp_tscheme.json"
 
 
 # Read dataset json to get h5ad path
@@ -84,7 +91,7 @@ classifier_epoch=100   # default = 50, help = Number of epoch to train te classi
 
 
 
-python ${python_path} hp_optim ${h5ad_path} --debug --training_scheme="training_scheme_11" --task ${task} --log_neptune "True" --neptune_name ${neptune_name} --out_dir ${out_dir} \
+python ${python_path} hp_optim ${h5ad_path} --debug --training_scheme="training_scheme_8" --task ${task} --log_neptune "True" --neptune_name ${neptune_name} --out_dir ${out_dir} \
 --hparam_path ${hparam_path} --dataset_name ${dataset_name} \
 --class_key $class_key --batch_key $batch_key --test_obs $test_obs \
 --mode entire_condition --obs_key $batch_key --keep_obs $keep_obs \

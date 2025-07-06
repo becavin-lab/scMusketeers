@@ -668,8 +668,13 @@ class Workflow:
         ]:
             wait = 0
             best_epoch = 0
-            patience = 50
+            patience = 30
             min_delta = 0
+            
+            min_epochs = min(10, n_epochs)
+            logger.debug(f"Early stopping active with a warm-up of {min_epochs} epochs.")
+
+
             if strategy == "permutation_only":
                 monitored = "rec_loss"
                 es_best = np.inf
@@ -823,28 +828,38 @@ class Workflow:
                 "permutation_only",
                 "encoder_classifier",
             ]:
-                # Early stopping
-                wait += 1
                 monitored_value = history["val"][monitored][-1]
 
+                # ALWAYS CHECK FOR IMPROVEMENT
+                # This part runs on every epoch to ensure we capture the true best model.
+                has_improved = False
                 if "loss" in monitored:
                     if monitored_value < es_best - min_delta:
-                        best_epoch = epoch
-                        es_best = monitored_value
-                        wait = 0
-                        best_model = self.dann_ae.get_weights()
+                        has_improved = True
                 else:
                     if monitored_value > es_best + min_delta:
-                        best_epoch = epoch
-                        es_best = monitored_value
-                        wait = 0
-                        best_model = self.dann_ae.get_weights()
-                if wait >= patience:
+                        has_improved = True
+
+                if has_improved:
+                    logger.debug(f"New best score at epoch {epoch}: {monitored_value:.4f}")
+                    best_epoch = epoch
+                    es_best = monitored_value
+                    wait = 0  # Reset patience since we found a better model
+                    best_model = self.dann_ae.get_weights()
+                else:
+                    # INCREMENT WAIT COUNTER ONLY AFTER THE WARM-UP
+                    if epoch > min_epochs:
+                        wait += 1
+                        # Early stopping
+                
+                # CHECK FOR STOPPING CONDITION ONLY AFTER THE WARM-UP
+                if epoch > min_epochs and wait >= patience:
                     logger.info(
-                        f"Early stopping at epoch {best_epoch}, restoring model parameters from this epoch"
+                        f"Early stopping triggered at epoch {epoch}. Restoring best model from epoch {best_epoch} with score {es_best:.4f}."
                     )
                     self.dann_ae.set_weights(best_model)
-                    break
+                    break  # Exit the loop for this training scheme
+
 
         time_out = time.time()
         logger.info(f"Strategy {strategy} duration : {time_out - time_in} s")

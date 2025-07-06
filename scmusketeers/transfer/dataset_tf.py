@@ -8,6 +8,8 @@ import scanpy as sc
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.utils import shuffle
+import mygene
+
 
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
@@ -251,6 +253,45 @@ class Dataset:
         if self.scale_input:
             logger.debug("Dataset scaling")
             sc.pp.scale(self.adata)
+
+        if self.size_factor == "default":  # Computing sf on preprocessed data
+            logger.debug("Calculate size factor (default mode)")
+            self.adata.obs["n_counts"] = self.adata.X.sum(axis=1)
+            self.adata.obs["size_factors"] = (
+                self.adata.obs.n_counts / np.median(self.adata.obs.n_counts)
+            )
+        elif self.size_factor == "constant":
+            logger.debug("Calculate size factor (constant mode sf=1)")
+            self.adata.obs["size_factors"] = 1.0
+
+
+    def normalize_celltypist(self):
+        """
+        Celltypist requires log1p normalization with max 10000genes
+        """
+        logger.debug("Preprocess dataset (Celltypist) - Normalization (target_sum=1e4, log1p)")
+
+        if self.filter_min_counts:
+            logger.debug("Filter dataset")
+            sc.pp.filter_genes(self.adata, min_counts=1)
+            sc.pp.filter_cells(self.adata, min_counts=1)
+        nonzero_genes, _ = sc.pp.filter_genes(self.adata.X, min_counts=1)
+        assert (
+            nonzero_genes.all()
+        ), "Please remove all-zero genes before using DCA."
+
+        if self.size_factor == "raw":  # Computing sf on raw data
+            logger.debug("Calculate size factor (raw mode)")
+            self.adata.obs["n_counts"] = self.adata.X.sum(axis=1)
+            self.adata.obs["size_factors"] = (
+                self.adata.obs.n_counts / np.median(self.adata.obs.n_counts)
+            )
+
+        # Normalize to 10,000 counts per cell
+        sc.pp.normalize_total(self.adata, target_sum=1e4)
+
+        # Log-transform the data
+        sc.pp.log1p(self.adata)
 
         if self.size_factor == "default":  # Computing sf on preprocessed data
             logger.debug("Calculate size factor (default mode)")
@@ -811,6 +852,35 @@ def process_dataset(workflow):
     
     # Processing dataset. Splitting train/test.
     workflow.dataset.normalize()
+
+def get_gene_symbol_celltypist(adata):
+        
+    logger.debug(f"adatavar {adata.var.index}")
+    # 1. Get the list of Ensembl IDs from your adata object
+    #    We remove the version number (e.g., .1) if it exists
+    ensembl_ids = adata.var.index.str.split('.').str[0].tolist()
+
+    # 2. Query MyGene.info
+    mg = mygene.MyGeneInfo()
+    gene_info = mg.querymany(ensembl_ids, 
+                            scopes='ensembl.gene', 
+                            fields='symbol', 
+                            species='human', # Or 'mouse', etc.
+                            as_dataframe=True)
+
+    # 3. Add the gene symbols to your adata.var DataFrame
+    #    We use .loc to ensure we are modifying the original adata.var
+    adata.var.loc[:, 'symbol'] = gene_info['symbol']
+
+    # 4. Handle genes where no symbol was found (important!)
+    #    Fill missing symbols with the original Ensembl ID
+    adata.var['symbol'].fillna(adata.var.index, inplace=True)
+
+    # 5. Set the new gene symbols as the main index
+    adata.var.set_index('symbol', inplace=True)
+    adata.var_names_make_unique()
+    logger.debug(f"adatavar {adata.var}")
+    return adata
 
 
 ## deprecated

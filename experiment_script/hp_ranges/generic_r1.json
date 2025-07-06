@@ -12,5 +12,4 @@
            {"name": "dropout", "type": "range", "bounds": [0.0, 0.5], "value_type": "float"},
             {"name": "bottleneck", "type": "range", "bounds": [32, 128], "value_type": "int"},
              {"name": "layer2", "type": "range", "bounds": [32, 512], "value_type": "int"},
-              {"name": "layer1", "type": "range", "bounds": [512, 2048], "value_type": "int"},
-               {"name": "training_scheme", "type": "choice", "values": ["training_scheme_5", "training_scheme_6", "training_scheme_7", "training_scheme_8"]}]
+              {"name": "layer1", "type": "range", "bounds": [512, 2048], "value_type": "int"}]

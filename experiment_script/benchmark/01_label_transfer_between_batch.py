@@ -63,7 +63,7 @@ def run_benchmark():
     parser.add_argument('--test_index_name', type = str,nargs='+', default = None, help ='indexes to be used as test. Overwrites test_obs')
     
     parser.add_argument('--log_neptune', type=str2bool, nargs='?',const=True, default=True , help ='')
-    parser.add_argument('--neptune_name', type=str, nargs='?', default="scmusk-review" , help ='')
+    parser.add_argument('--neptune_name', type=str, nargs='?', default="scmusk-tasks" , help ='')
     parser.add_argument('--gpu_models', type=str2bool, nargs='?',const=False, default=True , help ='')
     parser.add_argument('--resume', type=str2bool, nargs='?',const=False, default=False , help ='')
 
@@ -103,7 +103,7 @@ def run_benchmark():
     logger.info("Setup Workflow")
     experiment = Workflow(run_file=run_file, working_dir=working_dir)
 
-    experiment.process_dataset()
+    experiment.process_dataset(model_list)
 
     experiment.mode = "entire_condition"
 
