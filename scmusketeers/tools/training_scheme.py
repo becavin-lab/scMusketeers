@@ -225,12 +225,12 @@ def get_training_scheme(training_scheme_id, run_file):
     if training_scheme_id == "training_scheme_debug_1":
         training_scheme = [
             (
-                "warmup_dann",
+                "full_model_pseudolabels",
                 run_file.warmup_epoch,
                 False,
             ),  # Permutating with pseudo labels during warmup
             #("full_model", run_file.fullmodel_epoch, False),
-            ("full_model_pseudolabels", run_file.fullmodel_epoch, True),
+            #("full_model_pseudolabels", run_file.fullmodel_epoch, True),
         ]
 
     if training_scheme_id == "training_scheme_debug_2":

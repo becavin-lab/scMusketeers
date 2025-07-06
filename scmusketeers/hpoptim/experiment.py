@@ -7,6 +7,7 @@ import json
 import neptune
 import logging
 import json
+import gc
 
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
@@ -123,7 +124,9 @@ class MakeExperiment:
                 self.workflow,"opt_metric", self.run_file.opt_metric
             )
             stop_neptune_log(self.workflow)
-            # del self.workflow  # Should not be necessary
+            del self.workflow # Delete the large workflow object
+            gc.collect() # Ask Python to free up memory
+
             return opt_metric
         else:  # we return the already computed value
             logger.info(f"Trial {self.trial_count} already exists, retrieving value")

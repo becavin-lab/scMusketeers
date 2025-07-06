@@ -14,10 +14,13 @@ import scanpy as sc
 import tensorflow as tf
 import keras
 import functools
+import scipy
 import warnings
-import warnings
+import gc
 from neptune.utils import stringify_unsupported
 import keras
+from tensorflow.keras.mixed_precision import set_global_policy
+
 from sklearn.utils import compute_class_weight
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import (confusion_matrix, accuracy_score, adjusted_mutual_info_score,
@@ -80,6 +83,9 @@ f1_score = functools.partial(f1_score, average="macro")
 physical_devices = tf.config.list_physical_devices("GPU")
 for gpu_instance in physical_devices:
     tf.config.experimental.set_memory_growth(gpu_instance, True)
+# Set the global policy to use mixed_float16
+#set_global_policy('mixed_float16')
+
 # Suppress the specific Keras UserWarning about non-existent gradients
 warnings.filterwarnings(
     'ignore',
@@ -739,7 +745,7 @@ class Workflow:
             logger.debug(
                 f"Epoch {running_epoch}/{total_epochs}, Current strat Epoch {epoch}/{n_epochs}"
             )
-            history, _, _, _, _ = self.training_loop(
+            history = self.training_loop(
                 history=history,
                 group=group,
                 training_strategy=strategy,
@@ -795,6 +801,10 @@ class Workflow:
 
         time_out = time.time()
         logger.debug(f"Strategy {strategy} duration : {time_out - time_in} s")
+
+        tf.keras.backend.clear_session()
+        gc.collect()
+
         return running_epoch
 
 
@@ -865,7 +875,7 @@ class Workflow:
                 n_obs,
             )
 
-        history, _, clas, dann, rec = self.evaluation_pass(
+        history = self.evaluation_pass(
             history,
             adata_list,
             X_list,
@@ -875,7 +885,7 @@ class Workflow:
             dann_loss_fn,
             rec_loss_fn,
         )
-        return history, _, clas, dann, rec
+        return history
 
     
     def batch_step(
@@ -905,7 +915,12 @@ class Workflow:
             # Forward pass
             input_batch_new = dict()
             for k, v in input_batch.items():
-                input_batch_new[k] = tf.convert_to_tensor(v)
+                # If the input is the main expression matrix, convert to dense tensor
+                if isinstance(v, scipy.sparse.spmatrix):
+                    # This is the only place it becomes dense, and only for one batch
+                    input_batch_new[k] = tf.convert_to_tensor(v.toarray()) 
+                else:
+                    input_batch_new[k] = tf.convert_to_tensor(v)
             input_batch = input_batch_new
             enc, clas, dann, rec = self.dann_ae(input_batch, training=True).values()
 
@@ -1011,9 +1026,48 @@ class Workflow:
         on : "epoch_end" to evaluate on train and val, "training_end" to evaluate on train, val and "test".
         """
         for group in ["train", "val"]:  # evaluation round
-            inp = scanpy_to_input(adata_list[group], ["size_factors"])
-            inp = {k: tf.convert_to_tensor(v) for k, v in inp.items()}
-            _, clas, dann, rec = self.dann_ae(inp, training=False).values()
+            n_obs = X_list[group].shape[0]
+            steps = n_obs // self.batch_size + (1 if n_obs % self.batch_size > 0 else 0)
+            
+            all_clas = []
+            batch_rec_losses = []
+            all_dann = []
+            
+            # Create a simple generator for evaluation
+            for i in range(steps):
+                start_idx = i * self.batch_size
+                end_idx = min((i + 1) * self.batch_size, n_obs)
+                
+                # 1. Prepare the count data for the batch
+                batch_X = X_list[group][start_idx:end_idx]
+                if scipy.sparse.issparse(batch_X):
+                    batch_X = batch_X.toarray()
+                
+                # 2. Prepare the size factors for the batch
+                batch_sf = adata_list[group].obs["size_factors"].iloc[start_idx:end_idx].values
+                
+                # 3. Build the input dictionary with the CORRECT keys: 'counts' and 'size_factors'
+                inp = {
+                    'counts': tf.convert_to_tensor(batch_X),
+                    'size_factors': tf.convert_to_tensor(batch_sf)
+                }
+
+                _, clas_batch, dann_batch, rec_batch = self.dann_ae(inp, training=False).values()
+                all_clas.append(clas_batch.numpy())
+                all_dann.append(dann_batch.numpy())
+                # Calculate reconstruction loss for this batch and append the scalar value
+                rec_loss_for_batch = tf.reduce_mean(rec_loss_fn(batch_X, rec_batch))
+                batch_rec_losses.append(rec_loss_for_batch.numpy())
+            
+
+            # Concatenate results from all batches
+            clas = np.concatenate(all_clas, axis=0)
+            dann = np.concatenate(all_dann, axis=0)
+
+            # # Calc val for all batches
+            # inp = scanpy_to_input(adata_list[group], ["size_factors"])
+            # inp = {k: tf.convert_to_tensor(v) for k, v in inp.items()}
+            # _, clas, dann, rec = self.dann_ae(inp, training=False).values()
 
             #         return _, clas, dann, rec
             clas_loss = tf.reduce_mean(
@@ -1024,9 +1078,8 @@ class Workflow:
                 dann_loss_fn(batch_list[group], dann)
             ).numpy()
             history[group]["dann_loss"] += [dann_loss]
-            rec_loss = tf.reduce_mean(
-                rec_loss_fn(X_list[group], rec)
-            ).numpy()
+            rec_loss = np.mean(batch_rec_losses)
+
             history[group]["rec_loss"] += [rec_loss]
             history[group]["total_loss"] += [
                 self.clas_w * clas_loss
@@ -1062,7 +1115,7 @@ class Workflow:
                     )
                 ]  # y_list are onehot encoded
         del inp
-        return history, _, clas, dann, rec
+        return history
 
 
     def get_losses(self, y_list):

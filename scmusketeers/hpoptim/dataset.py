@@ -619,10 +619,14 @@ class Dataset:
         self.adata_test = self.adata[
             self.adata.obs["train_split"] == "test"
         ].copy()
-        self.X = densify(self.adata.X)
-        self.X_train = densify(self.adata_train.X)
-        self.X_val = densify(self.adata_val.X)
-        self.X_test = densify(self.adata_test.X)
+        self.X = self.adata.X
+        self.X_train = self.adata_train.X
+        self.X_val = self.adata_val.X
+        self.X_test = self.adata_test.X
+        # self.X = densify(self.adata.X)
+        # self.X_train = densify(self.adata_train.X)
+        # self.X_val = densify(self.adata_val.X)
+        # self.X_test = densify(self.adata_test.X)
         self.y = self.adata.obs[f"true_{self.class_key}"]
         self.y_train = self.adata_train.obs[f"true_{self.class_key}"]
         self.y_val = self.adata_val.obs[f"true_{self.class_key}"]
