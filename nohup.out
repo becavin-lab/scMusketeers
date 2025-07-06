@@ -227,3 +227,1978 @@ I0000 00:00:1750456107.615486 1010243 gpu_device.cc:2019] Created device /job:lo
 |--- INFO        Epoch 2/250, Current strat Epoch 2/100
 |--- DEBUG       Use permutation strategy? use_perm = True
 |--- DEBUG       Change the cell permutations
+jq: error: Could not open file /workspace/cell/scMusketeers/experiment_script/datasets_h5ad.json: No such file or directory
+Error: Dataset name 'ajrccm_by_batch' not found in the JSON file.
+  File "/data/analysis/data_becavin/scMusketeers/experiment_script/benchmark/00_hp_optim.sh", line 23
+    scmusk_path=$working_dir
+                ^
+SyntaxError: invalid syntax
+experiment_script/benchmark/00_hp_optim.sh: 48: Syntax error: redirection unexpected
+experiment_script/benchmark/00_hp_optim.sh: 48: Syntax error: redirection unexpected
+experiment_script/benchmark/00_hp_optim.sh: 48: Syntax error: redirection unexpected
+h5ad_path: /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- BASH  #####     Hyperparameters optimization of Sc-Musketeers with dataset=ajrccm_by_batch
+|--- BASH  the dataset will be loaded from /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- BASH  test_obs=D322_Biop_Nas1 D354_Brus_Dis1 D326_Brus_Dis1 D353_Biop_Pro1 D337_Brus_Dis1 D354_Biop_Int2 D367_Brus_Dis1
+|--- BASH  train_obs=D367_Brus_Nas1 D372_Brus_Nas1 D326_Biop_Int1 D367_Biop_Pro1 D339_Biop_Pro1 D372_Biop_Int2 D353_Brus_Dis1 D372_Biop_Pro1 D354_Biop_Pro1 D326_Biop_Pro1 D367_Biop_Int1 D363_Brus_Dis1 D363_Biop_Int2 D344_Brus_Dis1 D339_Biop_Int1 D372_Brus_Dis1 D372_Biop_Int1 D339_Brus_Dis1 D344_Biop_Int1 D353_Biop_Int2 D339_Biop_Nas1 D344_Biop_Pro1
+2025-07-05 09:57:18.896681: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2025-07-05 09:57:18.912267: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:467] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1751702238.931198 3431112 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1751702238.936490 3431112 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1751702238.951008 3431112 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1751702238.951035 3431112 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1751702238.951038 3431112 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1751702238.951041 3431112 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+2025-07-05 09:57:18.955338: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+|--- DEBUG       Program arguments: Namespace(process='hp_optim', ref_path='/data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad', debug=True, class_key='celltype', batch_key='manip', query_path=None, out_dir='/data/analysis/data_becavin/scMusketeers-data/results', out_name='scMusk_', training_scheme='training_scheme_11', log_neptune=True, neptune_name='scmusk-review', opt_metric='val-balanced_mcc', verbose=True, hparam_path=None, working_dir=None, dataset_name='ajrccm_by_batch', task='hp_tscheme', unlabeled_category='UNK', filter_min_counts=True, normalize_size_factors=True, size_factor='default', scale_input=False, logtrans_input=True, use_hvg=None, batch_size=430, test_split_key='TRAIN_TEST_split_batch', test_obs=['D322_Biop_Nas1', 'D354_Brus_Dis1', 'D326_Brus_Dis1', 'D353_Biop_Pro1', 'D337_Brus_Dis1', 'D354_Biop_Int2', 'D367_Brus_Dis1'], test_index_name=None, mode='entire_condition', pct_split=0.9, obs_key='manip', n_keep=None, split_strategy=None, keep_obs=['D367_Brus_Nas1', 'D372_Brus_Nas1', 'D326_Biop_Int1', 'D367_Biop_Pro1', 'D339_Biop_Pro1', 'D372_Biop_Int2', 'D353_Brus_Dis1', 'D372_Biop_Pro1', 'D354_Biop_Pro1', 'D326_Biop_Pro1', 'D367_Biop_Int1', 'D363_Brus_Dis1', 'D363_Biop_Int2', 'D344_Brus_Dis1', 'D339_Biop_Int1', 'D372_Brus_Dis1', 'D372_Biop_Int1', 'D339_Brus_Dis1', 'D344_Biop_Int1', 'D353_Biop_Int2', 'D339_Biop_Nas1', 'D344_Biop_Pro1'], train_test_random_seed=0, obs_subsample=None, make_fake=False, true_celltype=None, false_celltype=None, pct_false=None, weight_decay=9.447375593939065e-07, learning_rate=0.0009913638603687327, optimizer_type='adam', warmup_epoch=1, fullmodel_epoch=1, permonly_epoch=1, classifier_epoch=1, balance_classes=True, clas_loss_name='categorical_focal_crossentropy', dann_loss_name='categorical_crossentropy', rec_loss_name='MSE', clas_w=0.3066763716843436, dann_w=0.01865515471175812, rec_w=0.013070252184855429, dropout=0.27058450953709307, layer1=1151, layer2=235, bottleneck=84, ae_hidden_size=[128, 64, 128], ae_hidden_dropout=None, ae_activation='relu', ae_bottleneck_activation='linear', ae_output_activation='relu', ae_init='glorot_uniform', ae_batchnorm=True, ae_l1_enc_coef=None, ae_l2_enc_coef=None, class_hidden_size=[64], class_hidden_dropout=None, class_batchnorm=True, class_activation='relu', class_output_activation='softmax', dann_hidden_size=[64], dann_hidden_dropout=None, dann_batchnorm=True, dann_activation='relu', dann_output_activation='softmax')
+|--- INFO        Run hyperparameters optimization
+|--- INFO        #HP_optim--- Create Experiment
+[neptune] [info   ] Neptune initialized. Open in the app: https://app.neptune.ai/becavin-lab/scmusk-review/
+[neptune] [info   ] Shutting down background jobs, please wait a moment...
+[neptune] [info   ] Done!
+[neptune] [info   ] Explore the metadata in the Neptune app: https://app.neptune.ai/becavin-lab/scmusk-review/metadata
+|--- INFO        #HP_optim--- Load hyperparameters ranges
+|--- DEBUG       hp ranges: 
+|--- INFO        hp ranges: experiment_script/hp_ranges/generic_r1.json
+|--- INFO        #HP_optim--- Run AX Platform for hyperparameters optimization
+[INFO 07-05 09:57:25] ax.service.ax_client: Starting optimization with verbose logging. To disable logging, set the `verbose_logging` argument to `False`. Note that float values in the logs are rounded to 6 decimal points.
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/service/utils/instantiation.py:248: AxParameterWarning: `is_ordered` is not specified for `ChoiceParameter` "clas_loss_name". Defaulting to `True`  since there are exactly two choices.. To override this behavior (or avoid this warning), specify `is_ordered` during `ChoiceParameter` construction. Note that choice parameters with exactly 2 choices are always considered ordered and that the user-supplied `is_ordered` has no effect in this particular case.
+  return ChoiceParameter(
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/service/utils/instantiation.py:248: AxParameterWarning: `sort_values` is not specified for `ChoiceParameter` "clas_loss_name". Defaulting to `False` for parameters of `ParameterType` STRING. To override this behavior (or avoid this warning), specify `sort_values` during `ChoiceParameter` construction.
+  return ChoiceParameter(
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/service/utils/instantiation.py:248: AxParameterWarning: `is_ordered` is not specified for `ChoiceParameter` "size_factor". Defaulting to `False`  since the parameter is a string with more than 2 choices.. To override this behavior (or avoid this warning), specify `is_ordered` during `ChoiceParameter` construction. Note that choice parameters with exactly 2 choices are always considered ordered and that the user-supplied `is_ordered` has no effect in this particular case.
+  return ChoiceParameter(
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/service/utils/instantiation.py:248: AxParameterWarning: `sort_values` is not specified for `ChoiceParameter` "size_factor". Defaulting to `False` for parameters of `ParameterType` STRING. To override this behavior (or avoid this warning), specify `sort_values` during `ChoiceParameter` construction.
+  return ChoiceParameter(
+[INFO 07-05 09:57:25] ax.service.utils.instantiation: Inferred value type of ParameterType.STRING for parameter training_scheme. If that is not the expected value type, you can explicitly specify 'value_type' ('int', 'float', 'bool' or 'str') in parameter dict.
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/service/utils/instantiation.py:248: AxParameterWarning: `is_ordered` is not specified for `ChoiceParameter` "training_scheme". Defaulting to `False`  since the parameter is a string with more than 2 choices.. To override this behavior (or avoid this warning), specify `is_ordered` during `ChoiceParameter` construction. Note that choice parameters with exactly 2 choices are always considered ordered and that the user-supplied `is_ordered` has no effect in this particular case.
+  return ChoiceParameter(
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/service/utils/instantiation.py:248: AxParameterWarning: `sort_values` is not specified for `ChoiceParameter` "training_scheme". Defaulting to `False` for parameters of `ParameterType` STRING. To override this behavior (or avoid this warning), specify `sort_values` during `ChoiceParameter` construction.
+  return ChoiceParameter(
+[INFO 07-05 09:57:25] ax.service.utils.instantiation: Created search space: SearchSpace(parameters=[RangeParameter(name='use_hvg', parameter_type=INT, range=[1000, 5000]), RangeParameter(name='batch_size', parameter_type=INT, range=[64, 512]), RangeParameter(name='clas_w', parameter_type=FLOAT, range=[0.0001, 100.0], log_scale=True), RangeParameter(name='rec_w', parameter_type=FLOAT, range=[0.0001, 30.0], log_scale=True), RangeParameter(name='dann_w', parameter_type=FLOAT, range=[0.0001, 100.0], log_scale=True), FixedParameter(name='ae_bottleneck_activation', parameter_type=STRING, value='linear'), ChoiceParameter(name='clas_loss_name', parameter_type=STRING, values=['categorical_crossentropy', 'categorical_focal_crossentropy'], is_ordered=True, sort_values=False), ChoiceParameter(name='size_factor', parameter_type=STRING, values=['raw', 'constant', 'default'], is_ordered=False, sort_values=False), RangeParameter(name='learning_rate', parameter_type=FLOAT, range=[0.0001, 0.01], log_scale=True), RangeParameter(name='weight_decay', parameter_type=FLOAT, range=[1e-08, 0.0001], log_scale=True), RangeParameter(name='warmup_epoch', parameter_type=INT, range=[1, 70]), RangeParameter(name='dropout', parameter_type=FLOAT, range=[0.0, 0.5]), RangeParameter(name='bottleneck', parameter_type=INT, range=[32, 128]), RangeParameter(name='layer2', parameter_type=INT, range=[32, 512]), RangeParameter(name='layer1', parameter_type=INT, range=[512, 2048]), ChoiceParameter(name='training_scheme', parameter_type=STRING, values=['training_scheme_5', 'training_scheme_6', 'training_scheme_7', 'training_scheme_8'], is_ordered=False, sort_values=False)], parameter_constraints=[]).
+[INFO 07-05 09:57:25] ax.modelbridge.dispatch_utils: Using Models.BOTORCH_MODULAR since there are more ordered parameters than there are categories for the unordered categorical parameters.
+[INFO 07-05 09:57:25] ax.modelbridge.dispatch_utils: Calculating the number of remaining initialization trials based on num_initialization_trials=None max_initialization_trials=None num_tunable_parameters=15 num_trials=None use_batch_trials=False
+[INFO 07-05 09:57:25] ax.modelbridge.dispatch_utils: calculated num_initialization_trials=30
+[INFO 07-05 09:57:25] ax.modelbridge.dispatch_utils: num_completed_initialization_trials=0 num_remaining_initialization_trials=30
+[INFO 07-05 09:57:25] ax.modelbridge.dispatch_utils: `verbose`, `disable_progbar`, and `jit_compile` are not yet supported when using `choose_generation_strategy` with ModularBoTorchModel, dropping these arguments.
+[INFO 07-05 09:57:25] ax.modelbridge.dispatch_utils: Using Bayesian Optimization generation strategy: GenerationStrategy(name='Sobol+BoTorch', steps=[Sobol for 30 trials, BoTorch for subsequent trials]). Iterations after 30 will take longer to generate due to model-fitting.
+|--- INFO        #HP_optim--- Running trial 0/2
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/modelbridge/cross_validation.py:463: UserWarning: Encountered exception in computing model fit quality: RandomModelBridge does not support prediction.
+  warn("Encountered exception in computing model fit quality: " + str(e))
+[INFO 07-05 09:57:25] ax.service.ax_client: Generated new trial 0 with parameters {'use_hvg': 1089, 'batch_size': 455, 'clas_w': 0.547735, 'rec_w': 0.000153, 'dann_w': 0.397322, 'clas_loss_name': 'categorical_focal_crossentropy', 'learning_rate': 0.000682, 'weight_decay': 5.1e-05, 'warmup_epoch': 31, 'dropout': 0.184116, 'bottleneck': 76, 'layer2': 369, 'layer1': 1131, 'size_factor': 'raw', 'training_scheme': 'training_scheme_6', 'ae_bottleneck_activation': 'linear'} using model Sobol.
+|--- INFO        Run the Experiment: experiment.train()
+|--- DEBUG       Load checkpoint
+|--- DEBUG       Compare checkpoint and Neptune dataframe
+|--- DEBUG       Trial 1 does not exist, running trial
+I0000 00:00:1751702245.709921 3431112 gpu_device.cc:2019] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 38471 MB memory:  -> device: 0, name: NVIDIA A100-PCIE-40GB, pci bus id: 0000:37:00.0, compute capability: 8.0
+|--- DEBUG       Set hyparameters
+|--- DEBUG       Setting hparams {'use_hvg': 1089, 'batch_size': 455, 'clas_w': 0.5477346472360242, 'rec_w': 0.0001533549700212502, 'dann_w': 0.3973219437434328, 'clas_loss_name': 'categorical_focal_crossentropy', 'learning_rate': 0.000682106755438967, 'weight_decay': 5.1497938755616826e-05, 'warmup_epoch': 31, 'dropout': 0.1841161549091339, 'bottleneck': 76, 'layer2': 369, 'layer1': 1131, 'size_factor': 'raw', 'training_scheme': 'training_scheme_6', 'ae_bottleneck_activation': 'linear'}
+|--- DEBUG       
+|--- INFO        Use Neptune.ai log : True
+|--- INFO        Use Neptune project name = scmusk-review
+[neptune] [info   ] Neptune initialized. Open in the app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-322
+|--- DEBUG       Log the trial on Neptune
+|--- DEBUG        -- HyperParam_Optim_hp_tscheme_ajrccm_by_batch_1/2 -- 
+|--- DEBUG       
+|--- INFO        Load dataset /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- INFO        Load /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- DEBUG       Did not find existing PCA, computing it
+|--- DEBUG       Preprocess dataset - Normalization
+|--- DEBUG       Filter dataset
+|--- DEBUG       Calculate size factor (raw mode)
+|--- DEBUG       Calculate HVG
+|--- DEBUG       Selecting 1089 HVG
+|--- DEBUG       Normalize with total nb reads and calculate size factor
+|--- DEBUG       Log_1 transformation
+|--- DEBUG       
+|--- DEBUG       test obs :['D322_Biop_Nas1', 'D354_Brus_Dis1', 'D326_Brus_Dis1', 'D353_Biop_Pro1', 'D337_Brus_Dis1', 'D354_Biop_Int2', 'D367_Brus_Dis1']
+|--- DEBUG       
+|--- INFO        Process train, test, val datasets
+|--- DEBUG       splitting this adata train/val : View of AnnData object with n_obs × n_vars = 62619 × 1089
+    obs: 'donor', 'manip', 'method', 'position', 'Sex', 'Age', 'celltype', 'phenotype', 'celltype_phenotype', 'celltype_position', 'TRAIN_TEST_split', 'true_celltype', 'n_counts', 'size_factors', 'TRAIN_TEST_split_batch'
+    var: 'gene_ids', 'feature_types', 'genome', 'n_counts'
+    uns: 'pca', 'log1p'
+    obsm: 'X_uce', 'tsne_hg19', 'umap_hg19', 'umap_uncorrected_hg19', 'X_pca'
+    varm: 'PCs'
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/dataset.py:511: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+  self.adata_train_extended.obs["train_split"] = to_keep
+|--- INFO        train, test, val proportions : train_split
+train    47293
+test     15350
+val      15326
+Name: count, dtype: int64
+|--- INFO        Dataset split performed
+|--- DEBUG       Run the training
+|--- INFO        ##-- Create scmusketeers model and the train/test/val datasets:
+|--- DEBUG       hyperparameters.make_experiment()
+|--- DEBUG       Setup X,Y
+|--- DEBUG       Create pseudo-labels pseudo_y_list
+|--- DEBUG       Setup model settings
+|--- DEBUG       Setup optimizer
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       Setup losses
+|--- DEBUG       Setup training scheme
+|--- DEBUG       Setting up training scheme: training_scheme_6 - [('warmup_dann', 1, True), ('full_model', 1, True)]
+|--- INFO        ##-- Run model training
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- WARMUP_DANN - Step 0, running warmup_dann strategy with permutation = True for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Epoch 1/2, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy warmup_dann duration : 36.68926286697388 s
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- FULL_MODEL - Step 0, running full_model strategy with permutation = True for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Epoch 2/2, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy full_model duration : 23.227829694747925 s
+|--- INFO        Training complete
+|--- INFO        ##-- Performing model prediction
+|--- INFO        Save results to: /data/analysis/data_becavin/scMusketeers-data/results/SCMUSR1-322
+|--- INFO        Prediction for dataset - full
+|--- DEBUG       Saving predicted matrix and embedding - full
+|--- DEBUG       Calculate confusion matrix - full
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - full
+|--- DEBUG       Save classification metrics - full
+|--- DEBUG       Save classification metrics by size of cell type - full
+|--- DEBUG       Save clustering metrics - full
+|--- DEBUG       Save all matrices and figures - full
+|--- INFO        Prediction for dataset - train
+|--- DEBUG       Calculate confusion matrix - train
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - train
+|--- DEBUG       Save classification metrics - train
+|--- DEBUG       Save classification metrics by size of cell type - train
+|--- DEBUG       Save clustering metrics - train
+|--- DEBUG       Save all matrices and figures - train
+|--- INFO        Prediction for dataset - val
+|--- DEBUG       Calculate confusion matrix - val
+|--- DEBUG       ConfMatrix no label : (27, 27)
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/metrics.py:31: RuntimeWarning: invalid value encountered in divide
+  cm_norm = cm / cm.sum(axis=1, keepdims=True)
+|--- DEBUG       ConfMatrix label : (27, 27)
+|--- DEBUG       ConfMatrix label df : (27, 27)
+|--- DEBUG       Save batch mixing metrics - val
+|--- DEBUG       Save classification metrics - val
+|--- DEBUG       Save classification metrics by size of cell type - val
+|--- DEBUG       Save clustering metrics - val
+|--- DEBUG       Save all matrices and figures - val
+|--- INFO        Prediction for dataset - test
+|--- DEBUG       Calculate confusion matrix - test
+|--- DEBUG       ConfMatrix no label : (27, 27)
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/metrics.py:31: RuntimeWarning: invalid value encountered in divide
+  cm_norm = cm / cm.sum(axis=1, keepdims=True)
+|--- DEBUG       ConfMatrix label : (27, 27)
+|--- DEBUG       ConfMatrix label df : (27, 27)
+|--- DEBUG       Save batch mixing metrics - test
+|--- DEBUG       Save classification metrics - test
+|--- DEBUG       Save classification metrics by size of cell type - test
+|--- DEBUG       Save clustering metrics - test
+|--- DEBUG       Save all matrices and figures - test
+|--- DEBUG       opt_metric val-balanced_mcc
+|--- DEBUG       get optmetric
+|--- DEBUG       get optmetric 2
+|--- DEBUG       optimal metric:0.8892793104959585
+|--- DEBUG       Log the trial metrics on Neptune
+Computing neighborhood graph
+[0.02350934 0.02232939 0.02467647 0.01559594 0.03673255 0.01414665
+ 0.01767369 0.04159345 0.02397107 0.00942682 0.01668612 0.01273583
+ 0.02625402 0.00379638 0.03469328 0.02765202 0.051482   0.05671485
+ 0.0621016  0.03398787 0.02280393 0.03178186 0.01623722 0.01919994
+ 0.0205338  0.04082392 0.02851133 0.0393105  0.02547166 0.02924239
+ 0.0157755  0.04880145 0.0557401  0.02141877 0.02858829]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.02571205 0.06055865 0.06857252 0.03951959 0.01554141 0.02750936
+ 0.02099676 0.00625885 0.05719663 0.04558814 0.09350221 0.03759542
+ 0.02676929 0.03385279 0.04700484 0.06480875 0.04821009 0.02600808
+ 0.08045588 0.09189521 0.03531178 0.04713171]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.11960068 0.1255383  0.13356388 0.31593371 0.09767715 0.20768628]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.1134202  0.07185668 0.08977199 0.26149837 0.17263844 0.16143322
+ 0.12938111]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+[neptune] [info   ] Shutting down background jobs, please wait a moment...
+[neptune] [info   ] Done!
+[neptune] [info   ] Waiting for the remaining 2 operations to synchronize with Neptune. Do not kill this process.
+[neptune] [info   ] All 2 operations synced, thanks for waiting!
+[neptune] [info   ] Explore the metadata in the Neptune app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-322/metadata
+[INFO 07-05 10:03:05] ax.service.ax_client: Completed trial 0 with data: {'opt_metric': (0.889279, None)}.
+|--- INFO        #HP_optim--- Running trial 1/2
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/modelbridge/cross_validation.py:463: UserWarning: Encountered exception in computing model fit quality: RandomModelBridge does not support prediction.
+  warn("Encountered exception in computing model fit quality: " + str(e))
+[INFO 07-05 10:03:05] ax.service.ax_client: Generated new trial 1 with parameters {'use_hvg': 4921, 'batch_size': 194, 'clas_w': 0.045363, 'rec_w': 0.080538, 'dann_w': 0.003966, 'clas_loss_name': 'categorical_crossentropy', 'learning_rate': 0.001348, 'weight_decay': 0.0, 'warmup_epoch': 68, 'dropout': 0.467622, 'bottleneck': 114, 'layer2': 167, 'layer1': 1785, 'size_factor': 'constant', 'training_scheme': 'training_scheme_8', 'ae_bottleneck_activation': 'linear'} using model Sobol.
+|--- INFO        Run the Experiment: experiment.train()
+|--- DEBUG       Load checkpoint
+|--- DEBUG       Compare checkpoint and Neptune dataframe
+|--- DEBUG       Trial 2 does not exist, running trial
+|--- DEBUG       Set hyparameters
+|--- DEBUG       Setting hparams {'use_hvg': 4921, 'batch_size': 194, 'clas_w': 0.04536307156603178, 'rec_w': 0.08053777715739627, 'dann_w': 0.003966343798658953, 'clas_loss_name': 'categorical_crossentropy', 'learning_rate': 0.0013479894564239463, 'weight_decay': 8.383888555028896e-08, 'warmup_epoch': 68, 'dropout': 0.46762150898575783, 'bottleneck': 114, 'layer2': 167, 'layer1': 1785, 'size_factor': 'constant', 'training_scheme': 'training_scheme_8', 'ae_bottleneck_activation': 'linear'}
+|--- DEBUG       
+|--- INFO        Use Neptune.ai log : True
+|--- INFO        Use Neptune project name = scmusk-review
+[neptune] [info   ] Neptune initialized. Open in the app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-323
+|--- DEBUG       Log the trial on Neptune
+|--- DEBUG        -- HyperParam_Optim_hp_tscheme_ajrccm_by_batch_2/2 -- 
+|--- DEBUG       
+|--- INFO        Load dataset /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- INFO        Load /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- DEBUG       Did not find existing PCA, computing it
+|--- DEBUG       Preprocess dataset - Normalization
+|--- DEBUG       Filter dataset
+|--- DEBUG       Calculate HVG
+|--- DEBUG       Selecting 4921 HVG
+|--- DEBUG       Normalize with total nb reads and calculate size factor
+|--- DEBUG       Log_1 transformation
+|--- DEBUG       Calculate size factor (constant mode sf=1)
+|--- DEBUG       
+|--- DEBUG       test obs :['D322_Biop_Nas1', 'D354_Brus_Dis1', 'D326_Brus_Dis1', 'D353_Biop_Pro1', 'D337_Brus_Dis1', 'D354_Biop_Int2', 'D367_Brus_Dis1']
+|--- DEBUG       
+|--- INFO        Process train, test, val datasets
+|--- DEBUG       splitting this adata train/val : View of AnnData object with n_obs × n_vars = 62619 × 4921
+    obs: 'donor', 'manip', 'method', 'position', 'Sex', 'Age', 'celltype', 'phenotype', 'celltype_phenotype', 'celltype_position', 'TRAIN_TEST_split', 'true_celltype', 'n_counts', 'size_factors', 'TRAIN_TEST_split_batch'
+    var: 'gene_ids', 'feature_types', 'genome', 'n_counts'
+    uns: 'pca', 'log1p'
+    obsm: 'X_uce', 'tsne_hg19', 'umap_hg19', 'umap_uncorrected_hg19', 'X_pca'
+    varm: 'PCs'
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/dataset.py:511: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+  self.adata_train_extended.obs["train_split"] = to_keep
+|--- INFO        train, test, val proportions : train_split
+train    47293
+test     15350
+val      15326
+Name: count, dtype: int64
+|--- INFO        Dataset split performed
+|--- DEBUG       Run the training
+|--- INFO        ##-- Create scmusketeers model and the train/test/val datasets:
+|--- DEBUG       hyperparameters.make_experiment()
+|--- DEBUG       Setup X,Y
+|--- DEBUG       Create pseudo-labels pseudo_y_list
+|--- DEBUG       Setup model settings
+|--- DEBUG       Setup optimizer
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       Setup losses
+|--- DEBUG       Setup training scheme
+|--- DEBUG       Setting up training scheme: training_scheme_8 - [('warmup_dann', 1, True), ('full_model', 1, False), ('classifier_branch', 1, False)]
+|--- INFO        ##-- Run model training
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- WARMUP_DANN - Step 0, running warmup_dann strategy with permutation = True for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Epoch 1/3, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy warmup_dann duration : 79.77166485786438 s
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- FULL_MODEL - Step 0, running full_model strategy with permutation = False for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Epoch 2/3, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy full_model duration : 57.904680490493774 s
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- CLASSIFIER_BRANCH - Step 0, running classifier_branch strategy with permutation = False for 1 epochs
+|--- DEBUG       Freezing layer: <Classifier name=Dann_Discriminator, built=True>
+|--- DEBUG       Freezing layer: <Encoder name=Encoder, built=True>
+|--- DEBUG       Freezing layer: <Decoder name=Decoder, built=True>
+|--- DEBUG       Freezing layer: <Dense name=autoencoder_output, built=True>
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Epoch 3/3, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy classifier_branch duration : 28.524020195007324 s
+|--- INFO        Training complete
+|--- INFO        ##-- Performing model prediction
+|--- INFO        Save results to: /data/analysis/data_becavin/scMusketeers-data/results/SCMUSR1-323
+|--- INFO        Prediction for dataset - full
+|--- DEBUG       Saving predicted matrix and embedding - full
+|--- DEBUG       Calculate confusion matrix - full
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - full
+|--- DEBUG       Save classification metrics - full
+|--- DEBUG       Save classification metrics by size of cell type - full
+|--- DEBUG       Save clustering metrics - full
+|--- DEBUG       Save all matrices and figures - full
+|--- INFO        Prediction for dataset - train
+|--- DEBUG       Calculate confusion matrix - train
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - train
+|--- DEBUG       Save classification metrics - train
+|--- DEBUG       Save classification metrics by size of cell type - train
+|--- DEBUG       Save clustering metrics - train
+|--- DEBUG       Save all matrices and figures - train
+|--- INFO        Prediction for dataset - val
+|--- DEBUG       Calculate confusion matrix - val
+|--- DEBUG       ConfMatrix no label : (25, 25)
+|--- DEBUG       ConfMatrix label : (25, 25)
+|--- DEBUG       ConfMatrix label df : (25, 25)
+|--- DEBUG       Save batch mixing metrics - val
+|--- DEBUG       Save classification metrics - val
+|--- DEBUG       Save classification metrics by size of cell type - val
+|--- DEBUG       Save clustering metrics - val
+|--- DEBUG       Save all matrices and figures - val
+|--- INFO        Prediction for dataset - test
+|--- DEBUG       Calculate confusion matrix - test
+|--- DEBUG       ConfMatrix no label : (26, 26)
+|--- DEBUG       ConfMatrix label : (26, 26)
+|--- DEBUG       ConfMatrix label df : (26, 26)
+|--- DEBUG       Save batch mixing metrics - test
+|--- DEBUG       Save classification metrics - test
+|--- DEBUG       Save classification metrics by size of cell type - test
+|--- DEBUG       Save clustering metrics - test
+|--- DEBUG       Save all matrices and figures - test
+|--- DEBUG       opt_metric val-balanced_mcc
+|--- DEBUG       get optmetric
+|--- DEBUG       get optmetric 2
+|--- DEBUG       optimal metric:0.683563939393229
+|--- DEBUG       Log the trial metrics on Neptune
+Computing neighborhood graph
+[0.02350934 0.02232939 0.02467647 0.01559594 0.03673255 0.01414665
+ 0.01767369 0.04159345 0.02397107 0.00942682 0.01668612 0.01273583
+ 0.02625402 0.00379638 0.03469328 0.02765202 0.051482   0.05671485
+ 0.0621016  0.03398787 0.02280393 0.03178186 0.01623722 0.01919994
+ 0.0205338  0.04082392 0.02851133 0.0393105  0.02547166 0.02924239
+ 0.0157755  0.04880145 0.0557401  0.02141877 0.02858829]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.02571205 0.06055865 0.06857252 0.03951959 0.01554141 0.02750936
+ 0.02099676 0.00625885 0.05719663 0.04558814 0.09350221 0.03759542
+ 0.02676929 0.03385279 0.04700484 0.06480875 0.04821009 0.02600808
+ 0.08045588 0.09189521 0.03531178 0.04713171]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.11960068 0.1255383  0.13356388 0.31593371 0.09767715 0.20768628]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.1134202  0.07185668 0.08977199 0.26149837 0.17263844 0.16143322
+ 0.12938111]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+[neptune] [info   ] Shutting down background jobs, please wait a moment...
+[neptune] [info   ] Done!
+[neptune] [info   ] Waiting for the remaining 2 operations to synchronize with Neptune. Do not kill this process.
+[neptune] [info   ] All 2 operations synced, thanks for waiting!
+[neptune] [info   ] Explore the metadata in the Neptune app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-323/metadata
+[INFO 07-05 10:10:22] ax.service.ax_client: Completed trial 1 with data: {'opt_metric': (0.683564, None)}.
+|--- INFO        #HP_optim--- Hyperparam optimization finished
+|--- DEBUG       Best parameters {'use_hvg': 654, 'batch_size': 357, 'clas_w': 75.9059544539962, 'dann_w': 0.0006800634789046336, 'learning_rate': 0.007181802826807251, 'weight_decay': 3.457969993736587e-05, 'warmup_epoch': 1, 'dropout': 0.17059661448001862, 'bottleneck': 42, 'layer2': 153, 'layer1': 905}
+|--- INFO        Best hyperparameters saved in /data/analysis/data_becavin/scMusketeers-data/results/scMusk_ajrccm_by_batch_best_hp.json
+h5ad_path: /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- BASH  #####     Hyperparameters optimization of Sc-Musketeers with dataset=ajrccm_by_batch
+|--- BASH  the dataset will be loaded from /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- BASH  test_obs=D322_Biop_Nas1 D354_Brus_Dis1 D326_Brus_Dis1 D353_Biop_Pro1 D337_Brus_Dis1 D354_Biop_Int2 D367_Brus_Dis1
+|--- BASH  train_obs=D367_Brus_Nas1 D372_Brus_Nas1 D326_Biop_Int1 D367_Biop_Pro1 D339_Biop_Pro1 D372_Biop_Int2 D353_Brus_Dis1 D372_Biop_Pro1 D354_Biop_Pro1 D326_Biop_Pro1 D367_Biop_Int1 D363_Brus_Dis1 D363_Biop_Int2 D344_Brus_Dis1 D339_Biop_Int1 D372_Brus_Dis1 D372_Biop_Int1 D339_Brus_Dis1 D344_Biop_Int1 D353_Biop_Int2 D339_Biop_Nas1 D344_Biop_Pro1
+2025-07-05 14:50:22.877525: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2025-07-05 14:50:22.893242: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:467] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1751719822.912453 3504600 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1751719822.917861 3504600 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1751719822.932512 3504600 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1751719822.932549 3504600 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1751719822.932552 3504600 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1751719822.932555 3504600 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+2025-07-05 14:50:22.936992: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+|--- DEBUG       Program arguments: Namespace(process='hp_optim', ref_path='/data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad', debug=True, class_key='celltype', batch_key='manip', query_path=None, out_dir='/data/analysis/data_becavin/scMusketeers-data/results', out_name='scMusk_', training_scheme='training_scheme_11', log_neptune=True, neptune_name='scmusk-review', opt_metric='val-balanced_mcc', verbose=True, hparam_path=None, working_dir=None, dataset_name='ajrccm_by_batch', task='hp_tscheme', unlabeled_category='UNK', filter_min_counts=True, normalize_size_factors=True, size_factor='default', scale_input=False, logtrans_input=True, use_hvg=None, batch_size=430, test_split_key='TRAIN_TEST_split_batch', test_obs=['D322_Biop_Nas1', 'D354_Brus_Dis1', 'D326_Brus_Dis1', 'D353_Biop_Pro1', 'D337_Brus_Dis1', 'D354_Biop_Int2', 'D367_Brus_Dis1'], test_index_name=None, mode='entire_condition', pct_split=0.9, obs_key='manip', n_keep=None, split_strategy=None, keep_obs=['D367_Brus_Nas1', 'D372_Brus_Nas1', 'D326_Biop_Int1', 'D367_Biop_Pro1', 'D339_Biop_Pro1', 'D372_Biop_Int2', 'D353_Brus_Dis1', 'D372_Biop_Pro1', 'D354_Biop_Pro1', 'D326_Biop_Pro1', 'D367_Biop_Int1', 'D363_Brus_Dis1', 'D363_Biop_Int2', 'D344_Brus_Dis1', 'D339_Biop_Int1', 'D372_Brus_Dis1', 'D372_Biop_Int1', 'D339_Brus_Dis1', 'D344_Biop_Int1', 'D353_Biop_Int2', 'D339_Biop_Nas1', 'D344_Biop_Pro1'], train_test_random_seed=0, obs_subsample=None, make_fake=False, true_celltype=None, false_celltype=None, pct_false=None, weight_decay=9.447375593939065e-07, learning_rate=0.0009913638603687327, optimizer_type='adam', warmup_epoch=1, fullmodel_epoch=1, permonly_epoch=1, classifier_epoch=1, balance_classes=True, clas_loss_name='categorical_focal_crossentropy', dann_loss_name='categorical_crossentropy', rec_loss_name='MSE', clas_w=0.3066763716843436, dann_w=0.01865515471175812, rec_w=0.013070252184855429, dropout=0.27058450953709307, layer1=1151, layer2=235, bottleneck=84, ae_hidden_size=[128, 64, 128], ae_hidden_dropout=None, ae_activation='relu', ae_bottleneck_activation='linear', ae_output_activation='relu', ae_init='glorot_uniform', ae_batchnorm=True, ae_l1_enc_coef=None, ae_l2_enc_coef=None, class_hidden_size=[64], class_hidden_dropout=None, class_batchnorm=True, class_activation='relu', class_output_activation='softmax', dann_hidden_size=[64], dann_hidden_dropout=None, dann_batchnorm=True, dann_activation='relu', dann_output_activation='softmax')
+|--- INFO        Run hyperparameters optimization
+|--- INFO        #HP_optim--- Create Experiment
+[neptune] [info   ] Neptune initialized. Open in the app: https://app.neptune.ai/becavin-lab/scmusk-review/
+[neptune] [info   ] Shutting down background jobs, please wait a moment...
+[neptune] [info   ] Done!
+[neptune] [info   ] Explore the metadata in the Neptune app: https://app.neptune.ai/becavin-lab/scmusk-review/metadata
+|--- INFO        #HP_optim--- Load hyperparameters ranges
+|--- DEBUG       hp ranges: 
+|--- INFO        hp ranges: experiment_script/hp_ranges/generic_r1.json
+|--- INFO        #HP_optim--- Run AX Platform for hyperparameters optimization
+[INFO 07-05 14:50:29] ax.service.ax_client: Starting optimization with verbose logging. To disable logging, set the `verbose_logging` argument to `False`. Note that float values in the logs are rounded to 6 decimal points.
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/service/utils/instantiation.py:248: AxParameterWarning: `is_ordered` is not specified for `ChoiceParameter` "clas_loss_name". Defaulting to `True`  since there are exactly two choices.. To override this behavior (or avoid this warning), specify `is_ordered` during `ChoiceParameter` construction. Note that choice parameters with exactly 2 choices are always considered ordered and that the user-supplied `is_ordered` has no effect in this particular case.
+  return ChoiceParameter(
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/service/utils/instantiation.py:248: AxParameterWarning: `sort_values` is not specified for `ChoiceParameter` "clas_loss_name". Defaulting to `False` for parameters of `ParameterType` STRING. To override this behavior (or avoid this warning), specify `sort_values` during `ChoiceParameter` construction.
+  return ChoiceParameter(
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/service/utils/instantiation.py:248: AxParameterWarning: `is_ordered` is not specified for `ChoiceParameter` "size_factor". Defaulting to `False`  since the parameter is a string with more than 2 choices.. To override this behavior (or avoid this warning), specify `is_ordered` during `ChoiceParameter` construction. Note that choice parameters with exactly 2 choices are always considered ordered and that the user-supplied `is_ordered` has no effect in this particular case.
+  return ChoiceParameter(
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/service/utils/instantiation.py:248: AxParameterWarning: `sort_values` is not specified for `ChoiceParameter` "size_factor". Defaulting to `False` for parameters of `ParameterType` STRING. To override this behavior (or avoid this warning), specify `sort_values` during `ChoiceParameter` construction.
+  return ChoiceParameter(
+[INFO 07-05 14:50:29] ax.service.utils.instantiation: Inferred value type of ParameterType.STRING for parameter training_scheme. If that is not the expected value type, you can explicitly specify 'value_type' ('int', 'float', 'bool' or 'str') in parameter dict.
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/service/utils/instantiation.py:248: AxParameterWarning: `is_ordered` is not specified for `ChoiceParameter` "training_scheme". Defaulting to `False`  since the parameter is a string with more than 2 choices.. To override this behavior (or avoid this warning), specify `is_ordered` during `ChoiceParameter` construction. Note that choice parameters with exactly 2 choices are always considered ordered and that the user-supplied `is_ordered` has no effect in this particular case.
+  return ChoiceParameter(
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/service/utils/instantiation.py:248: AxParameterWarning: `sort_values` is not specified for `ChoiceParameter` "training_scheme". Defaulting to `False` for parameters of `ParameterType` STRING. To override this behavior (or avoid this warning), specify `sort_values` during `ChoiceParameter` construction.
+  return ChoiceParameter(
+[INFO 07-05 14:50:29] ax.service.utils.instantiation: Created search space: SearchSpace(parameters=[RangeParameter(name='use_hvg', parameter_type=INT, range=[1000, 5000]), RangeParameter(name='batch_size', parameter_type=INT, range=[64, 512]), RangeParameter(name='clas_w', parameter_type=FLOAT, range=[0.0001, 100.0], log_scale=True), RangeParameter(name='rec_w', parameter_type=FLOAT, range=[0.0001, 30.0], log_scale=True), RangeParameter(name='dann_w', parameter_type=FLOAT, range=[0.0001, 100.0], log_scale=True), FixedParameter(name='ae_bottleneck_activation', parameter_type=STRING, value='linear'), ChoiceParameter(name='clas_loss_name', parameter_type=STRING, values=['categorical_crossentropy', 'categorical_focal_crossentropy'], is_ordered=True, sort_values=False), ChoiceParameter(name='size_factor', parameter_type=STRING, values=['raw', 'constant', 'default'], is_ordered=False, sort_values=False), RangeParameter(name='learning_rate', parameter_type=FLOAT, range=[0.0001, 0.01], log_scale=True), RangeParameter(name='weight_decay', parameter_type=FLOAT, range=[1e-08, 0.0001], log_scale=True), RangeParameter(name='warmup_epoch', parameter_type=INT, range=[1, 70]), RangeParameter(name='dropout', parameter_type=FLOAT, range=[0.0, 0.5]), RangeParameter(name='bottleneck', parameter_type=INT, range=[32, 128]), RangeParameter(name='layer2', parameter_type=INT, range=[32, 512]), RangeParameter(name='layer1', parameter_type=INT, range=[512, 2048]), ChoiceParameter(name='training_scheme', parameter_type=STRING, values=['training_scheme_5', 'training_scheme_6', 'training_scheme_7', 'training_scheme_8'], is_ordered=False, sort_values=False)], parameter_constraints=[]).
+[INFO 07-05 14:50:29] ax.modelbridge.dispatch_utils: Using Models.BOTORCH_MODULAR since there are more ordered parameters than there are categories for the unordered categorical parameters.
+[INFO 07-05 14:50:29] ax.modelbridge.dispatch_utils: Calculating the number of remaining initialization trials based on num_initialization_trials=None max_initialization_trials=None num_tunable_parameters=15 num_trials=None use_batch_trials=False
+[INFO 07-05 14:50:29] ax.modelbridge.dispatch_utils: calculated num_initialization_trials=30
+[INFO 07-05 14:50:29] ax.modelbridge.dispatch_utils: num_completed_initialization_trials=0 num_remaining_initialization_trials=30
+[INFO 07-05 14:50:29] ax.modelbridge.dispatch_utils: `verbose`, `disable_progbar`, and `jit_compile` are not yet supported when using `choose_generation_strategy` with ModularBoTorchModel, dropping these arguments.
+[INFO 07-05 14:50:29] ax.modelbridge.dispatch_utils: Using Bayesian Optimization generation strategy: GenerationStrategy(name='Sobol+BoTorch', steps=[Sobol for 30 trials, BoTorch for subsequent trials]). Iterations after 30 will take longer to generate due to model-fitting.
+|--- INFO        #HP_optim--- Running trial 0/8
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/modelbridge/cross_validation.py:463: UserWarning: Encountered exception in computing model fit quality: RandomModelBridge does not support prediction.
+  warn("Encountered exception in computing model fit quality: " + str(e))
+[INFO 07-05 14:50:29] ax.service.ax_client: Generated new trial 0 with parameters {'use_hvg': 2128, 'batch_size': 458, 'clas_w': 0.000209, 'rec_w': 1.101299, 'dann_w': 0.000147, 'clas_loss_name': 'categorical_focal_crossentropy', 'learning_rate': 0.001102, 'weight_decay': 0.0, 'warmup_epoch': 51, 'dropout': 0.183827, 'bottleneck': 62, 'layer2': 350, 'layer1': 709, 'size_factor': 'constant', 'training_scheme': 'training_scheme_6', 'ae_bottleneck_activation': 'linear'} using model Sobol.
+|--- INFO        Run the Experiment: experiment.train()
+|--- DEBUG       Load checkpoint
+|--- DEBUG       Compare checkpoint and Neptune dataframe
+|--- DEBUG       Trial 1 does not exist, running trial
+I0000 00:00:1751719829.645373 3504600 gpu_device.cc:2019] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 38471 MB memory:  -> device: 0, name: NVIDIA A100-PCIE-40GB, pci bus id: 0000:37:00.0, compute capability: 8.0
+|--- DEBUG       Set hyparameters
+|--- DEBUG       Setting hparams {'use_hvg': 2128, 'batch_size': 458, 'clas_w': 0.0002092312498926705, 'rec_w': 1.101299489238637, 'dann_w': 0.0001473131574512944, 'clas_loss_name': 'categorical_focal_crossentropy', 'learning_rate': 0.0011022892579561146, 'weight_decay': 9.63397284871906e-08, 'warmup_epoch': 51, 'dropout': 0.18382690846920013, 'bottleneck': 62, 'layer2': 350, 'layer1': 709, 'size_factor': 'constant', 'training_scheme': 'training_scheme_6', 'ae_bottleneck_activation': 'linear'}
+|--- DEBUG       
+|--- INFO        Use Neptune.ai log : True
+|--- INFO        Use Neptune project name = scmusk-review
+[neptune] [info   ] Neptune initialized. Open in the app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-324
+|--- DEBUG       Log the trial on Neptune
+|--- DEBUG        -- HyperParam_Optim_hp_tscheme_ajrccm_by_batch_1/8 -- 
+|--- DEBUG       
+|--- INFO        Load dataset /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- INFO        Load /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- DEBUG       Did not find existing PCA, computing it
+|--- DEBUG       Preprocess dataset - Normalization
+|--- DEBUG       Filter dataset
+|--- DEBUG       Calculate HVG
+|--- DEBUG       Selecting 2128 HVG
+|--- DEBUG       Normalize with total nb reads and calculate size factor
+|--- DEBUG       Log_1 transformation
+|--- DEBUG       Calculate size factor (constant mode sf=1)
+|--- DEBUG       
+|--- DEBUG       test obs :['D322_Biop_Nas1', 'D354_Brus_Dis1', 'D326_Brus_Dis1', 'D353_Biop_Pro1', 'D337_Brus_Dis1', 'D354_Biop_Int2', 'D367_Brus_Dis1']
+|--- DEBUG       
+|--- INFO        Process train, test, val datasets
+|--- DEBUG       splitting this adata train/val : View of AnnData object with n_obs × n_vars = 62619 × 2128
+    obs: 'donor', 'manip', 'method', 'position', 'Sex', 'Age', 'celltype', 'phenotype', 'celltype_phenotype', 'celltype_position', 'TRAIN_TEST_split', 'true_celltype', 'n_counts', 'size_factors', 'TRAIN_TEST_split_batch'
+    var: 'gene_ids', 'feature_types', 'genome', 'n_counts'
+    uns: 'pca', 'log1p'
+    obsm: 'X_uce', 'tsne_hg19', 'umap_hg19', 'umap_uncorrected_hg19', 'X_pca'
+    varm: 'PCs'
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/dataset.py:511: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+  self.adata_train_extended.obs["train_split"] = to_keep
+|--- INFO        train, test, val proportions : train_split
+train    47293
+test     15350
+val      15326
+Name: count, dtype: int64
+|--- INFO        Dataset split performed
+|--- DEBUG       Run the training
+|--- INFO        ##-- Create scmusketeers model and the train/test/val datasets:
+|--- DEBUG       hyperparameters.make_experiment()
+|--- DEBUG       Setup X,Y
+|--- DEBUG       Create pseudo-labels pseudo_y_list
+|--- DEBUG       Setup model settings
+|--- DEBUG       Setup optimizer
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       Setup losses
+|--- DEBUG       Setup training scheme
+|--- DEBUG       Setting up training scheme: training_scheme_6 - [('warmup_dann', 1, True), ('full_model', 1, True)]
+|--- INFO        ##-- Run model training
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- WARMUP_DANN - Step 0, running warmup_dann strategy with permutation = True for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Epoch 1/2, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy warmup_dann duration : 39.23954439163208 s
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- FULL_MODEL - Step 0, running full_model strategy with permutation = True for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Epoch 2/2, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy full_model duration : 24.701982736587524 s
+|--- INFO        Training complete
+|--- INFO        ##-- Performing model prediction
+|--- INFO        Save results to: /data/analysis/data_becavin/scMusketeers-data/results/SCMUSR1-324
+|--- INFO        Prediction for dataset - full
+|--- DEBUG       Saving predicted matrix and embedding - full
+|--- DEBUG       Calculate confusion matrix - full
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - full
+|--- DEBUG       Save classification metrics - full
+|--- DEBUG       Save classification metrics by size of cell type - full
+|--- DEBUG       Save clustering metrics - full
+|--- DEBUG       Save all matrices and figures - full
+|--- INFO        Prediction for dataset - train
+|--- DEBUG       Calculate confusion matrix - train
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - train
+|--- DEBUG       Save classification metrics - train
+|--- DEBUG       Save classification metrics by size of cell type - train
+|--- DEBUG       Save clustering metrics - train
+|--- DEBUG       Save all matrices and figures - train
+|--- INFO        Prediction for dataset - val
+|--- DEBUG       Calculate confusion matrix - val
+|--- DEBUG       ConfMatrix no label : (25, 25)
+|--- DEBUG       ConfMatrix label : (25, 25)
+|--- DEBUG       ConfMatrix label df : (25, 25)
+|--- DEBUG       Save batch mixing metrics - val
+|--- DEBUG       Save classification metrics - val
+|--- DEBUG       Save classification metrics by size of cell type - val
+|--- DEBUG       Save clustering metrics - val
+|--- DEBUG       Save all matrices and figures - val
+|--- INFO        Prediction for dataset - test
+|--- DEBUG       Calculate confusion matrix - test
+|--- DEBUG       ConfMatrix no label : (27, 27)
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/metrics.py:31: RuntimeWarning: invalid value encountered in divide
+  cm_norm = cm / cm.sum(axis=1, keepdims=True)
+|--- DEBUG       ConfMatrix label : (27, 27)
+|--- DEBUG       ConfMatrix label df : (27, 27)
+|--- DEBUG       Save batch mixing metrics - test
+|--- DEBUG       Save classification metrics - test
+|--- DEBUG       Save classification metrics by size of cell type - test
+|--- DEBUG       Save clustering metrics - test
+|--- DEBUG       Save all matrices and figures - test
+|--- DEBUG       opt_metric val-balanced_mcc
+|--- DEBUG       get optmetric
+|--- DEBUG       get optmetric 2
+|--- DEBUG       optimal metric:0.8520552899165723
+|--- DEBUG       Log the trial metrics on Neptune
+Computing neighborhood graph
+[0.02350934 0.02232939 0.02467647 0.01559594 0.03673255 0.01414665
+ 0.01767369 0.04159345 0.02397107 0.00942682 0.01668612 0.01273583
+ 0.02625402 0.00379638 0.03469328 0.02765202 0.051482   0.05671485
+ 0.0621016  0.03398787 0.02280393 0.03178186 0.01623722 0.01919994
+ 0.0205338  0.04082392 0.02851133 0.0393105  0.02547166 0.02924239
+ 0.0157755  0.04880145 0.0557401  0.02141877 0.02858829]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.02571205 0.06055865 0.06857252 0.03951959 0.01554141 0.02750936
+ 0.02099676 0.00625885 0.05719663 0.04558814 0.09350221 0.03759542
+ 0.02676929 0.03385279 0.04700484 0.06480875 0.04821009 0.02600808
+ 0.08045588 0.09189521 0.03531178 0.04713171]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.11960068 0.1255383  0.13356388 0.31593371 0.09767715 0.20768628]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.1134202  0.07185668 0.08977199 0.26149837 0.17263844 0.16143322
+ 0.12938111]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+[neptune] [info   ] Shutting down background jobs, please wait a moment...
+[neptune] [info   ] Done!
+[neptune] [info   ] Waiting for the remaining 2 operations to synchronize with Neptune. Do not kill this process.
+[neptune] [info   ] All 2 operations synced, thanks for waiting!
+[neptune] [info   ] Explore the metadata in the Neptune app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-324/metadata
+[INFO 07-05 14:56:31] ax.service.ax_client: Completed trial 0 with data: {'opt_metric': (0.852055, None)}.
+|--- INFO        #HP_optim--- Running trial 1/8
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/modelbridge/cross_validation.py:463: UserWarning: Encountered exception in computing model fit quality: RandomModelBridge does not support prediction.
+  warn("Encountered exception in computing model fit quality: " + str(e))
+[INFO 07-05 14:56:31] ax.service.ax_client: Generated new trial 1 with parameters {'use_hvg': 4186, 'batch_size': 288, 'clas_w': 6.177053, 'rec_w': 0.000317, 'dann_w': 9.780856, 'clas_loss_name': 'categorical_crossentropy', 'learning_rate': 0.000103, 'weight_decay': 1.5e-05, 'warmup_epoch': 7, 'dropout': 0.36322, 'bottleneck': 114, 'layer2': 83, 'layer1': 1337, 'size_factor': 'default', 'training_scheme': 'training_scheme_7', 'ae_bottleneck_activation': 'linear'} using model Sobol.
+|--- INFO        Run the Experiment: experiment.train()
+|--- DEBUG       Load checkpoint
+|--- DEBUG       Compare checkpoint and Neptune dataframe
+|--- DEBUG       Trial 2 does not exist, running trial
+|--- DEBUG       Set hyparameters
+|--- DEBUG       Setting hparams {'use_hvg': 4186, 'batch_size': 288, 'clas_w': 6.177053355671152, 'rec_w': 0.00031721607426401133, 'dann_w': 9.780856220968172, 'clas_loss_name': 'categorical_crossentropy', 'learning_rate': 0.00010269416367230431, 'weight_decay': 1.5117786902711111e-05, 'warmup_epoch': 7, 'dropout': 0.36322024976834655, 'bottleneck': 114, 'layer2': 83, 'layer1': 1337, 'size_factor': 'default', 'training_scheme': 'training_scheme_7', 'ae_bottleneck_activation': 'linear'}
+|--- DEBUG       
+|--- INFO        Use Neptune.ai log : True
+|--- INFO        Use Neptune project name = scmusk-review
+[neptune] [info   ] Neptune initialized. Open in the app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-325
+|--- DEBUG       Log the trial on Neptune
+|--- DEBUG        -- HyperParam_Optim_hp_tscheme_ajrccm_by_batch_2/8 -- 
+|--- DEBUG       
+|--- INFO        Load dataset /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- INFO        Load /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- DEBUG       Did not find existing PCA, computing it
+|--- DEBUG       Preprocess dataset - Normalization
+|--- DEBUG       Filter dataset
+|--- DEBUG       Calculate HVG
+|--- DEBUG       Selecting 4186 HVG
+|--- DEBUG       Normalize with total nb reads and calculate size factor
+|--- DEBUG       Log_1 transformation
+|--- DEBUG       Calculate size factor (default mode)
+|--- DEBUG       
+|--- DEBUG       test obs :['D322_Biop_Nas1', 'D354_Brus_Dis1', 'D326_Brus_Dis1', 'D353_Biop_Pro1', 'D337_Brus_Dis1', 'D354_Biop_Int2', 'D367_Brus_Dis1']
+|--- DEBUG       
+|--- INFO        Process train, test, val datasets
+|--- DEBUG       splitting this adata train/val : View of AnnData object with n_obs × n_vars = 62619 × 4186
+    obs: 'donor', 'manip', 'method', 'position', 'Sex', 'Age', 'celltype', 'phenotype', 'celltype_phenotype', 'celltype_position', 'TRAIN_TEST_split', 'true_celltype', 'n_counts', 'size_factors', 'TRAIN_TEST_split_batch'
+    var: 'gene_ids', 'feature_types', 'genome', 'n_counts'
+    uns: 'pca', 'log1p'
+    obsm: 'X_uce', 'tsne_hg19', 'umap_hg19', 'umap_uncorrected_hg19', 'X_pca'
+    varm: 'PCs'
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/dataset.py:511: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+  self.adata_train_extended.obs["train_split"] = to_keep
+|--- INFO        train, test, val proportions : train_split
+train    47293
+test     15350
+val      15326
+Name: count, dtype: int64
+|--- INFO        Dataset split performed
+|--- DEBUG       Run the training
+|--- INFO        ##-- Create scmusketeers model and the train/test/val datasets:
+|--- DEBUG       hyperparameters.make_experiment()
+|--- DEBUG       Setup X,Y
+|--- DEBUG       Create pseudo-labels pseudo_y_list
+|--- DEBUG       Setup model settings
+|--- DEBUG       Setup optimizer
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       Setup losses
+|--- DEBUG       Setup training scheme
+|--- DEBUG       Setting up training scheme: training_scheme_7 - [('warmup_dann', 1, True), ('full_model', 1, False)]
+|--- INFO        ##-- Run model training
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- WARMUP_DANN - Step 0, running warmup_dann strategy with permutation = True for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Epoch 1/2, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy warmup_dann duration : 55.771913051605225 s
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- FULL_MODEL - Step 0, running full_model strategy with permutation = False for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Epoch 2/2, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy full_model duration : 38.91941285133362 s
+|--- INFO        Training complete
+|--- INFO        ##-- Performing model prediction
+|--- INFO        Save results to: /data/analysis/data_becavin/scMusketeers-data/results/SCMUSR1-325
+|--- INFO        Prediction for dataset - full
+|--- DEBUG       Saving predicted matrix and embedding - full
+|--- DEBUG       Calculate confusion matrix - full
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - full
+|--- DEBUG       Save classification metrics - full
+|--- DEBUG       Save classification metrics by size of cell type - full
+|--- DEBUG       Save clustering metrics - full
+|--- DEBUG       Save all matrices and figures - full
+|--- INFO        Prediction for dataset - train
+|--- DEBUG       Calculate confusion matrix - train
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - train
+|--- DEBUG       Save classification metrics - train
+|--- DEBUG       Save classification metrics by size of cell type - train
+|--- DEBUG       Save clustering metrics - train
+|--- DEBUG       Save all matrices and figures - train
+|--- INFO        Prediction for dataset - val
+|--- DEBUG       Calculate confusion matrix - val
+|--- DEBUG       ConfMatrix no label : (26, 26)
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/metrics.py:31: RuntimeWarning: invalid value encountered in divide
+  cm_norm = cm / cm.sum(axis=1, keepdims=True)
+|--- DEBUG       ConfMatrix label : (26, 26)
+|--- DEBUG       ConfMatrix label df : (26, 26)
+|--- DEBUG       Save batch mixing metrics - val
+|--- DEBUG       Save classification metrics - val
+|--- DEBUG       Save classification metrics by size of cell type - val
+|--- DEBUG       Save clustering metrics - val
+|--- DEBUG       Save all matrices and figures - val
+|--- INFO        Prediction for dataset - test
+|--- DEBUG       Calculate confusion matrix - test
+|--- DEBUG       ConfMatrix no label : (27, 27)
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/metrics.py:31: RuntimeWarning: invalid value encountered in divide
+  cm_norm = cm / cm.sum(axis=1, keepdims=True)
+|--- DEBUG       ConfMatrix label : (27, 27)
+|--- DEBUG       ConfMatrix label df : (27, 27)
+|--- DEBUG       Save batch mixing metrics - test
+|--- DEBUG       Save classification metrics - test
+|--- DEBUG       Save classification metrics by size of cell type - test
+|--- DEBUG       Save clustering metrics - test
+|--- DEBUG       Save all matrices and figures - test
+|--- DEBUG       opt_metric val-balanced_mcc
+|--- DEBUG       get optmetric
+|--- DEBUG       get optmetric 2
+|--- DEBUG       optimal metric:0.3875718567709107
+|--- DEBUG       Log the trial metrics on Neptune
+Computing neighborhood graph
+[0.02350934 0.02232939 0.02467647 0.01559594 0.03673255 0.01414665
+ 0.01767369 0.04159345 0.02397107 0.00942682 0.01668612 0.01273583
+ 0.02625402 0.00379638 0.03469328 0.02765202 0.051482   0.05671485
+ 0.0621016  0.03398787 0.02280393 0.03178186 0.01623722 0.01919994
+ 0.0205338  0.04082392 0.02851133 0.0393105  0.02547166 0.02924239
+ 0.0157755  0.04880145 0.0557401  0.02141877 0.02858829]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.02571205 0.06055865 0.06857252 0.03951959 0.01554141 0.02750936
+ 0.02099676 0.00625885 0.05719663 0.04558814 0.09350221 0.03759542
+ 0.02676929 0.03385279 0.04700484 0.06480875 0.04821009 0.02600808
+ 0.08045588 0.09189521 0.03531178 0.04713171]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.11960068 0.1255383  0.13356388 0.31593371 0.09767715 0.20768628]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.1134202  0.07185668 0.08977199 0.26149837 0.17263844 0.16143322
+ 0.12938111]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+[neptune] [info   ] Shutting down background jobs, please wait a moment...
+[neptune] [info   ] Done!
+[neptune] [info   ] Waiting for the remaining 2 operations to synchronize with Neptune. Do not kill this process.
+[neptune] [info   ] All 2 operations synced, thanks for waiting!
+[neptune] [info   ] Explore the metadata in the Neptune app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-325/metadata
+[INFO 07-05 15:02:22] ax.service.ax_client: Completed trial 1 with data: {'opt_metric': (0.387572, None)}.
+|--- INFO        #HP_optim--- Running trial 2/8
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/modelbridge/cross_validation.py:463: UserWarning: Encountered exception in computing model fit quality: RandomModelBridge does not support prediction.
+  warn("Encountered exception in computing model fit quality: " + str(e))
+[INFO 07-05 15:02:22] ax.service.ax_client: Generated new trial 2 with parameters {'use_hvg': 3660, 'batch_size': 314, 'clas_w': 0.067472, 'rec_w': 12.397856, 'dann_w': 0.759782, 'clas_loss_name': 'categorical_crossentropy', 'learning_rate': 0.000955, 'weight_decay': 5e-06, 'warmup_epoch': 26, 'dropout': 0.02616, 'bottleneck': 49, 'layer2': 214, 'layer1': 1229, 'size_factor': 'default', 'training_scheme': 'training_scheme_7', 'ae_bottleneck_activation': 'linear'} using model Sobol.
+|--- INFO        Run the Experiment: experiment.train()
+|--- DEBUG       Load checkpoint
+|--- DEBUG       Compare checkpoint and Neptune dataframe
+|--- DEBUG       Trial 3 does not exist, running trial
+|--- DEBUG       Set hyparameters
+|--- DEBUG       Setting hparams {'use_hvg': 3660, 'batch_size': 314, 'clas_w': 0.06747248861335907, 'rec_w': 12.397856337372591, 'dann_w': 0.7597818374945834, 'clas_loss_name': 'categorical_crossentropy', 'learning_rate': 0.000954582621426445, 'weight_decay': 4.869201799368452e-06, 'warmup_epoch': 26, 'dropout': 0.026159958448261023, 'bottleneck': 49, 'layer2': 214, 'layer1': 1229, 'size_factor': 'default', 'training_scheme': 'training_scheme_7', 'ae_bottleneck_activation': 'linear'}
+|--- DEBUG       
+|--- INFO        Use Neptune.ai log : True
+|--- INFO        Use Neptune project name = scmusk-review
+[neptune] [info   ] Neptune initialized. Open in the app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-326
+|--- DEBUG       Log the trial on Neptune
+|--- DEBUG        -- HyperParam_Optim_hp_tscheme_ajrccm_by_batch_3/8 -- 
+|--- DEBUG       
+|--- INFO        Load dataset /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- INFO        Load /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- DEBUG       Did not find existing PCA, computing it
+|--- DEBUG       Preprocess dataset - Normalization
+|--- DEBUG       Filter dataset
+|--- DEBUG       Calculate HVG
+|--- DEBUG       Selecting 3660 HVG
+|--- DEBUG       Normalize with total nb reads and calculate size factor
+|--- DEBUG       Log_1 transformation
+|--- DEBUG       Calculate size factor (default mode)
+|--- DEBUG       
+|--- DEBUG       test obs :['D322_Biop_Nas1', 'D354_Brus_Dis1', 'D326_Brus_Dis1', 'D353_Biop_Pro1', 'D337_Brus_Dis1', 'D354_Biop_Int2', 'D367_Brus_Dis1']
+|--- DEBUG       
+|--- INFO        Process train, test, val datasets
+|--- DEBUG       splitting this adata train/val : View of AnnData object with n_obs × n_vars = 62619 × 3660
+    obs: 'donor', 'manip', 'method', 'position', 'Sex', 'Age', 'celltype', 'phenotype', 'celltype_phenotype', 'celltype_position', 'TRAIN_TEST_split', 'true_celltype', 'n_counts', 'size_factors', 'TRAIN_TEST_split_batch'
+    var: 'gene_ids', 'feature_types', 'genome', 'n_counts'
+    uns: 'pca', 'log1p'
+    obsm: 'X_uce', 'tsne_hg19', 'umap_hg19', 'umap_uncorrected_hg19', 'X_pca'
+    varm: 'PCs'
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/dataset.py:511: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+  self.adata_train_extended.obs["train_split"] = to_keep
+|--- INFO        train, test, val proportions : train_split
+train    47293
+test     15350
+val      15326
+Name: count, dtype: int64
+|--- INFO        Dataset split performed
+|--- DEBUG       Run the training
+|--- INFO        ##-- Create scmusketeers model and the train/test/val datasets:
+|--- DEBUG       hyperparameters.make_experiment()
+|--- DEBUG       Setup X,Y
+|--- DEBUG       Create pseudo-labels pseudo_y_list
+|--- DEBUG       Setup model settings
+|--- DEBUG       Setup optimizer
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       Setup losses
+|--- DEBUG       Setup training scheme
+|--- DEBUG       Setting up training scheme: training_scheme_7 - [('warmup_dann', 1, True), ('full_model', 1, False)]
+|--- INFO        ##-- Run model training
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- WARMUP_DANN - Step 0, running warmup_dann strategy with permutation = True for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Epoch 1/2, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy warmup_dann duration : 50.62243962287903 s
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- FULL_MODEL - Step 0, running full_model strategy with permutation = False for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Epoch 2/2, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy full_model duration : 34.903159618377686 s
+|--- INFO        Training complete
+|--- INFO        ##-- Performing model prediction
+|--- INFO        Save results to: /data/analysis/data_becavin/scMusketeers-data/results/SCMUSR1-326
+|--- INFO        Prediction for dataset - full
+|--- DEBUG       Saving predicted matrix and embedding - full
+|--- DEBUG       Calculate confusion matrix - full
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - full
+|--- DEBUG       Save classification metrics - full
+|--- DEBUG       Save classification metrics by size of cell type - full
+|--- DEBUG       Save clustering metrics - full
+|--- DEBUG       Save all matrices and figures - full
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/scanpy/plotting/_tools/scatterplots.py:263: RuntimeWarning: More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`). Consider using `matplotlib.pyplot.close()`.
+  fig = plt.figure()
+|--- INFO        Prediction for dataset - train
+|--- DEBUG       Calculate confusion matrix - train
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - train
+|--- DEBUG       Save classification metrics - train
+|--- DEBUG       Save classification metrics by size of cell type - train
+|--- DEBUG       Save clustering metrics - train
+|--- DEBUG       Save all matrices and figures - train
+|--- INFO        Prediction for dataset - val
+|--- DEBUG       Calculate confusion matrix - val
+|--- DEBUG       ConfMatrix no label : (25, 25)
+|--- DEBUG       ConfMatrix label : (25, 25)
+|--- DEBUG       ConfMatrix label df : (25, 25)
+|--- DEBUG       Save batch mixing metrics - val
+|--- DEBUG       Save classification metrics - val
+|--- DEBUG       Save classification metrics by size of cell type - val
+|--- DEBUG       Save clustering metrics - val
+|--- DEBUG       Save all matrices and figures - val
+|--- INFO        Prediction for dataset - test
+|--- DEBUG       Calculate confusion matrix - test
+|--- DEBUG       ConfMatrix no label : (26, 26)
+|--- DEBUG       ConfMatrix label : (26, 26)
+|--- DEBUG       ConfMatrix label df : (26, 26)
+|--- DEBUG       Save batch mixing metrics - test
+|--- DEBUG       Save classification metrics - test
+|--- DEBUG       Save classification metrics by size of cell type - test
+|--- DEBUG       Save clustering metrics - test
+|--- DEBUG       Save all matrices and figures - test
+|--- DEBUG       opt_metric val-balanced_mcc
+|--- DEBUG       get optmetric
+|--- DEBUG       get optmetric 2
+|--- DEBUG       optimal metric:0.31057184254871617
+|--- DEBUG       Log the trial metrics on Neptune
+Computing neighborhood graph
+[0.02350934 0.02232939 0.02467647 0.01559594 0.03673255 0.01414665
+ 0.01767369 0.04159345 0.02397107 0.00942682 0.01668612 0.01273583
+ 0.02625402 0.00379638 0.03469328 0.02765202 0.051482   0.05671485
+ 0.0621016  0.03398787 0.02280393 0.03178186 0.01623722 0.01919994
+ 0.0205338  0.04082392 0.02851133 0.0393105  0.02547166 0.02924239
+ 0.0157755  0.04880145 0.0557401  0.02141877 0.02858829]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.02571205 0.06055865 0.06857252 0.03951959 0.01554141 0.02750936
+ 0.02099676 0.00625885 0.05719663 0.04558814 0.09350221 0.03759542
+ 0.02676929 0.03385279 0.04700484 0.06480875 0.04821009 0.02600808
+ 0.08045588 0.09189521 0.03531178 0.04713171]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.11960068 0.1255383  0.13356388 0.31593371 0.09767715 0.20768628]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.1134202  0.07185668 0.08977199 0.26149837 0.17263844 0.16143322
+ 0.12938111]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+[neptune] [info   ] Shutting down background jobs, please wait a moment...
+[neptune] [info   ] Done!
+[neptune] [info   ] Waiting for the remaining 2 operations to synchronize with Neptune. Do not kill this process.
+[neptune] [info   ] All 2 operations synced, thanks for waiting!
+[neptune] [info   ] Explore the metadata in the Neptune app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-326/metadata
+[INFO 07-05 15:08:03] ax.service.ax_client: Completed trial 2 with data: {'opt_metric': (0.310572, None)}.
+|--- INFO        #HP_optim--- Running trial 3/8
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/modelbridge/cross_validation.py:463: UserWarning: Encountered exception in computing model fit quality: RandomModelBridge does not support prediction.
+  warn("Encountered exception in computing model fit quality: " + str(e))
+[INFO 07-05 15:08:03] ax.service.ax_client: Generated new trial 3 with parameters {'use_hvg': 1656, 'batch_size': 92, 'clas_w': 2.220858, 'rec_w': 0.003075, 'dann_w': 0.059322, 'clas_loss_name': 'categorical_focal_crossentropy', 'learning_rate': 0.008892, 'weight_decay': 0.0, 'warmup_epoch': 70, 'dropout': 0.458026, 'bottleneck': 94, 'layer2': 428, 'layer1': 1845, 'size_factor': 'constant', 'training_scheme': 'training_scheme_5', 'ae_bottleneck_activation': 'linear'} using model Sobol.
+|--- INFO        Run the Experiment: experiment.train()
+|--- DEBUG       Load checkpoint
+|--- DEBUG       Compare checkpoint and Neptune dataframe
+|--- DEBUG       Trial 4 does not exist, running trial
+|--- DEBUG       Set hyparameters
+|--- DEBUG       Setting hparams {'use_hvg': 1656, 'batch_size': 92, 'clas_w': 2.2208578945011483, 'rec_w': 0.003074671979852406, 'dann_w': 0.059321785667120965, 'clas_loss_name': 'categorical_focal_crossentropy', 'learning_rate': 0.008892203562899213, 'weight_decay': 2.9916619824027124e-07, 'warmup_epoch': 70, 'dropout': 0.45802570041269064, 'bottleneck': 94, 'layer2': 428, 'layer1': 1845, 'size_factor': 'constant', 'training_scheme': 'training_scheme_5', 'ae_bottleneck_activation': 'linear'}
+|--- DEBUG       
+|--- INFO        Use Neptune.ai log : True
+|--- INFO        Use Neptune project name = scmusk-review
+[neptune] [info   ] Neptune initialized. Open in the app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-327
+|--- DEBUG       Log the trial on Neptune
+|--- DEBUG        -- HyperParam_Optim_hp_tscheme_ajrccm_by_batch_4/8 -- 
+|--- DEBUG       
+|--- INFO        Load dataset /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- INFO        Load /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- DEBUG       Did not find existing PCA, computing it
+|--- DEBUG       Preprocess dataset - Normalization
+|--- DEBUG       Filter dataset
+|--- DEBUG       Calculate HVG
+|--- DEBUG       Selecting 1656 HVG
+|--- DEBUG       Normalize with total nb reads and calculate size factor
+|--- DEBUG       Log_1 transformation
+|--- DEBUG       Calculate size factor (constant mode sf=1)
+|--- DEBUG       
+|--- DEBUG       test obs :['D322_Biop_Nas1', 'D354_Brus_Dis1', 'D326_Brus_Dis1', 'D353_Biop_Pro1', 'D337_Brus_Dis1', 'D354_Biop_Int2', 'D367_Brus_Dis1']
+|--- DEBUG       
+|--- INFO        Process train, test, val datasets
+|--- DEBUG       splitting this adata train/val : View of AnnData object with n_obs × n_vars = 62619 × 1656
+    obs: 'donor', 'manip', 'method', 'position', 'Sex', 'Age', 'celltype', 'phenotype', 'celltype_phenotype', 'celltype_position', 'TRAIN_TEST_split', 'true_celltype', 'n_counts', 'size_factors', 'TRAIN_TEST_split_batch'
+    var: 'gene_ids', 'feature_types', 'genome', 'n_counts'
+    uns: 'pca', 'log1p'
+    obsm: 'X_uce', 'tsne_hg19', 'umap_hg19', 'umap_uncorrected_hg19', 'X_pca'
+    varm: 'PCs'
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/dataset.py:511: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+  self.adata_train_extended.obs["train_split"] = to_keep
+|--- INFO        train, test, val proportions : train_split
+train    47293
+test     15350
+val      15326
+Name: count, dtype: int64
+|--- INFO        Dataset split performed
+|--- DEBUG       Run the training
+|--- INFO        ##-- Create scmusketeers model and the train/test/val datasets:
+|--- DEBUG       hyperparameters.make_experiment()
+|--- DEBUG       Setup X,Y
+|--- DEBUG       Create pseudo-labels pseudo_y_list
+|--- DEBUG       Setup model settings
+|--- DEBUG       Setup optimizer
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       Setup losses
+|--- DEBUG       Setup training scheme
+|--- DEBUG       Setting up training scheme: training_scheme_5 - [('warmup_dann', 1, False), ('full_model', 1, False)]
+|--- INFO        ##-- Run model training
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- WARMUP_DANN - Step 0, running warmup_dann strategy with permutation = False for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Epoch 1/2, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy warmup_dann duration : 156.5758044719696 s
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- FULL_MODEL - Step 0, running full_model strategy with permutation = False for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Epoch 2/2, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy full_model duration : 108.39449954032898 s
+|--- INFO        Training complete
+|--- INFO        ##-- Performing model prediction
+|--- INFO        Save results to: /data/analysis/data_becavin/scMusketeers-data/results/SCMUSR1-327
+|--- INFO        Prediction for dataset - full
+|--- DEBUG       Saving predicted matrix and embedding - full
+|--- DEBUG       Calculate confusion matrix - full
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - full
+|--- DEBUG       Save classification metrics - full
+|--- DEBUG       Save classification metrics by size of cell type - full
+|--- DEBUG       Save clustering metrics - full
+|--- DEBUG       Save all matrices and figures - full
+|--- INFO        Prediction for dataset - train
+|--- DEBUG       Calculate confusion matrix - train
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - train
+|--- DEBUG       Save classification metrics - train
+|--- DEBUG       Save classification metrics by size of cell type - train
+|--- DEBUG       Save clustering metrics - train
+|--- DEBUG       Save all matrices and figures - train
+|--- INFO        Prediction for dataset - val
+|--- DEBUG       Calculate confusion matrix - val
+|--- DEBUG       ConfMatrix no label : (25, 25)
+|--- DEBUG       ConfMatrix label : (25, 25)
+|--- DEBUG       ConfMatrix label df : (25, 25)
+|--- DEBUG       Save batch mixing metrics - val
+|--- DEBUG       Save classification metrics - val
+|--- DEBUG       Save classification metrics by size of cell type - val
+|--- DEBUG       Save clustering metrics - val
+|--- DEBUG       Save all matrices and figures - val
+|--- INFO        Prediction for dataset - test
+|--- DEBUG       Calculate confusion matrix - test
+|--- DEBUG       ConfMatrix no label : (27, 27)
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/metrics.py:31: RuntimeWarning: invalid value encountered in divide
+  cm_norm = cm / cm.sum(axis=1, keepdims=True)
+|--- DEBUG       ConfMatrix label : (27, 27)
+|--- DEBUG       ConfMatrix label df : (27, 27)
+|--- DEBUG       Save batch mixing metrics - test
+|--- DEBUG       Save classification metrics - test
+|--- DEBUG       Save classification metrics by size of cell type - test
+|--- DEBUG       Save clustering metrics - test
+|--- DEBUG       Save all matrices and figures - test
+|--- DEBUG       opt_metric val-balanced_mcc
+|--- DEBUG       get optmetric
+|--- DEBUG       get optmetric 2
+|--- DEBUG       optimal metric:0.6680653084689178
+|--- DEBUG       Log the trial metrics on Neptune
+Computing neighborhood graph
+[0.02350934 0.02232939 0.02467647 0.01559594 0.03673255 0.01414665
+ 0.01767369 0.04159345 0.02397107 0.00942682 0.01668612 0.01273583
+ 0.02625402 0.00379638 0.03469328 0.02765202 0.051482   0.05671485
+ 0.0621016  0.03398787 0.02280393 0.03178186 0.01623722 0.01919994
+ 0.0205338  0.04082392 0.02851133 0.0393105  0.02547166 0.02924239
+ 0.0157755  0.04880145 0.0557401  0.02141877 0.02858829]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.02571205 0.06055865 0.06857252 0.03951959 0.01554141 0.02750936
+ 0.02099676 0.00625885 0.05719663 0.04558814 0.09350221 0.03759542
+ 0.02676929 0.03385279 0.04700484 0.06480875 0.04821009 0.02600808
+ 0.08045588 0.09189521 0.03531178 0.04713171]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.11960068 0.1255383  0.13356388 0.31593371 0.09767715 0.20768628]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.1134202  0.07185668 0.08977199 0.26149837 0.17263844 0.16143322
+ 0.12938111]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+[neptune] [info   ] Shutting down background jobs, please wait a moment...
+[neptune] [info   ] Done!
+[neptune] [info   ] Waiting for the remaining 2 operations to synchronize with Neptune. Do not kill this process.
+[neptune] [info   ] All 2 operations synced, thanks for waiting!
+[neptune] [info   ] Explore the metadata in the Neptune app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-327/metadata
+[INFO 07-05 15:16:58] ax.service.ax_client: Completed trial 3 with data: {'opt_metric': (0.668065, None)}.
+|--- INFO        #HP_optim--- Running trial 4/8
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/modelbridge/cross_validation.py:463: UserWarning: Encountered exception in computing model fit quality: RandomModelBridge does not support prediction.
+  warn("Encountered exception in computing model fit quality: " + str(e))
+[INFO 07-05 15:16:58] ax.service.ax_client: Generated new trial 4 with parameters {'use_hvg': 1007, 'batch_size': 372, 'clas_w': 56.981207, 'rec_w': 0.045545, 'dann_w': 0.005006, 'clas_loss_name': 'categorical_focal_crossentropy', 'learning_rate': 0.000216, 'weight_decay': 1e-06, 'warmup_epoch': 56, 'dropout': 0.119541, 'bottleneck': 118, 'layer2': 479, 'layer1': 2026, 'size_factor': 'default', 'training_scheme': 'training_scheme_8', 'ae_bottleneck_activation': 'linear'} using model Sobol.
+|--- INFO        Run the Experiment: experiment.train()
+|--- DEBUG       Load checkpoint
+|--- DEBUG       Compare checkpoint and Neptune dataframe
+|--- DEBUG       Trial 5 does not exist, running trial
+|--- DEBUG       Set hyparameters
+|--- DEBUG       Setting hparams {'use_hvg': 1007, 'batch_size': 372, 'clas_w': 56.981206960481785, 'rec_w': 0.04554500069963739, 'dann_w': 0.005006172279282087, 'clas_loss_name': 'categorical_focal_crossentropy', 'learning_rate': 0.00021648329694419737, 'weight_decay': 1.1264293645247106e-06, 'warmup_epoch': 56, 'dropout': 0.11954064248129725, 'bottleneck': 118, 'layer2': 479, 'layer1': 2026, 'size_factor': 'default', 'training_scheme': 'training_scheme_8', 'ae_bottleneck_activation': 'linear'}
+|--- DEBUG       
+|--- INFO        Use Neptune.ai log : True
+|--- INFO        Use Neptune project name = scmusk-review
+[neptune] [info   ] Neptune initialized. Open in the app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-328
+|--- DEBUG       Log the trial on Neptune
+|--- DEBUG        -- HyperParam_Optim_hp_tscheme_ajrccm_by_batch_5/8 -- 
+|--- DEBUG       
+|--- INFO        Load dataset /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- INFO        Load /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- DEBUG       Did not find existing PCA, computing it
+|--- DEBUG       Preprocess dataset - Normalization
+|--- DEBUG       Filter dataset
+|--- DEBUG       Calculate HVG
+|--- DEBUG       Selecting 1007 HVG
+|--- DEBUG       Normalize with total nb reads and calculate size factor
+|--- DEBUG       Log_1 transformation
+|--- DEBUG       Calculate size factor (default mode)
+|--- DEBUG       
+|--- DEBUG       test obs :['D322_Biop_Nas1', 'D354_Brus_Dis1', 'D326_Brus_Dis1', 'D353_Biop_Pro1', 'D337_Brus_Dis1', 'D354_Biop_Int2', 'D367_Brus_Dis1']
+|--- DEBUG       
+|--- INFO        Process train, test, val datasets
+|--- DEBUG       splitting this adata train/val : View of AnnData object with n_obs × n_vars = 62619 × 1007
+    obs: 'donor', 'manip', 'method', 'position', 'Sex', 'Age', 'celltype', 'phenotype', 'celltype_phenotype', 'celltype_position', 'TRAIN_TEST_split', 'true_celltype', 'n_counts', 'size_factors', 'TRAIN_TEST_split_batch'
+    var: 'gene_ids', 'feature_types', 'genome', 'n_counts'
+    uns: 'pca', 'log1p'
+    obsm: 'X_uce', 'tsne_hg19', 'umap_hg19', 'umap_uncorrected_hg19', 'X_pca'
+    varm: 'PCs'
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/dataset.py:511: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+  self.adata_train_extended.obs["train_split"] = to_keep
+|--- INFO        train, test, val proportions : train_split
+train    47293
+test     15350
+val      15326
+Name: count, dtype: int64
+|--- INFO        Dataset split performed
+|--- DEBUG       Run the training
+|--- INFO        ##-- Create scmusketeers model and the train/test/val datasets:
+|--- DEBUG       hyperparameters.make_experiment()
+|--- DEBUG       Setup X,Y
+|--- DEBUG       Create pseudo-labels pseudo_y_list
+|--- DEBUG       Setup model settings
+|--- DEBUG       Setup optimizer
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       Setup losses
+|--- DEBUG       Setup training scheme
+|--- DEBUG       Setting up training scheme: training_scheme_8 - [('warmup_dann', 1, True), ('full_model', 1, False), ('classifier_branch', 1, False)]
+|--- INFO        ##-- Run model training
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- WARMUP_DANN - Step 0, running warmup_dann strategy with permutation = True for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Epoch 1/3, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy warmup_dann duration : 42.94832229614258 s
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- FULL_MODEL - Step 0, running full_model strategy with permutation = False for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Epoch 2/3, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy full_model duration : 29.91769576072693 s
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- CLASSIFIER_BRANCH - Step 0, running classifier_branch strategy with permutation = False for 1 epochs
+|--- DEBUG       Freezing layer: <Classifier name=Dann_Discriminator, built=True>
+|--- DEBUG       Freezing layer: <Encoder name=Encoder, built=True>
+|--- DEBUG       Freezing layer: <Decoder name=Decoder, built=True>
+|--- DEBUG       Freezing layer: <Dense name=autoencoder_output, built=True>
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Epoch 3/3, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy classifier_branch duration : 13.89299488067627 s
+|--- INFO        Training complete
+|--- INFO        ##-- Performing model prediction
+|--- INFO        Save results to: /data/analysis/data_becavin/scMusketeers-data/results/SCMUSR1-328
+|--- INFO        Prediction for dataset - full
+|--- DEBUG       Saving predicted matrix and embedding - full
+|--- DEBUG       Calculate confusion matrix - full
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - full
+|--- DEBUG       Save classification metrics - full
+|--- DEBUG       Save classification metrics by size of cell type - full
+|--- DEBUG       Save clustering metrics - full
+|--- DEBUG       Save all matrices and figures - full
+|--- INFO        Prediction for dataset - train
+|--- DEBUG       Calculate confusion matrix - train
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - train
+|--- DEBUG       Save classification metrics - train
+|--- DEBUG       Save classification metrics by size of cell type - train
+|--- DEBUG       Save clustering metrics - train
+|--- DEBUG       Save all matrices and figures - train
+|--- INFO        Prediction for dataset - val
+|--- DEBUG       Calculate confusion matrix - val
+|--- DEBUG       ConfMatrix no label : (26, 26)
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/metrics.py:31: RuntimeWarning: invalid value encountered in divide
+  cm_norm = cm / cm.sum(axis=1, keepdims=True)
+|--- DEBUG       ConfMatrix label : (26, 26)
+|--- DEBUG       ConfMatrix label df : (26, 26)
+|--- DEBUG       Save batch mixing metrics - val
+|--- DEBUG       Save classification metrics - val
+|--- DEBUG       Save classification metrics by size of cell type - val
+|--- DEBUG       Save clustering metrics - val
+|--- DEBUG       Save all matrices and figures - val
+|--- INFO        Prediction for dataset - test
+|--- DEBUG       Calculate confusion matrix - test
+|--- DEBUG       ConfMatrix no label : (28, 28)
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/metrics.py:31: RuntimeWarning: invalid value encountered in divide
+  cm_norm = cm / cm.sum(axis=1, keepdims=True)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - test
+|--- DEBUG       Save classification metrics - test
+|--- DEBUG       Save classification metrics by size of cell type - test
+|--- DEBUG       Save clustering metrics - test
+|--- DEBUG       Save all matrices and figures - test
+|--- DEBUG       opt_metric val-balanced_mcc
+|--- DEBUG       get optmetric
+|--- DEBUG       get optmetric 2
+|--- DEBUG       optimal metric:0.8723347994225058
+|--- DEBUG       Log the trial metrics on Neptune
+Computing neighborhood graph
+[0.02350934 0.02232939 0.02467647 0.01559594 0.03673255 0.01414665
+ 0.01767369 0.04159345 0.02397107 0.00942682 0.01668612 0.01273583
+ 0.02625402 0.00379638 0.03469328 0.02765202 0.051482   0.05671485
+ 0.0621016  0.03398787 0.02280393 0.03178186 0.01623722 0.01919994
+ 0.0205338  0.04082392 0.02851133 0.0393105  0.02547166 0.02924239
+ 0.0157755  0.04880145 0.0557401  0.02141877 0.02858829]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.02571205 0.06055865 0.06857252 0.03951959 0.01554141 0.02750936
+ 0.02099676 0.00625885 0.05719663 0.04558814 0.09350221 0.03759542
+ 0.02676929 0.03385279 0.04700484 0.06480875 0.04821009 0.02600808
+ 0.08045588 0.09189521 0.03531178 0.04713171]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.11960068 0.1255383  0.13356388 0.31593371 0.09767715 0.20768628]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.1134202  0.07185668 0.08977199 0.26149837 0.17263844 0.16143322
+ 0.12938111]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+[neptune] [info   ] Shutting down background jobs, please wait a moment...
+[neptune] [info   ] Done!
+[neptune] [info   ] Waiting for the remaining 2 operations to synchronize with Neptune. Do not kill this process.
+[neptune] [info   ] All 2 operations synced, thanks for waiting!
+[neptune] [info   ] Explore the metadata in the Neptune app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-328/metadata
+[INFO 07-05 15:22:51] ax.service.ax_client: Completed trial 4 with data: {'opt_metric': (0.872335, None)}.
+|--- INFO        #HP_optim--- Running trial 5/8
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/modelbridge/cross_validation.py:463: UserWarning: Encountered exception in computing model fit quality: RandomModelBridge does not support prediction.
+  warn("Encountered exception in computing model fit quality: " + str(e))
+[INFO 07-05 15:22:51] ax.service.ax_client: Generated new trial 5 with parameters {'use_hvg': 3058, 'batch_size': 150, 'clas_w': 0.001685, 'rec_w': 4.133942, 'dann_w': 0.435435, 'clas_loss_name': 'categorical_crossentropy', 'learning_rate': 0.002329, 'weight_decay': 1e-06, 'warmup_epoch': 29, 'dropout': 0.42739, 'bottleneck': 73, 'layer2': 205, 'layer1': 1027, 'size_factor': 'constant', 'training_scheme': 'training_scheme_6', 'ae_bottleneck_activation': 'linear'} using model Sobol.
+|--- INFO        Run the Experiment: experiment.train()
+|--- DEBUG       Load checkpoint
+|--- DEBUG       Compare checkpoint and Neptune dataframe
+|--- DEBUG       Trial 6 does not exist, running trial
+|--- DEBUG       Set hyparameters
+|--- DEBUG       Setting hparams {'use_hvg': 3058, 'batch_size': 150, 'clas_w': 0.0016850741646778687, 'rec_w': 4.1339420375647435, 'dann_w': 0.43543493042373194, 'clas_loss_name': 'categorical_crossentropy', 'learning_rate': 0.0023285311890726772, 'weight_decay': 7.174243001210667e-07, 'warmup_epoch': 29, 'dropout': 0.427390125580132, 'bottleneck': 73, 'layer2': 205, 'layer1': 1027, 'size_factor': 'constant', 'training_scheme': 'training_scheme_6', 'ae_bottleneck_activation': 'linear'}
+|--- DEBUG       
+|--- INFO        Use Neptune.ai log : True
+|--- INFO        Use Neptune project name = scmusk-review
+[neptune] [info   ] Neptune initialized. Open in the app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-329
+|--- DEBUG       Log the trial on Neptune
+|--- DEBUG        -- HyperParam_Optim_hp_tscheme_ajrccm_by_batch_6/8 -- 
+|--- DEBUG       
+|--- INFO        Load dataset /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- INFO        Load /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- DEBUG       Did not find existing PCA, computing it
+|--- DEBUG       Preprocess dataset - Normalization
+|--- DEBUG       Filter dataset
+|--- DEBUG       Calculate HVG
+|--- DEBUG       Selecting 3058 HVG
+|--- DEBUG       Normalize with total nb reads and calculate size factor
+|--- DEBUG       Log_1 transformation
+|--- DEBUG       Calculate size factor (constant mode sf=1)
+|--- DEBUG       
+|--- DEBUG       test obs :['D322_Biop_Nas1', 'D354_Brus_Dis1', 'D326_Brus_Dis1', 'D353_Biop_Pro1', 'D337_Brus_Dis1', 'D354_Biop_Int2', 'D367_Brus_Dis1']
+|--- DEBUG       
+|--- INFO        Process train, test, val datasets
+|--- DEBUG       splitting this adata train/val : View of AnnData object with n_obs × n_vars = 62619 × 3058
+    obs: 'donor', 'manip', 'method', 'position', 'Sex', 'Age', 'celltype', 'phenotype', 'celltype_phenotype', 'celltype_position', 'TRAIN_TEST_split', 'true_celltype', 'n_counts', 'size_factors', 'TRAIN_TEST_split_batch'
+    var: 'gene_ids', 'feature_types', 'genome', 'n_counts'
+    uns: 'pca', 'log1p'
+    obsm: 'X_uce', 'tsne_hg19', 'umap_hg19', 'umap_uncorrected_hg19', 'X_pca'
+    varm: 'PCs'
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/dataset.py:511: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+  self.adata_train_extended.obs["train_split"] = to_keep
+|--- INFO        train, test, val proportions : train_split
+train    47293
+test     15350
+val      15326
+Name: count, dtype: int64
+|--- INFO        Dataset split performed
+|--- DEBUG       Run the training
+|--- INFO        ##-- Create scmusketeers model and the train/test/val datasets:
+|--- DEBUG       hyperparameters.make_experiment()
+|--- DEBUG       Setup X,Y
+|--- DEBUG       Create pseudo-labels pseudo_y_list
+|--- DEBUG       Setup model settings
+|--- DEBUG       Setup optimizer
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       Setup losses
+|--- DEBUG       Setup training scheme
+|--- DEBUG       Setting up training scheme: training_scheme_6 - [('warmup_dann', 1, True), ('full_model', 1, True)]
+|--- INFO        ##-- Run model training
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- WARMUP_DANN - Step 0, running warmup_dann strategy with permutation = True for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Epoch 1/2, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy warmup_dann duration : 101.87247610092163 s
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- FULL_MODEL - Step 0, running full_model strategy with permutation = True for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Epoch 2/2, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy full_model duration : 70.41329050064087 s
+|--- INFO        Training complete
+|--- INFO        ##-- Performing model prediction
+|--- INFO        Save results to: /data/analysis/data_becavin/scMusketeers-data/results/SCMUSR1-329
+|--- INFO        Prediction for dataset - full
+|--- DEBUG       Saving predicted matrix and embedding - full
+|--- DEBUG       Calculate confusion matrix - full
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - full
+|--- DEBUG       Save classification metrics - full
+|--- DEBUG       Save classification metrics by size of cell type - full
+|--- DEBUG       Save clustering metrics - full
+|--- DEBUG       Save all matrices and figures - full
+|--- INFO        Prediction for dataset - train
+|--- DEBUG       Calculate confusion matrix - train
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - train
+|--- DEBUG       Save classification metrics - train
+|--- DEBUG       Save classification metrics by size of cell type - train
+|--- DEBUG       Save clustering metrics - train
+|--- DEBUG       Save all matrices and figures - train
+|--- INFO        Prediction for dataset - val
+|--- DEBUG       Calculate confusion matrix - val
+|--- DEBUG       ConfMatrix no label : (25, 25)
+|--- DEBUG       ConfMatrix label : (25, 25)
+|--- DEBUG       ConfMatrix label df : (25, 25)
+|--- DEBUG       Save batch mixing metrics - val
+|--- DEBUG       Save classification metrics - val
+|--- DEBUG       Save classification metrics by size of cell type - val
+|--- DEBUG       Save clustering metrics - val
+|--- DEBUG       Save all matrices and figures - val
+|--- INFO        Prediction for dataset - test
+|--- DEBUG       Calculate confusion matrix - test
+|--- DEBUG       ConfMatrix no label : (26, 26)
+|--- DEBUG       ConfMatrix label : (26, 26)
+|--- DEBUG       ConfMatrix label df : (26, 26)
+|--- DEBUG       Save batch mixing metrics - test
+|--- DEBUG       Save classification metrics - test
+|--- DEBUG       Save classification metrics by size of cell type - test
+|--- DEBUG       Save clustering metrics - test
+|--- DEBUG       Save all matrices and figures - test
+|--- DEBUG       opt_metric val-balanced_mcc
+|--- DEBUG       get optmetric
+|--- DEBUG       get optmetric 2
+|--- DEBUG       optimal metric:0.19842129173624312
+|--- DEBUG       Log the trial metrics on Neptune
+Computing neighborhood graph
+[0.02350934 0.02232939 0.02467647 0.01559594 0.03673255 0.01414665
+ 0.01767369 0.04159345 0.02397107 0.00942682 0.01668612 0.01273583
+ 0.02625402 0.00379638 0.03469328 0.02765202 0.051482   0.05671485
+ 0.0621016  0.03398787 0.02280393 0.03178186 0.01623722 0.01919994
+ 0.0205338  0.04082392 0.02851133 0.0393105  0.02547166 0.02924239
+ 0.0157755  0.04880145 0.0557401  0.02141877 0.02858829]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.02571205 0.06055865 0.06857252 0.03951959 0.01554141 0.02750936
+ 0.02099676 0.00625885 0.05719663 0.04558814 0.09350221 0.03759542
+ 0.02676929 0.03385279 0.04700484 0.06480875 0.04821009 0.02600808
+ 0.08045588 0.09189521 0.03531178 0.04713171]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.11960068 0.1255383  0.13356388 0.31593371 0.09767715 0.20768628]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.1134202  0.07185668 0.08977199 0.26149837 0.17263844 0.16143322
+ 0.12938111]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+[neptune] [info   ] Shutting down background jobs, please wait a moment...
+[neptune] [info   ] Done!
+[neptune] [info   ] Waiting for the remaining 2 operations to synchronize with Neptune. Do not kill this process.
+[neptune] [info   ] All 2 operations synced, thanks for waiting!
+[neptune] [info   ] Explore the metadata in the Neptune app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-329/metadata
+[INFO 07-05 15:30:03] ax.service.ax_client: Completed trial 5 with data: {'opt_metric': (0.198421, None)}.
+|--- INFO        #HP_optim--- Running trial 6/8
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/modelbridge/cross_validation.py:463: UserWarning: Encountered exception in computing model fit quality: RandomModelBridge does not support prediction.
+  warn("Encountered exception in computing model fit quality: " + str(e))
+[INFO 07-05 15:30:03] ax.service.ax_client: Generated new trial 6 with parameters {'use_hvg': 4538, 'batch_size': 401, 'clas_w': 0.102918, 'rec_w': 0.000995, 'dann_w': 30.90659, 'clas_loss_name': 'categorical_crossentropy', 'learning_rate': 0.004445, 'weight_decay': 0.0, 'warmup_epoch': 10, 'dropout': 0.21544, 'bottleneck': 90, 'layer2': 105, 'layer1': 1539, 'size_factor': 'raw', 'training_scheme': 'training_scheme_8', 'ae_bottleneck_activation': 'linear'} using model Sobol.
+|--- INFO        Run the Experiment: experiment.train()
+|--- DEBUG       Load checkpoint
+|--- DEBUG       Compare checkpoint and Neptune dataframe
+|--- DEBUG       Trial 7 does not exist, running trial
+|--- DEBUG       Set hyparameters
+|--- DEBUG       Setting hparams {'use_hvg': 4538, 'batch_size': 401, 'clas_w': 0.10291825291493319, 'rec_w': 0.0009954347328087266, 'dann_w': 30.90658958723988, 'clas_loss_name': 'categorical_crossentropy', 'learning_rate': 0.004444651873569963, 'weight_decay': 2.2288584221120302e-08, 'warmup_epoch': 10, 'dropout': 0.215440490283072, 'bottleneck': 90, 'layer2': 105, 'layer1': 1539, 'size_factor': 'raw', 'training_scheme': 'training_scheme_8', 'ae_bottleneck_activation': 'linear'}
+|--- DEBUG       
+|--- INFO        Use Neptune.ai log : True
+|--- INFO        Use Neptune project name = scmusk-review
+[neptune] [info   ] Neptune initialized. Open in the app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-330
+|--- DEBUG       Log the trial on Neptune
+|--- DEBUG        -- HyperParam_Optim_hp_tscheme_ajrccm_by_batch_7/8 -- 
+|--- DEBUG       
+|--- INFO        Load dataset /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- INFO        Load /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- DEBUG       Did not find existing PCA, computing it
+|--- DEBUG       Preprocess dataset - Normalization
+|--- DEBUG       Filter dataset
+|--- DEBUG       Calculate size factor (raw mode)
+|--- DEBUG       Calculate HVG
+|--- DEBUG       Selecting 4538 HVG
+|--- DEBUG       Normalize with total nb reads and calculate size factor
+|--- DEBUG       Log_1 transformation
+|--- DEBUG       
+|--- DEBUG       test obs :['D322_Biop_Nas1', 'D354_Brus_Dis1', 'D326_Brus_Dis1', 'D353_Biop_Pro1', 'D337_Brus_Dis1', 'D354_Biop_Int2', 'D367_Brus_Dis1']
+|--- DEBUG       
+|--- INFO        Process train, test, val datasets
+|--- DEBUG       splitting this adata train/val : View of AnnData object with n_obs × n_vars = 62619 × 4538
+    obs: 'donor', 'manip', 'method', 'position', 'Sex', 'Age', 'celltype', 'phenotype', 'celltype_phenotype', 'celltype_position', 'TRAIN_TEST_split', 'true_celltype', 'n_counts', 'size_factors', 'TRAIN_TEST_split_batch'
+    var: 'gene_ids', 'feature_types', 'genome', 'n_counts'
+    uns: 'pca', 'log1p'
+    obsm: 'X_uce', 'tsne_hg19', 'umap_hg19', 'umap_uncorrected_hg19', 'X_pca'
+    varm: 'PCs'
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/dataset.py:511: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+  self.adata_train_extended.obs["train_split"] = to_keep
+|--- INFO        train, test, val proportions : train_split
+train    47293
+test     15350
+val      15326
+Name: count, dtype: int64
+|--- INFO        Dataset split performed
+|--- DEBUG       Run the training
+|--- INFO        ##-- Create scmusketeers model and the train/test/val datasets:
+|--- DEBUG       hyperparameters.make_experiment()
+|--- DEBUG       Setup X,Y
+|--- DEBUG       Create pseudo-labels pseudo_y_list
+|--- DEBUG       Setup model settings
+|--- DEBUG       Setup optimizer
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       Setup losses
+|--- DEBUG       Setup training scheme
+|--- DEBUG       Setting up training scheme: training_scheme_8 - [('warmup_dann', 1, True), ('full_model', 1, False), ('classifier_branch', 1, False)]
+|--- INFO        ##-- Run model training
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- WARMUP_DANN - Step 0, running warmup_dann strategy with permutation = True for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = True
+|--- DEBUG       Epoch 1/3, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy warmup_dann duration : 45.44187259674072 s
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- FULL_MODEL - Step 0, running full_model strategy with permutation = False for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Epoch 2/3, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy full_model duration : 31.607074737548828 s
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- CLASSIFIER_BRANCH - Step 0, running classifier_branch strategy with permutation = False for 1 epochs
+|--- DEBUG       Freezing layer: <Classifier name=Dann_Discriminator, built=True>
+|--- DEBUG       Freezing layer: <Encoder name=Encoder, built=True>
+|--- DEBUG       Freezing layer: <Decoder name=Decoder, built=True>
+|--- DEBUG       Freezing layer: <Dense name=autoencoder_output, built=True>
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Epoch 3/3, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy classifier_branch duration : 15.886888980865479 s
+|--- INFO        Training complete
+|--- INFO        ##-- Performing model prediction
+|--- INFO        Save results to: /data/analysis/data_becavin/scMusketeers-data/results/SCMUSR1-330
+|--- INFO        Prediction for dataset - full
+|--- DEBUG       Saving predicted matrix and embedding - full
+|--- DEBUG       Calculate confusion matrix - full
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - full
+|--- DEBUG       Save classification metrics - full
+|--- DEBUG       Save classification metrics by size of cell type - full
+|--- DEBUG       Save clustering metrics - full
+|--- DEBUG       Save all matrices and figures - full
+|--- INFO        Prediction for dataset - train
+|--- DEBUG       Calculate confusion matrix - train
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - train
+|--- DEBUG       Save classification metrics - train
+|--- DEBUG       Save classification metrics by size of cell type - train
+|--- DEBUG       Save clustering metrics - train
+|--- DEBUG       Save all matrices and figures - train
+|--- INFO        Prediction for dataset - val
+|--- DEBUG       Calculate confusion matrix - val
+|--- DEBUG       ConfMatrix no label : (25, 25)
+|--- DEBUG       ConfMatrix label : (25, 25)
+|--- DEBUG       ConfMatrix label df : (25, 25)
+|--- DEBUG       Save batch mixing metrics - val
+|--- DEBUG       Save classification metrics - val
+|--- DEBUG       Save classification metrics by size of cell type - val
+|--- DEBUG       Save clustering metrics - val
+|--- DEBUG       Save all matrices and figures - val
+|--- INFO        Prediction for dataset - test
+|--- DEBUG       Calculate confusion matrix - test
+|--- DEBUG       ConfMatrix no label : (26, 26)
+|--- DEBUG       ConfMatrix label : (26, 26)
+|--- DEBUG       ConfMatrix label df : (26, 26)
+|--- DEBUG       Save batch mixing metrics - test
+|--- DEBUG       Save classification metrics - test
+|--- DEBUG       Save classification metrics by size of cell type - test
+|--- DEBUG       Save clustering metrics - test
+|--- DEBUG       Save all matrices and figures - test
+|--- DEBUG       opt_metric val-balanced_mcc
+|--- DEBUG       get optmetric
+|--- DEBUG       get optmetric 2
+|--- DEBUG       optimal metric:0.3514330930155393
+|--- DEBUG       Log the trial metrics on Neptune
+Computing neighborhood graph
+[0.02350934 0.02232939 0.02467647 0.01559594 0.03673255 0.01414665
+ 0.01767369 0.04159345 0.02397107 0.00942682 0.01668612 0.01273583
+ 0.02625402 0.00379638 0.03469328 0.02765202 0.051482   0.05671485
+ 0.0621016  0.03398787 0.02280393 0.03178186 0.01623722 0.01919994
+ 0.0205338  0.04082392 0.02851133 0.0393105  0.02547166 0.02924239
+ 0.0157755  0.04880145 0.0557401  0.02141877 0.02858829]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.02571205 0.06055865 0.06857252 0.03951959 0.01554141 0.02750936
+ 0.02099676 0.00625885 0.05719663 0.04558814 0.09350221 0.03759542
+ 0.02676929 0.03385279 0.04700484 0.06480875 0.04821009 0.02600808
+ 0.08045588 0.09189521 0.03531178 0.04713171]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.11960068 0.1255383  0.13356388 0.31593371 0.09767715 0.20768628]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.1134202  0.07185668 0.08977199 0.26149837 0.17263844 0.16143322
+ 0.12938111]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+[neptune] [info   ] Shutting down background jobs, please wait a moment...
+[neptune] [info   ] Done!
+[neptune] [info   ] Waiting for the remaining 2 operations to synchronize with Neptune. Do not kill this process.
+[neptune] [info   ] All 2 operations synced, thanks for waiting!
+[neptune] [info   ] Explore the metadata in the Neptune app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-330/metadata
+[INFO 07-05 15:36:08] ax.service.ax_client: Completed trial 6 with data: {'opt_metric': (0.351433, None)}.
+|--- INFO        #HP_optim--- Running trial 7/8
+/data/analysis/ML_models/conda_env/cb_scmusketeers_benchmark/lib/python3.12/site-packages/ax/modelbridge/cross_validation.py:463: UserWarning: Encountered exception in computing model fit quality: RandomModelBridge does not support prediction.
+  warn("Encountered exception in computing model fit quality: " + str(e))
+[INFO 07-05 15:36:08] ax.service.ax_client: Generated new trial 7 with parameters {'use_hvg': 2526, 'batch_size': 230, 'clas_w': 0.003393, 'rec_w': 0.070507, 'dann_w': 0.002286, 'clas_loss_name': 'categorical_focal_crossentropy', 'learning_rate': 0.000478, 'weight_decay': 3.6e-05, 'warmup_epoch': 37, 'dropout': 0.268865, 'bottleneck': 38, 'layer2': 312, 'layer1': 528, 'size_factor': 'default', 'training_scheme': 'training_scheme_5', 'ae_bottleneck_activation': 'linear'} using model Sobol.
+|--- INFO        Run the Experiment: experiment.train()
+|--- DEBUG       Load checkpoint
+|--- DEBUG       Compare checkpoint and Neptune dataframe
+|--- DEBUG       Trial 8 does not exist, running trial
+|--- DEBUG       Set hyparameters
+|--- DEBUG       Setting hparams {'use_hvg': 2526, 'batch_size': 230, 'clas_w': 0.0033932719540253698, 'rec_w': 0.07050700758290716, 'dann_w': 0.0022858317234503555, 'clas_loss_name': 'categorical_focal_crossentropy', 'learning_rate': 0.00047828537928583685, 'weight_decay': 3.6256230958748017e-05, 'warmup_epoch': 37, 'dropout': 0.2688654060475528, 'bottleneck': 38, 'layer2': 312, 'layer1': 528, 'size_factor': 'default', 'training_scheme': 'training_scheme_5', 'ae_bottleneck_activation': 'linear'}
+|--- DEBUG       
+|--- INFO        Use Neptune.ai log : True
+|--- INFO        Use Neptune project name = scmusk-review
+[neptune] [info   ] Neptune initialized. Open in the app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-331
+|--- DEBUG       Log the trial on Neptune
+|--- DEBUG        -- HyperParam_Optim_hp_tscheme_ajrccm_by_batch_8/8 -- 
+|--- DEBUG       
+|--- INFO        Load dataset /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- INFO        Load /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- DEBUG       Did not find existing PCA, computing it
+|--- DEBUG       Preprocess dataset - Normalization
+|--- DEBUG       Filter dataset
+|--- DEBUG       Calculate HVG
+|--- DEBUG       Selecting 2526 HVG
+|--- DEBUG       Normalize with total nb reads and calculate size factor
+|--- DEBUG       Log_1 transformation
+|--- DEBUG       Calculate size factor (default mode)
+|--- DEBUG       
+|--- DEBUG       test obs :['D322_Biop_Nas1', 'D354_Brus_Dis1', 'D326_Brus_Dis1', 'D353_Biop_Pro1', 'D337_Brus_Dis1', 'D354_Biop_Int2', 'D367_Brus_Dis1']
+|--- DEBUG       
+|--- INFO        Process train, test, val datasets
+|--- DEBUG       splitting this adata train/val : View of AnnData object with n_obs × n_vars = 62619 × 2526
+    obs: 'donor', 'manip', 'method', 'position', 'Sex', 'Age', 'celltype', 'phenotype', 'celltype_phenotype', 'celltype_position', 'TRAIN_TEST_split', 'true_celltype', 'n_counts', 'size_factors', 'TRAIN_TEST_split_batch'
+    var: 'gene_ids', 'feature_types', 'genome', 'n_counts'
+    uns: 'pca', 'log1p'
+    obsm: 'X_uce', 'tsne_hg19', 'umap_hg19', 'umap_uncorrected_hg19', 'X_pca'
+    varm: 'PCs'
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/dataset.py:511: ImplicitModificationWarning: Trying to modify attribute `.obs` of view, initializing view as actual.
+  self.adata_train_extended.obs["train_split"] = to_keep
+|--- INFO        train, test, val proportions : train_split
+train    47293
+test     15350
+val      15326
+Name: count, dtype: int64
+|--- INFO        Dataset split performed
+|--- DEBUG       Run the training
+|--- INFO        ##-- Create scmusketeers model and the train/test/val datasets:
+|--- DEBUG       hyperparameters.make_experiment()
+|--- DEBUG       Setup X,Y
+|--- DEBUG       Create pseudo-labels pseudo_y_list
+|--- DEBUG       Setup model settings
+|--- DEBUG       Setup optimizer
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       Setup losses
+|--- DEBUG       Setup training scheme
+|--- DEBUG       Setting up training scheme: training_scheme_5 - [('warmup_dann', 1, False), ('full_model', 1, False)]
+|--- INFO        ##-- Run model training
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- WARMUP_DANN - Step 0, running warmup_dann strategy with permutation = False for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Epoch 1/2, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy warmup_dann duration : 66.27993893623352 s
+|--- DEBUG       Optimizer type: adam
+|--- DEBUG       ##-- FULL_MODEL - Step 0, running full_model strategy with permutation = False for 1 epochs
+|--- DEBUG       Use permutation strategy? use_perm = False
+|--- DEBUG       Epoch 2/2, Current strat Epoch 1/1
+|--- DEBUG       Change the cell permutations
+|--- DEBUG       Strategy full_model duration : 48.687724590301514 s
+|--- INFO        Training complete
+|--- INFO        ##-- Performing model prediction
+|--- INFO        Save results to: /data/analysis/data_becavin/scMusketeers-data/results/SCMUSR1-331
+|--- INFO        Prediction for dataset - full
+|--- DEBUG       Saving predicted matrix and embedding - full
+|--- DEBUG       Calculate confusion matrix - full
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - full
+|--- DEBUG       Save classification metrics - full
+|--- DEBUG       Save classification metrics by size of cell type - full
+|--- DEBUG       Save clustering metrics - full
+|--- DEBUG       Save all matrices and figures - full
+|--- INFO        Prediction for dataset - train
+|--- DEBUG       Calculate confusion matrix - train
+|--- DEBUG       ConfMatrix no label : (28, 28)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - train
+|--- DEBUG       Save classification metrics - train
+|--- DEBUG       Save classification metrics by size of cell type - train
+|--- DEBUG       Save clustering metrics - train
+|--- DEBUG       Save all matrices and figures - train
+|--- INFO        Prediction for dataset - val
+|--- DEBUG       Calculate confusion matrix - val
+|--- DEBUG       ConfMatrix no label : (27, 27)
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/metrics.py:31: RuntimeWarning: invalid value encountered in divide
+  cm_norm = cm / cm.sum(axis=1, keepdims=True)
+|--- DEBUG       ConfMatrix label : (27, 27)
+|--- DEBUG       ConfMatrix label df : (27, 27)
+|--- DEBUG       Save batch mixing metrics - val
+|--- DEBUG       Save classification metrics - val
+|--- DEBUG       Save classification metrics by size of cell type - val
+|--- DEBUG       Save clustering metrics - val
+|--- DEBUG       Save all matrices and figures - val
+|--- INFO        Prediction for dataset - test
+|--- DEBUG       Calculate confusion matrix - test
+|--- DEBUG       ConfMatrix no label : (28, 28)
+/data/analysis/data_becavin/scMusketeers/scmusketeers/hpoptim/metrics.py:31: RuntimeWarning: invalid value encountered in divide
+  cm_norm = cm / cm.sum(axis=1, keepdims=True)
+|--- DEBUG       ConfMatrix label : (28, 28)
+|--- DEBUG       ConfMatrix label df : (28, 28)
+|--- DEBUG       Save batch mixing metrics - test
+|--- DEBUG       Save classification metrics - test
+|--- DEBUG       Save classification metrics by size of cell type - test
+|--- DEBUG       Save clustering metrics - test
+|--- DEBUG       Save all matrices and figures - test
+|--- DEBUG       opt_metric val-balanced_mcc
+|--- DEBUG       get optmetric
+|--- DEBUG       get optmetric 2
+|--- DEBUG       optimal metric:0.8487472114058738
+|--- DEBUG       Log the trial metrics on Neptune
+Computing neighborhood graph
+[0.02350934 0.02232939 0.02467647 0.01559594 0.03673255 0.01414665
+ 0.01767369 0.04159345 0.02397107 0.00942682 0.01668612 0.01273583
+ 0.02625402 0.00379638 0.03469328 0.02765202 0.051482   0.05671485
+ 0.0621016  0.03398787 0.02280393 0.03178186 0.01623722 0.01919994
+ 0.0205338  0.04082392 0.02851133 0.0393105  0.02547166 0.02924239
+ 0.0157755  0.04880145 0.0557401  0.02141877 0.02858829]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.02571205 0.06055865 0.06857252 0.03951959 0.01554141 0.02750936
+ 0.02099676 0.00625885 0.05719663 0.04558814 0.09350221 0.03759542
+ 0.02676929 0.03385279 0.04700484 0.06480875 0.04821009 0.02600808
+ 0.08045588 0.09189521 0.03531178 0.04713171]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.11960068 0.1255383  0.13356388 0.31593371 0.09767715 0.20768628]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+Computing neighborhood graph
+[0.1134202  0.07185668 0.08977199 0.26149837 0.17263844 0.16143322
+ 0.12938111]
+Entropy mixing ----- step 0
+Entropy mixing ----- step 10
+Entropy mixing ----- step 20
+Entropy mixing ----- step 30
+Entropy mixing ----- step 40
+Entropy mixing ----- step 50
+Entropy mixing ----- step 60
+Entropy mixing ----- step 70
+Entropy mixing ----- step 80
+Entropy mixing ----- step 90
+[neptune] [info   ] Shutting down background jobs, please wait a moment...
+[neptune] [info   ] Done!
+[neptune] [info   ] Waiting for the remaining 2 operations to synchronize with Neptune. Do not kill this process.
+[neptune] [info   ] All 2 operations synced, thanks for waiting!
+[neptune] [info   ] Explore the metadata in the Neptune app: https://app.neptune.ai/becavin-lab/scmusk-review/e/SCMUSR1-331/metadata
+[INFO 07-05 15:42:28] ax.service.ax_client: Completed trial 7 with data: {'opt_metric': (0.848747, None)}.
+|--- INFO        #HP_optim--- Hyperparam optimization finished
+|--- DEBUG       Best parameters {'use_hvg': 654, 'batch_size': 357, 'clas_w': 75.9059544539962, 'dann_w': 0.0006800634789046336, 'learning_rate': 0.007181802826807251, 'weight_decay': 3.457969993736587e-05, 'warmup_epoch': 1, 'dropout': 0.17059661448001862, 'bottleneck': 42, 'layer2': 153, 'layer1': 905}
+|--- INFO        Best hyperparameters saved in /data/analysis/data_becavin/scMusketeers-data/results/scMusk_ajrccm_by_batch_best_hp.json

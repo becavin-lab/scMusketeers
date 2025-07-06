@@ -14,18 +14,18 @@ task="hp_tscheme"
 
 ### Sc-Musketeers directory parameters
 neptune_name="scmusk-review"
-working_dir="/workspace/cell/scMusketeers"
+#working_dir="/workspace/cell/scMusketeers"
 #working_dir="/data/analysis/data_becavin/scMusketeers"
-#working_dir="/data/analysis/data_becavin/scMusketeers-data"
-#scmusk_path="/data/analysis/data_becavin/scMusketeers"
+working_dir="/data/analysis/data_becavin/scMusketeers-data"
+scmusk_path="/data/analysis/data_becavin/scMusketeers"
+#scmusk_path=$working_dir
 
 ### Dataset settings
-scmusk_path=$working_dir
 out_dir=${working_dir}"/results"
 python_path=${scmusk_path}"/scmusketeers/__main__.py"
 data_path=${working_dir}"/data"
-#hparam_path=${scmusk_path}"/experiment_script/hp_ranges/besthp_tscheme.json"
-hparam_path=${working_dir}"/experiment_script/hp_ranges/generic_r1_debug.json"
+hparam_path=${scmusk_path}"/experiment_script/hp_ranges/besthp_tscheme.json"
+#hparam_path=${working_dir}"/experiment_script/hp_ranges/generic_r1_debug.json"
 
 
 # Read dataset json to get h5ad path

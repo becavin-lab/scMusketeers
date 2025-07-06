@@ -219,7 +219,7 @@ def create_argparser():
         "--batch_size",
         type=int,
         nargs="?",
-        default=430,
+        default=130, #430
         help="Training batch size",
     )  # Default identified with hp optimization
     training_group.add_argument(

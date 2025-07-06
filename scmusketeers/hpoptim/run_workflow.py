@@ -27,7 +27,7 @@ except ImportError:
 
 JSON_PATH_DEFAULT = "experiment_script/hp_ranges/"
 
-TOTAL_TRIAL = 2
+TOTAL_TRIAL = 8
 RANDOM_SEED = 40
 
 

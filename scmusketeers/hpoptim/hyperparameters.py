@@ -455,87 +455,88 @@ class Workflow:
         logger.info("Training complete")
 
         logger.info("##-- Performing model prediction")
-        if self.log_neptune:
-            # TODO also make it on gpu with smaller batch size
-            self.run_neptune["evaluation/training_time"] = stop_time - start_time
-            neptune_run_id = self.run_neptune["sys/id"].fetch()
-            save_dir = os.path.join(self.run_file.out_dir,str(neptune_run_id))
-            logger.info(f"Save results to: {save_dir}")
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir)
-            
-            # Setting model inference
-            y_true_full = adata_list["full"].obs[f"true_{self.class_key}"]
-            ct_prop = (
-                pd.Series(y_true_full).value_counts()
-                / pd.Series(y_true_full).value_counts().sum()
-            )
-            sizes = {
-                "xxsmall": list(ct_prop[ct_prop < 0.001].index),
-                "small": list(
-                    ct_prop[(ct_prop >= 0.001) & (ct_prop < 0.01)].index
-                ),
-                "medium": list(
-                    ct_prop[(ct_prop >= 0.01) & (ct_prop < 0.1)].index
-                ),
-                "large": list(ct_prop[ct_prop >= 0.1].index),
-            }
-            for group in ["full", "train", "val", "test"]:
-                logger.info(f"Prediction for dataset - {group}")
-                input_tensor = {
-                    k: tf.convert_to_tensor(v)
-                    for k, v in scanpy_to_input(
-                        adata_list[group], ["size_factors"]
-                    ).items()
+        with tf.device('/CPU:0'):
+            if self.log_neptune:
+                # TODO also make it on gpu with smaller batch size
+                self.run_neptune["evaluation/training_time"] = stop_time - start_time
+                neptune_run_id = self.run_neptune["sys/id"].fetch()
+                save_dir = os.path.join(self.run_file.out_dir,str(neptune_run_id))
+                logger.info(f"Save results to: {save_dir}")
+                if not os.path.exists(save_dir):
+                    os.makedirs(save_dir)
+                
+                # Setting model inference
+                y_true_full = adata_list["full"].obs[f"true_{self.class_key}"]
+                ct_prop = (
+                    pd.Series(y_true_full).value_counts()
+                    / pd.Series(y_true_full).value_counts().sum()
+                )
+                sizes = {
+                    "xxsmall": list(ct_prop[ct_prop < 0.001].index),
+                    "small": list(
+                        ct_prop[(ct_prop >= 0.001) & (ct_prop < 0.01)].index
+                    ),
+                    "medium": list(
+                        ct_prop[(ct_prop >= 0.01) & (ct_prop < 0.1)].index
+                    ),
+                    "large": list(ct_prop[ct_prop >= 0.1].index),
                 }
-                enc, clas, dann, rec = self.dann_ae(
-                    input_tensor, training=False
-                ).values()  # Model predict
+                for group in ["full", "train", "val", "test"]:
+                    logger.info(f"Prediction for dataset - {group}")
+                    input_tensor = {
+                        k: tf.convert_to_tensor(v)
+                        for k, v in scanpy_to_input(
+                            adata_list[group], ["size_factors"]
+                        ).items()
+                    }
+                    enc, clas, dann, rec = self.dann_ae(
+                        input_tensor, training=False
+                    ).values()  # Model predict
 
-                if (
-                    group == "full"
-                ):  # saving full predictions as probability output from the classifier
-                    logger.debug(f"Saving predicted matrix and embedding - {group}")
-                    y_pred_proba = pd.DataFrame(
-                        np.asarray(clas),
-                        index=adata_list["full"].obs_names,
-                        columns=self.dataset.ohe_celltype.categories_[0],
+                    if (
+                        group == "full"
+                    ):  # saving full predictions as probability output from the classifier
+                        logger.debug(f"Saving predicted matrix and embedding - {group}")
+                        y_pred_proba = pd.DataFrame(
+                            np.asarray(clas),
+                            index=adata_list["full"].obs_names,
+                            columns=self.dataset.ohe_celltype.categories_[0],
+                        )
+                        y_pred_proba.to_csv(os.path.join(save_dir,"y_pred_proba_full.csv"))
+                        self.run_neptune[
+                            f"evaluation/{group}/y_pred_proba_full"
+                        ].track_files(os.path.join(save_dir,"y_pred_proba_full.csv"))
+
+                    # Create predicted cell types
+                    clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
+                    y_pred = self.dataset.ohe_celltype.inverse_transform(
+                        clas
+                    ).reshape(
+                        -1,
                     )
-                    y_pred_proba.to_csv(os.path.join(save_dir,"y_pred_proba_full.csv"))
-                    self.run_neptune[
-                        f"evaluation/{group}/y_pred_proba_full"
-                    ].track_files(os.path.join(save_dir,"y_pred_proba_full.csv"))
+                    y_true = adata_list[group].obs[f"true_{self.class_key}"]
+                    batches = np.asarray(
+                        batch_list[group].argmax(axis=1)
+                    ).reshape(
+                        -1,
+                    )
+                    split = adata_list[group].obs["train_split"]
 
-                # Create predicted cell types
-                clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
-                y_pred = self.dataset.ohe_celltype.inverse_transform(
-                    clas
-                ).reshape(
-                    -1,
-                )
-                y_true = adata_list[group].obs[f"true_{self.class_key}"]
-                batches = np.asarray(
-                    batch_list[group].argmax(axis=1)
-                ).reshape(
-                    -1,
-                )
-                split = adata_list[group].obs["train_split"]
+                    # Saving confusion matrices
+                    metrics.metric_confusion_matrix(self, y_pred, y_true, group, save_dir)
 
-                # Saving confusion matrices
-                metrics.metric_confusion_matrix(self, y_pred, y_true, group, save_dir)
+                    # Computing batch mixing metrics
+                    metrics.metric_batch_mixing(self, batch_list, group, enc, batches)
 
-                # Computing batch mixing metrics
-                metrics.metric_batch_mixing(self, batch_list, group, enc, batches)
+                    # Save classification metrics
+                    metrics.metric_classification(self, y_pred, y_true, group, sizes)
 
-                # Save classification metrics
-                metrics.metric_classification(self, y_pred, y_true, group, sizes)
+                    # save clustering metrics
+                    metrics.metric_clustering(self, y_pred, group, enc)
 
-                # save clustering metrics
-                metrics.metric_clustering(self, y_pred, group, enc)
-
-                logger.debug(f"Save all matrices and figures - {group}")
-                if group == "full":
-                    metrics.save_results(self, y_pred, y_true, adata_list, group, save_dir, split, enc)
+                    logger.debug(f"Save all matrices and figures - {group}")
+                    if group == "full":
+                        metrics.save_results(self, y_pred, y_true, adata_list, group, save_dir, split, enc)
 
         if self.opt_metric:
             logger.debug(f"opt_metric {self.opt_metric}")

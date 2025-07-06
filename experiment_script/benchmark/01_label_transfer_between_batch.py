@@ -6,6 +6,11 @@ import neptune
 import logging
 import os
 
+import tensorflow as tf
+print(tf.config.list_physical_devices('GPU'))
+import torch
+torch.set_float32_matmul_precision('medium') # Or 'high' if you're comfortable with more aggressive precision trade-offs
+
 #WD_PATH = '/dhome/acollin/scPermut/'
 #sys.path.append(WD_PATH)
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
@@ -26,8 +31,8 @@ except ImportError:
 
 logger = logging.getLogger("Sc-Musketeers")
 
-model_list_cpu = ['scmap_cells','scmap_cluster', 'pca_svm', 'pca_knn']#,'harmony_svm','uce']
-model_list_gpu = ['scanvi', 'celltypist',]
+model_list_cpu = ['pca_knn', 'pca_svm']#,'harmony_svm','uce','scmap_cells','scmap_cluster',]
+model_list_gpu = ['celltypist'] #'scanvi'
 
 def run_benchmark():
     parser = argparse.ArgumentParser()
@@ -43,7 +48,7 @@ def run_benchmark():
     parser.add_argument('--normalize_size_factors', type=str2bool, nargs='?',const=True, default=True, help ='Weither to normalize dataset or not')
     parser.add_argument('--scale_input', type=str2bool, nargs='?',const=False, default=False, help ='Weither to scale input the count values')
     parser.add_argument('--logtrans_input', type=str2bool, nargs='?',const=True, default=True, help ='Weither to log transform count values')
-    parser.add_argument('--use_hvg', type=int, nargs='?', const=3000, default=3000, help = "Number of hvg to use. If no tag, don't use hvg.")
+    parser.add_argument('--use_hvg', type=int, nargs='?', const=3000, default=0, help = "Number of hvg to use. If no tag, don't use hvg.")
 
     parser.add_argument('--test_split_key', type = str, default = 'TRAIN_TEST_split', help ='key of obs containing the test split')
     parser.add_argument('--mode', type = str, default = 'entire_condition', help ='Train test split mode to be used by Dataset.train_split')
@@ -60,6 +65,7 @@ def run_benchmark():
     parser.add_argument('--log_neptune', type=str2bool, nargs='?',const=True, default=True , help ='')
     parser.add_argument('--neptune_name', type=str, nargs='?', default="scmusk-review" , help ='')
     parser.add_argument('--gpu_models', type=str2bool, nargs='?',const=False, default=True , help ='')
+    parser.add_argument('--resume', type=str2bool, nargs='?',const=False, default=False , help ='')
 
     working_dir = "/data/analysis/data_becavin/scMusketeers-data"
     #working_dir = '/workspace/cell/scMusketeers'
@@ -149,6 +155,7 @@ def run_benchmark():
             
             logger.info(f"Loop on the models {model_list}")
             for model in model_list:
+                logger.info(f"Running model: {model}")
                 checkpoint={'parameters/dataset_name': experiment.dataset_name, 'parameters/task': 'task_1', 'parameters/use_hvg': experiment.use_hvg,
                     'parameters/model': model, 'parameters/test_fold_nb':i,'parameters/val_fold_nb':j}
                 logger.debug("Compare checkpoint and Neptune dataframe")
@@ -164,14 +171,17 @@ def run_benchmark():
                     .eq(common_values)
                     .all(axis=1)
                 ]
-                
-                if result.empty:
+                logger.debug(f"Result {result}")
+
+                logger.debug(f"Resume {run_file.resume}")
+                if result.empty or run_file.resume == False:
                     logger.debug(f'Running model - {model}')
                     logger.debug(f"Checkpoint: {checkpoint}")
                     start_neptune_log(experiment)
                     trial_name = f"Task1_{model}_{run_file.dataset_name}_test_{i}_val_{j}"
                     logger.debug(f" -- {trial_name} -- ")
-                    add_custom_log(experiment,"task", trial_name)
+                    add_custom_log(experiment,"task", "task1")
+                    add_custom_log(experiment,"trial_name", trial_name)
                     add_custom_log(experiment,'test_fold_nb',i)
                     add_custom_log(experiment,'val_fold_nb',j)
                     add_custom_log(experiment,'test_obs',test_obs)

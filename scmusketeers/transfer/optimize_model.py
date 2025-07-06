@@ -298,7 +298,7 @@ class Workflow:
         self.num_batches = len(np.unique(self.dataset.batch))
 
         # Setup model layers param
-        logger.debug("Setup model settings")
+        logger.info("Setup model settings")
         if self.layer1:
             self.ae_param.ae_hidden_size = [
                 self.layer1,
@@ -355,16 +355,16 @@ class Workflow:
             dann_output_activation=self.dann_param.dann_output_activation,
         )
 
-        logger.debug("Setup optimizer")
+        logger.info("Setup optimizer")
         self.optimizer = self.get_optimizer(
             self.learning_rate, self.weight_decay, self.optimizer_type
         )
-        logger.debug("Setup losses")
+        logger.info("Setup losses")
         self.rec_loss_fn, self.clas_loss_fn, self.dann_loss_fn = (
             self.get_losses(y_list)
         )  # redundant
         
-        logger.debug("Setup training scheme")
+        logger.info("Setup training scheme")
         training_scheme = get_training_scheme(self.run_file.training_scheme, self.run_file)
         
         # Training
@@ -461,7 +461,7 @@ class Workflow:
         optimizer = self.get_optimizer(
             self.learning_rate, self.weight_decay, self.optimizer_type
         )  # resetting optimizer state when switching strategy
-        logger.debug(
+        logger.info(
             f"##-- {strategy.upper()} - Step {scheme_index}, running {strategy} strategy with permutation = {use_perm} for {n_epochs} epochs"
         )
         time_in = time.time()
@@ -597,11 +597,11 @@ class Workflow:
             layers_to_freeze = freeze.freeze_block(self.dann_ae, "freeze_dec")
             freeze.freeze_layers(layers_to_freeze)
 
-        logger.debug(f"Use permutation strategy? use_perm = {use_perm}")
+        logger.info(f"Use permutation strategy? use_perm = {use_perm}")
 
         for epoch in range(1, n_epochs + 1):
             running_epoch += 1
-            logger.debug(
+            logger.info(
                 f"Epoch {running_epoch}/{total_epochs}, Current strat Epoch {epoch}/{n_epochs}"
             )
             history, _, _, _, _ = self.training_loop(
@@ -652,14 +652,14 @@ class Workflow:
                         wait = 0
                         best_model = self.dann_ae.get_weights()
                 if wait >= patience:
-                    logger.debug(
+                    logger.info(
                         f"Early stopping at epoch {best_epoch}, restoring model parameters from this epoch"
                     )
                     self.dann_ae.set_weights(best_model)
                     break
 
         time_out = time.time()
-        logger.debug(f"Strategy {strategy} duration : {time_out - time_in} s")
+        logger.info(f"Strategy {strategy} duration : {time_out - time_in} s")
         return running_epoch
 
 
