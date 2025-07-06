@@ -283,9 +283,8 @@ class Workflow:
 
     def make_experiment(self):
         logger.info("##-- Create scmusketeers model and the train/test/val datasets:")
-        logger.debug("hyperparameters.make_experiment()")
-
-        logger.debug("Setup X,Y")
+        
+        logger.info("Setup X,Y")
         adata_list = {
             "full": self.dataset.adata,
             "train": self.dataset.adata_train,
@@ -329,7 +328,7 @@ class Workflow:
         }
 
         # Create pesudo labels
-        logger.debug("Create pseudo-labels pseudo_y_list")
+        logger.info("Create pseudo-labels pseudo_y_list")
         knn_cl = KNeighborsClassifier(n_neighbors=5)
         knn_cl.fit(X_pca_list["train"], y_nooh_list["train"])
 
@@ -372,7 +371,7 @@ class Workflow:
         self.num_batches = len(np.unique(self.dataset.batch))
 
         # Setup model layers param
-        logger.debug("Setup model settings")
+        logger.info("Setup model settings")
         if self.layer1:
             self.ae_param.ae_hidden_size = [
                 self.layer1,
@@ -429,16 +428,16 @@ class Workflow:
             dann_output_activation=self.dann_param.dann_output_activation,
         )
 
-        logger.debug("Setup optimizer")
+        logger.info("Setup optimizer")
         self.optimizer = self.get_optimizer(
             self.learning_rate, self.weight_decay, self.optimizer_type
         )
-        logger.debug("Setup losses")
+        logger.info("Setup losses")
         self.rec_loss_fn, self.clas_loss_fn, self.dann_loss_fn = (
             self.get_losses(y_list)
         )  # redundant
         
-        logger.debug("Setup training scheme")
+        logger.info("Setup training scheme")
         training_scheme = get_training_scheme(self.training_scheme, self.run_file)
         
         # Training
@@ -545,16 +544,68 @@ class Workflow:
                         metrics.save_results(self, y_pred, y_true, adata_list, group, save_dir, split, enc)
 
         if self.opt_metric:
-            logger.debug(f"opt_metric {self.opt_metric}")
             split, metric = self.opt_metric.split("-")
-            logger.debug("get optmetric")
             self.run_neptune.wait()
-            logger.debug("get optmetric 2")
             opt_metric = self.run_neptune[f"evaluation/{split}/{metric}"].fetch()
-            logger.debug(f"optimal metric:{opt_metric}")
+            logger.info(f"optimal metric:{opt_metric}")
         else:
             opt_metric = None
         return opt_metric
+    
+    def generate_pseudolabels_batched(self, adata, batch_size=None):
+        """
+        Generate pseudolabels for the full dataset using batch processing to avoid memory issues.
+        
+        Args:
+            adata: AnnData object containing the full dataset
+            batch_size: Batch size for processing. If None, uses self.batch_size
+        
+        Returns:
+            numpy array of pseudolabels (one-hot encoded)
+        """
+        if batch_size is None:
+            batch_size = self.batch_size
+        
+        n_obs = adata.n_obs
+        steps = n_obs // batch_size + (1 if n_obs % batch_size > 0 else 0)
+        
+        all_predictions = []
+        
+        logger.debug(f"Generating pseudolabels for {n_obs} cells in {steps} batches")
+        
+        for i in range(steps):
+            start_idx = i * batch_size
+            end_idx = min((i + 1) * batch_size, n_obs)
+            
+            # Create batch input
+            batch_adata = adata[start_idx:end_idx].copy()
+            
+            # Convert to input format
+            input_tensor = {
+                k: tf.convert_to_tensor(v)
+                for k, v in scanpy_to_input(batch_adata, ["size_factors"]).items()
+            }
+            
+            # Model prediction for this batch
+            with tf.device('/CPU:0'):  # Use CPU to save GPU memory
+                enc, clas, dann, rec = self.dann_ae(input_tensor, training=False).values()
+            
+            # Store predictions
+            all_predictions.append(clas.numpy())
+            
+            # Clean up tensors to free memory
+            del input_tensor, enc, clas, dann, rec
+            tf.keras.backend.clear_session()
+            gc.collect()
+        
+        # Concatenate all predictions
+        full_predictions = np.concatenate(all_predictions, axis=0)
+        
+        # Convert to one-hot encoded pseudolabels
+        pseudo_labels = np.eye(full_predictions.shape[1])[np.argmax(full_predictions, axis=1)]
+        
+        logger.debug(f"Generated pseudolabels shape: {pseudo_labels.shape}")
+        return pseudo_labels
         
 
     def train_scheme(self, training_scheme, verbose=True, **loop_params):
@@ -602,89 +653,85 @@ class Workflow:
         optimizer = self.get_optimizer(
             self.learning_rate, self.weight_decay, self.optimizer_type
         )  # resetting optimizer state when switching strategy
-        logger.debug(
+        logger.info(
             f"##-- {strategy.upper()} - Step {scheme_index}, running {strategy} strategy with permutation = {use_perm} for {n_epochs} epochs"
         )
         time_in = time.time()
         scheme_index += 1
 
-            # Early stopping for those strategies only
+        # Early stopping setup 
         if strategy in [
             "full_model",
-            "classifier_branch",
+            "classifier_branch", 
             "permutation_only",
             "encoder_classifier",
         ]:
             wait = 0
             best_epoch = 0
-            patience = 20
+            patience = 50
             min_delta = 0
             if strategy == "permutation_only":
                 monitored = "rec_loss"
-                es_best = np.inf  # initialize early_stopping
+                es_best = np.inf
             else:
                 split, metric = self.opt_metric.split("-")
                 monitored = metric
                 es_best = -np.inf
+
         memory = {}
+
+        # Early stopping for those strategies only
         if strategy in [
             "warmup_dann_pseudolabels",
             "full_model_pseudolabels",
-        ]:  # We use the pseudolabels computed with the model
-            input_tensor = {
-                k: tf.convert_to_tensor(v)
-                for k, v in scanpy_to_input(
-                    loop_params["adata_list"]["full"], ["size_factors"]
-                ).items()
-            }
-            enc, clas, dann, rec = self.dann_ae(
-                input_tensor, training=False
-            ).values()  # Model predict
-            pseudo_full = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
-            pseudo_full[
-                loop_params["adata_list"]["full"].obs["train_split"]
-                == "train",
-                :,
-            ] = loop_params["pseudo_y_list"][
-                "train"
-            ]  # the true labels
+        ]:
+            logger.info("Generating pseudolabels using batch processing...")
+            
+            # Generate pseudolabels in batches
+            pseudo_full = self.generate_pseudolabels_batched(
+                loop_params["adata_list"]["full"], 
+                batch_size=self.batch_size
+            )
+            
+            # Replace train predictions with true labels
+            train_mask = loop_params["adata_list"]["full"].obs["train_split"] == "train"
+            pseudo_full[train_mask, :] = loop_params["pseudo_y_list"]["train"]
+            
+            # Update loop_params
             loop_params["pseudo_y_list"]["full"] = pseudo_full
+            
+            # Extract pseudolabels for val and test groups
             for group in ["val", "test"]:
-                loop_params["pseudo_y_list"][group] = pseudo_full[
-                    loop_params["adata_list"]["full"].obs["train_split"]
-                    == group,
-                    :,
-                ]  # the predicted labels in test and val
+                group_mask = loop_params["adata_list"]["full"].obs["train_split"] == group
+                loop_params["pseudo_y_list"][group] = pseudo_full[group_mask, :]
+                
+            logger.info("Pseudolabel generation completed")
+            
         elif strategy in ["warmup_dann_semisup"]:
             memory = {}
             memory["pseudo_full"] = loop_params["pseudo_y_list"]["full"]
+            
+            # Generate pseudolabels in batches first
+            pseudo_full = self.generate_pseudolabels_batched(
+                loop_params["adata_list"]["full"], 
+                batch_size=self.batch_size
+            )
+            
+            # Set val and test to unlabeled_category
             for group in ["val", "test"]:
-                loop_params["pseudo_y_list"]["full"][
-                    loop_params["adata_list"]["full"].obs["train_split"]
-                    == group,
-                    :,
-                ] = (
-                    self.run_file.unlabeled_category
-                )  # set val and test to self.unlabeled_category
-                loop_params["pseudo_y_list"][group] = pseudo_full[
-                    loop_params["adata_list"]["full"].obs["train_split"]
-                    == group,
-                    :,
-                ]
+                group_mask = loop_params["adata_list"]["full"].obs["train_split"] == group
+                loop_params["pseudo_y_list"]["full"][group_mask, :] = self.run_file.unlabeled_category
+                loop_params["pseudo_y_list"][group] = pseudo_full[group_mask, :]
+                
         else:
-            if (
-                memory
-            ):  # In case we are no longer using semi sup config, we reset to the previous known pseudolabels
+            if memory:
+                # Reset to previous known pseudolabels
                 for group in ["val", "test", "full"]:
                     loop_params["pseudo_y_list"][group] = memory[group]
                 memory = {}
 
-        # trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
-        # logger.debug(f"Before unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
-        # for i, var in enumerate(trainable_unfrozen_variables):
-        #     logger.debug(f"  Before Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
-        
-        freeze.unfreeze_all(self.dann_ae)  # resetting freeze state
+        # Rest of the function remains the same...
+        freeze.unfreeze_all(self.dann_ae)
         
         # trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
         # logger.debug(f"After unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
@@ -738,11 +785,11 @@ class Workflow:
             layers_to_freeze = freeze.freeze_block(self.dann_ae, "freeze_dec")
             freeze.freeze_layers(layers_to_freeze)
 
-        logger.debug(f"Use permutation strategy? use_perm = {use_perm}")
+        logger.info(f"Use permutation strategy? use_perm = {use_perm}")
 
         for epoch in range(1, n_epochs + 1):
             running_epoch += 1
-            logger.debug(
+            logger.info(
                 f"Epoch {running_epoch}/{total_epochs}, Current strat Epoch {epoch}/{n_epochs}"
             )
             history = self.training_loop(
@@ -793,14 +840,14 @@ class Workflow:
                         wait = 0
                         best_model = self.dann_ae.get_weights()
                 if wait >= patience:
-                    logger.debug(
+                    logger.info(
                         f"Early stopping at epoch {best_epoch}, restoring model parameters from this epoch"
                     )
                     self.dann_ae.set_weights(best_model)
                     break
 
         time_out = time.time()
-        logger.debug(f"Strategy {strategy} duration : {time_out - time_in} s")
+        logger.info(f"Strategy {strategy} duration : {time_out - time_in} s")
 
         tf.keras.backend.clear_session()
         gc.collect()
@@ -913,7 +960,7 @@ class Workflow:
         
         with tf.GradientTape() as tape:
             # Forward pass
-            logger.debug("Convert data to tensor")
+            # logger.debug("Convert data to tensor")
             input_batch_new = {
                 k: tf.convert_to_tensor(v.toarray() if isinstance(v, scipy.sparse.spmatrix) else v, dtype=tf.float32)
                 for k, v in input_batch.items()
@@ -922,7 +969,7 @@ class Workflow:
             enc, clas, dann, rec = self.dann_ae(input_batch, training=True).values()
 
             # Computing loss
-            logger.debug("Calculate losses")
+            # logger.debug("Calculate losses")
             clas_loss = tf.reduce_mean(clas_loss_fn(clas_batch, clas))
             dann_loss = tf.reduce_mean(dann_loss_fn(dann_batch, dann))
             rec_loss = tf.reduce_mean(rec_loss_fn(rec_batch, rec))
@@ -978,7 +1025,7 @@ class Workflow:
         
         # Backpropagation
         # --- Main Gradients for the Total Loss ---
-        logger.debug("Decipher gradients")
+        # logger.debug("Decipher gradients")
         gradients = tape.gradient(loss, self.dann_ae.trainable_variables)
 
         # logger.debug("\n--- Gradients from TOTAL LOSS ---")
@@ -987,7 +1034,7 @@ class Workflow:
         
         del tape # Don't forget to delete persistent tape
     
-        logger.debug("Back propagation")
+        # logger.debug("Back propagation")
         optimizer.apply_gradients(zip(gradients, self.dann_ae.trainable_variables))
 
         self.mean_loss_fn(loss.__float__())

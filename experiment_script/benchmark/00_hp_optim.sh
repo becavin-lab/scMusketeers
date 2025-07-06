@@ -13,7 +13,7 @@ batch_key="manip"
 task="hp_tscheme"
 
 ### Sc-Musketeers directory parameters
-neptune_name="scmusk-review"
+neptune_name="scmusk-scheme"
 #working_dir="/workspace/cell/scMusketeers"
 #working_dir="/data/analysis/data_becavin/scMusketeers"
 working_dir="/data/analysis/data_becavin/scMusketeers-data"
@@ -73,14 +73,14 @@ keep_obs=$(echo "$keep_obs" | tr -d '[:space:]' | tr -d '"' | tr ',' ' ')
 echo "|--- BASH  train_obs=$keep_obs"
 
 ### Run scMusketeers hyperparameters optimization
-#warmup_epoch=100   # default 100, help - Number of epoch to warmup DANN
-#fullmodel_epoch=100   # default = 100, help = Number of epoch to train full model
-#permonly_epoch=100   # default = 100, help = Number of epoch to train in permutation only mode
-#classifier_epoch=50   # default = 50, help = Number of epoch to train te classifier only
-warmup_epoch=1   # default 100, help - Number of epoch to warmup DANN
-fullmodel_epoch=1   # default = 100, help = Number of epoch to train full model
-permonly_epoch=1   # default = 100, help = Number of epoch to train in permutation only mode
-classifier_epoch=1   # default = 50, help = Number of epoch to train te classifier only
+warmup_epoch=50   # default 100, help - Number of epoch to warmup DANN
+fullmodel_epoch=100   # default = 100, help = Number of epoch to train full model
+permonly_epoch=100   # default = 100, help = Number of epoch to train in permutation only mode
+classifier_epoch=100   # default = 50, help = Number of epoch to train te classifier only
+#warmup_epoch=1   # default 100, help - Number of epoch to warmup DANN
+#fullmodel_epoch=1   # default = 100, help = Number of epoch to train full model
+#permonly_epoch=1   # default = 100, help = Number of epoch to train in permutation only mode
+#classifier_epoch=1   # default = 50, help = Number of epoch to train te classifier only
 
 
 

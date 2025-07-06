@@ -84,7 +84,7 @@ def run_benchmark():
     logger.info(f'working directory : {working_dir}')
 
     project = neptune.init_project(
-            project="becavin-lab/scmusk-review",
+            project="becavin-lab/scmusk-tasks",
             api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiI1Zjg5NGJkNC00ZmRkLTQ2NjctODhmYy0zZDAzYzM5ZTgxOTAifQ==",
             mode="read-only",
             )# For checkpoint

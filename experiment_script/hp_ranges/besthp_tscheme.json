@@ -1,1 +1,2 @@
-[{"name": "training_scheme", "type": "choice", "values": ["training_scheme_debug_1"]}]
+[{"name": "training_scheme", "type": "choice", "values": ["training_scheme_6","training_scheme_8","training_scheme_7","training_scheme_23","training_scheme_24",
+"training_scheme_19","training_scheme_5","training_scheme_14","training_scheme_13","training_scheme_11"]}]
