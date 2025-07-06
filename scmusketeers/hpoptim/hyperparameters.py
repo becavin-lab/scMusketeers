@@ -913,18 +913,16 @@ class Workflow:
         
         with tf.GradientTape() as tape:
             # Forward pass
-            input_batch_new = dict()
-            for k, v in input_batch.items():
-                # If the input is the main expression matrix, convert to dense tensor
-                if isinstance(v, scipy.sparse.spmatrix):
-                    # This is the only place it becomes dense, and only for one batch
-                    input_batch_new[k] = tf.convert_to_tensor(v.toarray()) 
-                else:
-                    input_batch_new[k] = tf.convert_to_tensor(v)
-            input_batch = input_batch_new
+            logger.debug("Convert data to tensor")
+            input_batch_new = {
+                k: tf.convert_to_tensor(v.toarray() if isinstance(v, scipy.sparse.spmatrix) else v, dtype=tf.float32)
+                for k, v in input_batch.items()
+            }
+
             enc, clas, dann, rec = self.dann_ae(input_batch, training=True).values()
 
             # Computing loss
+            logger.debug("Calculate losses")
             clas_loss = tf.reduce_mean(clas_loss_fn(clas_batch, clas))
             dann_loss = tf.reduce_mean(dann_loss_fn(dann_batch, dann))
             rec_loss = tf.reduce_mean(rec_loss_fn(rec_batch, rec))
@@ -980,6 +978,7 @@ class Workflow:
         
         # Backpropagation
         # --- Main Gradients for the Total Loss ---
+        logger.debug("Decipher gradients")
         gradients = tape.gradient(loss, self.dann_ae.trainable_variables)
 
         # logger.debug("\n--- Gradients from TOTAL LOSS ---")
@@ -988,7 +987,7 @@ class Workflow:
         
         del tape # Don't forget to delete persistent tape
     
-
+        logger.debug("Back propagation")
         optimizer.apply_gradients(zip(gradients, self.dann_ae.trainable_variables))
 
         self.mean_loss_fn(loss.__float__())
