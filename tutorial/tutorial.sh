@@ -1,8 +1,8 @@
 # Get GPU
 # srun -A cell -p gpu -t 10:00:00 --gres=gpu:1 --pty bash -i
 
-outdir="/workspace/cell/scMusketeers"
-#outdir="/data/analysis/data_becavin/scMusketeers-data"
+#outdir="/workspace/cell/scMusketeers"
+outdir="/data/analysis/data_becavin/scMusketeers-data"
 dataset=${outdir}"/data/Deprez-Lung-unknown-0.2.h5ad"
 outname=Deprez-Lung-unknown-0.2-pred
 classkey="celltype"
@@ -17,19 +17,19 @@ ref_dataset=data/Deprez-2020-ref-batch-0.2.h5ad
 query_dataset=data/Deprez-2020-query-batch-0.2.h5ad
 outname_query="Deprez-2020-query-0.2-pred"
 
-warmup_epoch=1   # default 100, help - Number of epoch to warmup DANN
-fullmodel_epoch=1   # default = 100, help = Number of epoch to train full model
-permonly_epoch=100 # default = 100, help = Number of epoch to train in permutation only mode
-classifier_epoch=1   # default = 50, help = Number of epoch to train te classifier only
+warmup_epoch=50   # default 100, help - Number of epoch to warmup DANN
+fullmodel_epoch=50   # default = 100, help = Number of epoch to train full model
+permonly_epoch=50 # default = 100, help = Number of epoch to train in permutation only mode
+classifier_epoch=50   # default = 50, help = Number of epoch to train te classifier only
 
-log_neptune=0
+log_neptune=False
 neptune_name="sc-musketeers"
 
 ##### Sampling_percentage 20%
 # Transfer Cell annotation to all Unknown cells
 #sc-musketeers transfer ${dataset} --class_key=celltype --unlabeled_category="Unknown" --batch_key=manip --out_dir=${outdir} --out_name=${outname}
-# sc-musketeers transfer ${dataset} --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
-python scmusketeers/__main__.py transfer ${dataset} --debug --training_scheme="training_scheme_8" --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
+sc-musketeers transfer ${dataset} --debug --training_scheme="training_scheme_13" --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
+#python scmusketeers/__main__.py transfer ${dataset} --debug --training_scheme="training_scheme_13" --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
 
 # python scmusketeers/__main__.py transfer ${dataset} --debug --training_scheme="training_scheme_8" --log_neptune=${log_neptune} --neptune_name=${neptune_name} --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
 # python sc-musketeers/__main__.py transfer ${dataset} --class_key=celltype --unlabeled_category="Unknown" --batch_key=manip --out_dir=${outdir} --out_name=${outname}

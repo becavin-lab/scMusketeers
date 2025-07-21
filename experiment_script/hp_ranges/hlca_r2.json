@@ -11,3 +11,4 @@
           {"name": "bottleneck", "type": "range", "bounds": [45, 80], "value_type": "int"},
            {"name": "layer1", "type": "range", "bounds": [540, 1200], "value_type": "int"},
             {"name": "layer2", "type": "range", "bounds": [150, 500], "value_type": "int"}]
+

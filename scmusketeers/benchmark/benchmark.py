@@ -159,7 +159,15 @@ class Workflow:
         adata = load_dataset(self.run_file.ref_path, query_path="", class_key="", unlabeled_category="")
 
         if "celltypist" in model_list:
+            logger.debug(f"Test celltypist gene overlap")
+            import celltypist
+            celltypist.models.download_models(model = 'Human_Lung_Atlas.pkl')
+            model = celltypist.models.Model.load(model = 'Human_Lung_Atlas.pkl')
+            common_genes = set(adata.var_names).intersection(model.features)
+            logger.debug(f"Number of overlapping genes: {len(common_genes)}")
             adata = get_gene_symbol_celltypist(adata)
+            common_genes = set(adata.var_names).intersection(model.features)
+            logger.debug(f"Number of overlapping genes: {len(common_genes)}")
         
         logger.debug("Create Dataset")
         print(adata.var['gene_ids'])

@@ -2,14 +2,22 @@
 #
 #SBATCH --account=cell     # The account name for the job.
 
-#dataset_name=$1
-#class_key=$2
-#batch_key=$3
-#task=$4
+dataset_name=$1
+class_key=$2
+batch_key=$3
+task=$4
+neptune_name=$5
+hparam_path=$6
+total_trial=$7
+
 ### Tests
-dataset_name="ajrccm_by_batch"
-class_key="celltype"
-batch_key="manip"
+#dataset_name="ajrccm_by_batch"
+#class_key="celltype"
+#batch_key="manip"
+
+#dataset_name="hlca_par_dataset_harmonized"
+#class_key="ann_finest_level"
+#batch_key="dataset"
 
 ### Sc-Musketeers directory parameters
 #working_dir="/workspace/cell/scMusketeers"
@@ -22,12 +30,12 @@ scmusk_path="/data/analysis/data_becavin/scMusketeers"
 out_dir=${working_dir}"/results"
 python_path=${scmusk_path}"/scmusketeers/__main__.py"
 data_path=${working_dir}"/data"
+hparam_path=${scmusk_path}"/experiment_script/hp_ranges/"${hparam_path}
 
 ### task specific
 # For hyperparameters optimiziation
-task="hp_hpparam"
-neptune_name="scmusk-hp"
-hparam_path=${scmusk_path}"/experiment_script/hp_ranges/generic_r1.json"
+#task="hp_hpparam"
+#neptune_name="scmusk-hp"
 
 # For training_scheme comparison
 #task="hp_tscheme"
@@ -89,9 +97,10 @@ classifier_epoch=100   # default = 50, help = Number of epoch to train te classi
 #permonly_epoch=1   # default = 100, help = Number of epoch to train in permutation only mode
 #classifier_epoch=1   # default = 50, help = Number of epoch to train te classifier only
 
+training_scheme="training_scheme_13"
 
-
-python ${python_path} hp_optim ${h5ad_path} --debug --training_scheme="training_scheme_8" --task ${task} --log_neptune "True" --neptune_name ${neptune_name} --out_dir ${out_dir} \
+python ${python_path} hp_optim ${h5ad_path} --debug --training_scheme=${training_scheme} --task ${task} --log_neptune "True" \
+--neptune_name ${neptune_name} --out_dir ${out_dir} --total_trial ${total_trial} \
 --hparam_path ${hparam_path} --dataset_name ${dataset_name} \
 --class_key $class_key --batch_key $batch_key --test_obs $test_obs \
 --mode entire_condition --obs_key $batch_key --keep_obs $keep_obs \

@@ -19,7 +19,7 @@ import warnings
 import gc
 from neptune.utils import stringify_unsupported
 import keras
-from tensorflow.keras.mixed_precision import set_global_policy
+#from tensorflow.keras.mixed_precision import set_global_policy
 
 from sklearn.utils import compute_class_weight
 from sklearn.neighbors import KNeighborsClassifier
@@ -669,9 +669,10 @@ class Workflow:
             wait = 0
             best_epoch = 0
             patience = 30
+            warmup_epoch = 10 
             min_delta = 0
             
-            min_epochs = min(10, n_epochs)
+            min_epochs = min(warmup_epoch, n_epochs)
             logger.debug(f"Early stopping active with a warm-up of {min_epochs} epochs.")
 
 
@@ -735,8 +736,7 @@ class Workflow:
                     loop_params["pseudo_y_list"][group] = memory[group]
                 memory = {}
 
-        # Rest of the function remains the same...
-        freeze.unfreeze_all(self.dann_ae)
+        freeze.unfreeze_all(self.dann_ae)  # resetting freeze state
         
         # trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
         # logger.debug(f"After unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
@@ -840,7 +840,7 @@ class Workflow:
                     if monitored_value > es_best + min_delta:
                         has_improved = True
 
-                if has_improved:
+                if has_improved and epoch > min_epochs:
                     logger.debug(f"New best score at epoch {epoch}: {monitored_value:.4f}")
                     best_epoch = epoch
                     es_best = monitored_value
@@ -863,7 +863,7 @@ class Workflow:
 
         time_out = time.time()
         logger.info(f"Strategy {strategy} duration : {time_out - time_in} s")
-
+        logger.info(f"Final score for {monitored} : {monitored_value:.4f} at {strategy}")          
         tf.keras.backend.clear_session()
         gc.collect()
 
@@ -1140,7 +1140,6 @@ class Workflow:
             ).numpy()
             history[group]["dann_loss"] += [dann_loss]
             rec_loss = np.mean(batch_rec_losses)
-
             history[group]["rec_loss"] += [rec_loss]
             history[group]["total_loss"] += [
                 self.clas_w * clas_loss

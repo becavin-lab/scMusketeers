@@ -147,6 +147,9 @@ def create_argparser():
         "--working_dir", type=str, nargs="?", default=None, help=""
     )
     hparam_group.add_argument(
+        "--total_trial", type=int, nargs="?", default=100, help="Number of trials for the hyperparameter optimization"
+    )
+    hparam_group.add_argument(
         "--dataset_name", type=str, nargs="?", default=None, help=""
     )
     hparam_group.add_argument(

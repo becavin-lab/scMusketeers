@@ -856,29 +856,33 @@ def process_dataset(workflow):
 def get_gene_symbol_celltypist(adata):
         
     logger.debug(f"adatavar {adata.var.index}")
+
+    
     # 1. Get the list of Ensembl IDs from your adata object
     #    We remove the version number (e.g., .1) if it exists
-    ensembl_ids = adata.var.index.str.split('.').str[0].tolist()
+    gene_ids = adata.var.index.tolist()
 
     # 2. Query MyGene.info
     mg = mygene.MyGeneInfo()
-    gene_info = mg.querymany(ensembl_ids, 
-                            scopes='ensembl.gene', 
+    results = mg.querymany(gene_ids, 
+                            scopes='symbol', 
                             fields='symbol', 
                             species='human', # Or 'mouse', etc.
                             as_dataframe=True)
 
-    # 3. Add the gene symbols to your adata.var DataFrame
-    #    We use .loc to ensure we are modifying the original adata.var
-    adata.var.loc[:, 'symbol'] = gene_info['symbol']
+    # Build mapping dictionary
+    symbol_map = {res['query']: res['symbol'] for res in results if 'symbol' in res}
 
-    # 4. Handle genes where no symbol was found (important!)
-    #    Fill missing symbols with the original Ensembl ID
-    adata.var['symbol'].fillna(adata.var.index, inplace=True)
+    # Replace index with mapped symbols
+    adata.var['gene_symbols'] = adata.var.index.map(symbol_map)
+    adata.var_names = adata.var['gene_symbols']
 
-    # 5. Set the new gene symbols as the main index
-    adata.var.set_index('symbol', inplace=True)
-    adata.var_names_make_unique()
+    # Clean duplicates and missing entries
+    adata = adata[:, adata.var_names.notnull()]
+    adata = adata[:, ~adata.var_names.duplicated()].copy()
+
+    # Convert to uppercase
+    adata.var_names = adata.var_names.str.upper()
     logger.debug(f"adatavar {adata.var}")
     return adata
 

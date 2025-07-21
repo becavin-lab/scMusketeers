@@ -102,16 +102,13 @@ def run_benchmark():
 
     logger.info("Setup Workflow")
     experiment = Workflow(run_file=run_file, working_dir=working_dir)
-
     experiment.process_dataset(model_list)
-
     experiment.mode = "entire_condition"
-
     random_seed = 2
 
     logger.info("Get all datasets settings (train/test/split)")
-    TOTAL_SPLIT_TEST = 1
-    TOTAL_SPLIT_VAL = 1
+    TOTAL_SPLIT_TEST = 3
+    TOTAL_SPLIT_VAL = 5
     
     X = experiment.dataset.adata.X
     classes = experiment.dataset.adata.obs[experiment.class_key]

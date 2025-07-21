@@ -27,7 +27,6 @@ except ImportError:
 
 JSON_PATH_DEFAULT = "experiment_script/hp_ranges/"
 
-TOTAL_TRIAL = 100
 RANDOM_SEED = 40
 
 
@@ -54,7 +53,7 @@ def run_workflow(run_file):
     logger.info("#HP_optim--- Create Experiment")
     experiment = MakeExperiment(
         run_file=run_file,
-        total_trial=TOTAL_TRIAL,
+        total_trial=run_file.total_trial,
         random_seed=RANDOM_SEED
     )
 
@@ -76,18 +75,24 @@ def run_workflow(run_file):
         parameters=hparams,
         objectives={"opt_metric": ObjectiveProperties(minimize=False)},
     )
-    for i in range(TOTAL_TRIAL):
-        logger.info(f"#HP_optim--- Running trial {i}/{TOTAL_TRIAL}")
+    for i in range(run_file.total_trial):
+        logger.info(f"#HP_optim--- Running trial {i}/{run_file.total_trial}")
         parametrization, trial_index = ax_client.get_next_trial()
         # Local evaluation here can be replaced with deployment to external system.
         ax_client.complete_trial(
             trial_index=trial_index,
             raw_data=experiment.train(parametrization),
         )
+        if i%10 == 0:
+            logger.info(f"#HP_optim--- Trial {i} status")
+            best_parameters, values = ax_client.get_best_parameters()
+            logger.debug(f"Best parameters {best_parameters}")
+
+
 
     logger.info("#HP_optim--- Hyperparam optimization finished")
     best_parameters, values = ax_client.get_best_parameters()
-    best_parameters = {'use_hvg': 654, 'batch_size': 357, 'clas_w': 75.9059544539962, 'dann_w': 0.0006800634789046336, 'learning_rate': 0.007181802826807251, 'weight_decay': 3.457969993736587e-05, 'warmup_epoch': 1, 'dropout': 0.17059661448001862, 'bottleneck': 42, 'layer2': 153, 'layer1': 905}
+    # best_parameters = {'use_hvg': 654, 'batch_size': 357, 'clas_w': 75.9059544539962, 'dann_w': 0.0006800634789046336, 'learning_rate': 0.007181802826807251, 'weight_decay': 3.457969993736587e-05, 'warmup_epoch': 1, 'dropout': 0.17059661448001862, 'bottleneck': 42, 'layer2': 153, 'layer1': 905}
     logger.debug(f"Best parameters {best_parameters}")
     path_bestparam = os.path.join(run_file.out_dir,run_file.out_name+run_file.dataset_name+"_best_hp.json")
     with open(path_bestparam, 'w') as json_file:

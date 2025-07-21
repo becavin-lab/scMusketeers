@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sc-musketeers"
-version = "0.4.3"
+version = "0.4.4"
 description = "A tri-partite modular autoencoder for addressing imbalanced cell type annotation and batch effect reduction"
 license = "MIT"
 authors = ["AntoineCollin","Christophe Becavin"]
@@ -23,6 +23,7 @@ matplotlib = "^3.9.3"
 pandas = "^2.2.3"
 scikit-learn = "^1.5.2"
 seaborn = "^0.13.2"
+mygene = "^3.2.2"
 
 
 [tool.poetry.group.dev]

@@ -237,5 +237,5 @@ def get_training_scheme(training_scheme_id, run_file):
         training_scheme = [
             ("encoder_classifier", run_file.classifier_epoch, False),
         ]
-    logger.debug(f"Setting up training scheme: {training_scheme_id} - {training_scheme}")
+    logger.info(f"Setting up training scheme: {training_scheme_id} - {training_scheme}")
     return training_scheme
