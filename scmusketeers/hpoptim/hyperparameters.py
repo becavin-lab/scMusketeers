@@ -606,12 +606,11 @@ class Workflow:
         
         logger.debug(f"Generated pseudolabels shape: {pseudo_labels.shape}")
         return pseudo_labels
-        
 
     def train_scheme(self, training_scheme, verbose=True, **loop_params):
         """
-        training scheme : dictionnary explaining the succession of strategies to use as keys with the corresponding number of epochs and use_perm as values.
-                        x :  training_scheme_3 = {"warmup_dann" : (10, False), "full_model":(10, False)}
+        training scheme : dictionary explaining the succession of strategies to use as keys with the corresponding number of epochs and use_perm as values.
+                        ex :  training_scheme_3 = {"warmup_dann" : (10, False), "full_model":(10, False)}
         """
         history = {"train": {}, "val": {}}  # initialize history
         for group in history.keys():
@@ -659,60 +658,66 @@ class Workflow:
         time_in = time.time()
         scheme_index += 1
 
-        # Early stopping setup 
+        wait = 0
+        best_epoch_es = 0 # best epoch for Early Stopping
+        patience_es = 30  # Patience for Early Stopping
+        
+        lr_wait = 0       # Patience counter for LR scheduling
+        patience_lr = 5   # Number of epochs with no improvement to wait before reducing LR
+        lr_factor = 0.2   # Factor to reduce LR by (new_lr = lr * factor)
+        min_lr = 1e-6     # Minimum learning rate
+
+        min_delta = 0
+        warmup_epoch = 10 
+        min_epochs = min(warmup_epoch, n_epochs)
         if strategy in [
             "full_model",
-            "classifier_branch", 
+            "classifier_branch",
             "permutation_only",
-            "encoder_classifier",
+            "encoder_classifier"
         ]:
-            wait = 0
-            best_epoch = 0
-            patience = 30
-            warmup_epoch = 10 
-            min_delta = 0
-            
-            min_epochs = min(warmup_epoch, n_epochs)
-            logger.debug(f"Early stopping active with a warm-up of {min_epochs} epochs.")
-
+            logger.debug(f"Early stopping and LR scheduler active with a warm-up of {min_epochs} epochs.")
+            logger.debug(f"Patience for early stopping of {patience_es} epochs.")
 
             if strategy == "permutation_only":
                 monitored = "rec_loss"
                 es_best = np.inf
             else:
+                # Use the balanced accuracy for monitoring
                 split, metric = self.opt_metric.split("-")
                 monitored = metric
                 es_best = -np.inf
 
         memory = {}
 
-        # Early stopping for those strategies only
         if strategy in [
             "warmup_dann_pseudolabels",
             "full_model_pseudolabels",
-        ]:
-            logger.info("Generating pseudolabels using batch processing...")
-            
-            # Generate pseudolabels in batches
-            pseudo_full = self.generate_pseudolabels_batched(
-                loop_params["adata_list"]["full"], 
-                batch_size=self.batch_size
-            )
-            
-            # Replace train predictions with true labels
-            train_mask = loop_params["adata_list"]["full"].obs["train_split"] == "train"
-            pseudo_full[train_mask, :] = loop_params["pseudo_y_list"]["train"]
-            
-            # Update loop_params
+        ]:  # We use the pseudolabels computed with the model
+            input_tensor = {
+                k: tf.convert_to_tensor(v)
+                for k, v in scanpy_to_input(
+                    loop_params["adata_list"]["full"], ["size_factors"]
+                ).items()
+            }
+            enc, clas, dann, rec = self.dann_ae(
+                input_tensor, training=False
+            ).values()  # Model predict
+            pseudo_full = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
+            pseudo_full[
+                loop_params["adata_list"]["full"].obs["train_split"]
+                == "train",
+                :,
+            ] = loop_params["pseudo_y_list"][
+                "train"
+            ]  # the true labels
             loop_params["pseudo_y_list"]["full"] = pseudo_full
-            
-            # Extract pseudolabels for val and test groups
             for group in ["val", "test"]:
-                group_mask = loop_params["adata_list"]["full"].obs["train_split"] == group
-                loop_params["pseudo_y_list"][group] = pseudo_full[group_mask, :]
-                
-            logger.info("Pseudolabel generation completed")
-            
+                loop_params["pseudo_y_list"][group] = pseudo_full[
+                    loop_params["adata_list"]["full"].obs["train_split"]
+                    == group,
+                    :,
+                ]  # the predicted labels in test and val
         elif strategy in ["warmup_dann_semisup"]:
             memory = {}
             memory["pseudo_full"] = loop_params["pseudo_y_list"]["full"]
@@ -736,20 +741,14 @@ class Workflow:
                     loop_params["pseudo_y_list"][group] = memory[group]
                 memory = {}
 
-        freeze.unfreeze_all(self.dann_ae)  # resetting freeze state
-        
-        # trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
-        # logger.debug(f"After unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
-        # for i, var in enumerate(trainable_unfrozen_variables):
-        #     logger.debug(f"  After Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
-       
+        freeze.unfreeze_all(self.dann_ae)  # resetting freeze state       
         if strategy == "full_model":
             group = "train"
         elif strategy == "full_model_pseudolabels":
             group = "full"
         elif strategy == "encoder_classifier":
             group = "train"
-            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_classifier")  # training only
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_classifier")
             freeze.freeze_layers(layers_to_freeze)
         elif strategy in [
             "warmup_dann",
@@ -807,11 +806,11 @@ class Workflow:
             )
 
             if self.run_file.log_neptune:
-                for group in history:
-                    for par, value in history[group].items():
+                for group_log in history:
+                    for par, value in history[group_log].items():
                         if len(value) > 0:
                             self.run_neptune[
-                                f"training/{group}/{par}"
+                                f"training/{group_log}/{par}"
                             ].append(value[-1])
                         if physical_devices:
                             self.run_neptune[
@@ -826,12 +825,12 @@ class Workflow:
                 "full_model",
                 "classifier_branch",
                 "permutation_only",
-                "encoder_classifier",
+                "encoder_classifier"
             ]:
+                # SCHEDULER AND EARLY STOPPING LOGIC ---
                 monitored_value = history["val"][monitored][-1]
 
-                # ALWAYS CHECK FOR IMPROVEMENT
-                # This part runs on every epoch to ensure we capture the true best model.
+                # Check for improvement
                 has_improved = False
                 if "loss" in monitored:
                     if monitored_value < es_best - min_delta:
@@ -840,30 +839,43 @@ class Workflow:
                     if monitored_value > es_best + min_delta:
                         has_improved = True
 
-                if has_improved and epoch > min_epochs:
-                    logger.debug(f"New best score at epoch {epoch}: {monitored_value:.4f}")
-                    best_epoch = epoch
+                if has_improved:
+                    logger.debug(f"Metric {monitored} improved to {monitored_value:.4f} at epoch {epoch}.")
                     es_best = monitored_value
-                    wait = 0  # Reset patience since we found a better model
                     best_model = self.dann_ae.get_weights()
+                    best_epoch_es = epoch
+                    wait = 0      # Reset early stopping patience
+                    lr_wait = 0   # Reset LR scheduler patience
                 else:
-                    # INCREMENT WAIT COUNTER ONLY AFTER THE WARM-UP
+                    # Increment patience counters only after warmup
                     if epoch > min_epochs:
                         wait += 1
-                        # Early stopping
+                        lr_wait += 1
+
+                # Learning Rate Scheduler Check
+                if lr_wait >= patience_lr and epoch > min_epochs:
+                    current_lr = optimizer.learning_rate.numpy()
+                    if current_lr > min_lr:
+                        new_lr = current_lr * lr_factor
+                        optimizer.learning_rate.assign(new_lr)
+                        logger.info(f"Epoch {running_epoch}: {monitored} did not improve for {patience_lr} epochs. Reducing learning rate to {new_lr:.2e}.")
+                        lr_wait = 0 # Reset the LR patience
                 
-                # CHECK FOR STOPPING CONDITION ONLY AFTER THE WARM-UP
-                if epoch > min_epochs and wait >= patience:
-                    logger.info(
-                        f"Early stopping triggered at epoch {epoch}. Restoring best model from epoch {best_epoch} with score {es_best:.4f}."
-                    )
+                # Early Stopping Check
+                if wait >= patience_es and epoch > min_epochs:
+                    logger.info(f"Early stopping triggered at epoch {epoch}. Restoring best model from epoch {best_epoch_es} with score {es_best:.4f}.")
                     self.dann_ae.set_weights(best_model)
                     break  # Exit the loop for this training scheme
-
+                
 
         time_out = time.time()
         logger.info(f"Strategy {strategy} duration : {time_out - time_in} s")
-        logger.info(f"Final score for {monitored} : {monitored_value:.4f} at {strategy}")          
+        # Ensure monitored_value is defined for the log message
+        try:
+            final_score_log = f"Final score for {monitored}: {monitored_value:.4f} at {strategy}"
+        except NameError:
+            final_score_log = f"Finished strategy {strategy}."
+        logger.info(final_score_log)          
         tf.keras.backend.clear_session()
         gc.collect()
 
@@ -1225,11 +1237,13 @@ class Workflow:
         if optimizer_type == "adam":
             optimizer = tf.keras.optimizers.Adam(
                 learning_rate=learning_rate,
-                #  decay=weight_decay
+                clipnorm=1.0
             )
         elif optimizer_type == "adamw":
             optimizer = tf.keras.optimizers.AdamW(
-                learning_rate=learning_rate, weight_decay=weight_decay
+                learning_rate=learning_rate, 
+                weight_decay=weight_decay,
+                clipnorm=1.0
             )
         elif optimizer_type == "rmsprop":
             optimizer = tf.keras.optimizers.RMSprop(
@@ -1250,16 +1264,16 @@ class Workflow:
             )
         return optimizer
 
-    def print_status_bar(self, iteration, total, loss, metrics=None):
-        metrics = " - ".join(
-            [
-                "{}: {:.4f}".format(m.name, m.result())
-                for m in loss + (metrics or [])
-            ]
-        )
 
-        end = "" if int(iteration) < int(total) else "\n"
-        #     print(f"{iteration}/{total} - "+metrics ,end="\r")
-        #     print(f"\r{iteration}/{total} - " + metrics, end=end)
-        print("\r{}/{} - ".format(iteration, total) + metrics, end=end)
+def print_status_bar(iteration, total, loss, metrics=None):
+    metrics = " - ".join(
+        [
+            "{}: {:.4f}".format(m.name, m.result())
+            for m in loss + (metrics or [])
+        ]
+    )
 
+    end = "" if int(iteration) < int(total) else "\n"
+    #     print(f"{iteration}/{total} - "+metrics ,end="\r")
+    #     print(f"\r{iteration}/{total} - " + metrics, end=end)
+    print("\r{}/{} - ".format(iteration, total) + metrics, end=end)

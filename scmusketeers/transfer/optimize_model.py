@@ -471,6 +471,7 @@ class Workflow:
         
         logger.debug(f"Generated pseudolabels shape: {pseudo_labels.shape}")
         return pseudo_labels
+
     def train_scheme(self, training_scheme, verbose=True, **loop_params):
         """
         training scheme : dictionary explaining the succession of strategies to use as keys with the corresponding number of epochs and use_perm as values.
@@ -522,34 +523,38 @@ class Workflow:
         time_in = time.time()
         scheme_index += 1
 
-        # Early stopping setup
+        wait = 0
+        best_epoch_es = 0 # best epoch for Early Stopping
+        patience_es = 30  # Patience for Early Stopping
+        
+        lr_wait = 0       # Patience counter for LR scheduling
+        patience_lr = 5   # Number of epochs with no improvement to wait before reducing LR
+        lr_factor = 0.2   # Factor to reduce LR by (new_lr = lr * factor)
+        min_lr = 1e-6     # Minimum learning rate
+
+        min_delta = 0
+        warmup_epoch = 10 
+        min_epochs = min(warmup_epoch, n_epochs)
         if strategy in [
             "full_model",
             "classifier_branch",
             "permutation_only",
-            "encoder_classifier",
+            "encoder_classifier"
         ]:
-            wait = 0
-            best_epoch = 0
-            patience = 30
-            warmup_epoch = 10 
-            min_delta = 0
-            
-            min_epochs = min(warmup_epoch, n_epochs)
-            logger.debug(f"Early stopping active with a warm-up of {min_epochs} epochs.")
-
+            logger.debug(f"Early stopping and LR scheduler active with a warm-up of {min_epochs} epochs.")
+            logger.debug(f"Patience for early stopping of {patience_es} epochs.")
 
             if strategy == "permutation_only":
                 monitored = "rec_loss"
                 es_best = np.inf
             else:
+                # Use the balanced accuracy for monitoring
                 split, metric = self.opt_metric.split("-")
                 monitored = metric
                 es_best = -np.inf
 
         memory = {}
 
-        # Early stopping for those strategies only
         if strategy in [
             "warmup_dann_pseudolabels",
             "full_model_pseudolabels",
@@ -601,20 +606,14 @@ class Workflow:
                     loop_params["pseudo_y_list"][group] = memory[group]
                 memory = {}
 
-        freeze.unfreeze_all(self.dann_ae)  # resetting freeze state
-        
-        # trainable_unfrozen_variables = [v for v in ae.trainable_variables if v.trainable] # Should match your '6' count
-        # logger.debug(f"After unfrozen trainable variables: {len(trainable_unfrozen_variables)}")
-        # for i, var in enumerate(trainable_unfrozen_variables):
-        #     logger.debug(f"  After Unfrozen Var {i}: {var.name}, Shape: {var.shape}") 
-       
+        freeze.unfreeze_all(self.dann_ae)  # resetting freeze state       
         if strategy == "full_model":
             group = "train"
         elif strategy == "full_model_pseudolabels":
             group = "full"
         elif strategy == "encoder_classifier":
             group = "train"
-            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_classifier")  # training only
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_classifier")
             freeze.freeze_layers(layers_to_freeze)
         elif strategy in [
             "warmup_dann",
@@ -672,11 +671,11 @@ class Workflow:
             )
 
             if self.run_file.log_neptune:
-                for group in history:
-                    for par, value in history[group].items():
+                for group_log in history:
+                    for par, value in history[group_log].items():
                         if len(value) > 0:
                             self.run_neptune[
-                                f"training/{group}/{par}"
+                                f"training/{group_log}/{par}"
                             ].append(value[-1])
                         if physical_devices:
                             self.run_neptune[
@@ -691,12 +690,12 @@ class Workflow:
                 "full_model",
                 "classifier_branch",
                 "permutation_only",
-                "encoder_classifier",
+                "encoder_classifier"
             ]:
+                # SCHEDULER AND EARLY STOPPING LOGIC ---
                 monitored_value = history["val"][monitored][-1]
 
-                # ALWAYS CHECK FOR IMPROVEMENT
-                # This part runs on every epoch to ensure we capture the true best model.
+                # Check for improvement
                 has_improved = False
                 if "loss" in monitored:
                     if monitored_value < es_best - min_delta:
@@ -705,30 +704,43 @@ class Workflow:
                     if monitored_value > es_best + min_delta:
                         has_improved = True
 
-                if has_improved and epoch > min_epochs:
-                    logger.debug(f"New best score at epoch {epoch}: {monitored_value:.4f}")
-                    best_epoch = epoch
+                if has_improved:
+                    logger.debug(f"Metric {monitored} improved to {monitored_value:.4f} at epoch {epoch}.")
                     es_best = monitored_value
-                    wait = 0  # Reset patience since we found a better model
                     best_model = self.dann_ae.get_weights()
+                    best_epoch_es = epoch
+                    wait = 0      # Reset early stopping patience
+                    lr_wait = 0   # Reset LR scheduler patience
                 else:
-                    # INCREMENT WAIT COUNTER ONLY AFTER THE WARM-UP
+                    # Increment patience counters only after warmup
                     if epoch > min_epochs:
                         wait += 1
-                        # Early stopping
+                        lr_wait += 1
+
+                # Learning Rate Scheduler Check
+                if lr_wait >= patience_lr and epoch > min_epochs:
+                    current_lr = optimizer.learning_rate.numpy()
+                    if current_lr > min_lr:
+                        new_lr = current_lr * lr_factor
+                        optimizer.learning_rate.assign(new_lr)
+                        logger.info(f"Epoch {running_epoch}: {monitored} did not improve for {patience_lr} epochs. Reducing learning rate to {new_lr:.2e}.")
+                        lr_wait = 0 # Reset the LR patience
                 
-                # CHECK FOR STOPPING CONDITION ONLY AFTER THE WARM-UP
-                if epoch > min_epochs and wait >= patience:
-                    logger.info(
-                        f"Early stopping triggered at epoch {epoch}. Restoring best model from epoch {best_epoch} with score {es_best:.4f}."
-                    )
+                # Early Stopping Check
+                if wait >= patience_es and epoch > min_epochs:
+                    logger.info(f"Early stopping triggered at epoch {epoch}. Restoring best model from epoch {best_epoch_es} with score {es_best:.4f}.")
                     self.dann_ae.set_weights(best_model)
                     break  # Exit the loop for this training scheme
-
+                
 
         time_out = time.time()
         logger.info(f"Strategy {strategy} duration : {time_out - time_in} s")
-        logger.info(f"Final score for {monitored} : {monitored_value:.4f} at {strategy}")          
+        # Ensure monitored_value is defined for the log message
+        try:
+            final_score_log = f"Final score for {monitored}: {monitored_value:.4f} at {strategy}"
+        except NameError:
+            final_score_log = f"Finished strategy {strategy}."
+        logger.info(final_score_log)          
         tf.keras.backend.clear_session()
         gc.collect()
 
@@ -833,75 +845,80 @@ class Workflow:
                 / 1e6
             )
             self.run_neptune["training/train/step"].append(step)
-        # self.tr.print_diff()
+
         input_batch, output_batch = next(batch_generator)
-        # print(f"input {type(input_batch)}")
         # X_batch, sf_batch = input_batch.values()
         clas_batch, dann_batch, rec_batch = output_batch.values()
-
         
-        with tf.GradientTape(persistent=True) as tape:
+        with tf.GradientTape() as tape:
+            # Forward pass
+            # logger.debug("Convert data to tensor")
+            input_batch_new = {
+                k: tf.convert_to_tensor(v.toarray() if isinstance(v, scipy.sparse.spmatrix) else v, dtype=tf.float32)
+                for k, v in input_batch.items()
+            }
+
+            enc, clas, dann, rec = self.dann_ae(input_batch, training=True).values()
+
+            # Computing loss
+            # logger.debug("Calculate losses")
+            clas_loss = tf.reduce_mean(clas_loss_fn(clas_batch, clas))
+            dann_loss = tf.reduce_mean(dann_loss_fn(dann_batch, dann))
+            rec_loss = tf.reduce_mean(rec_loss_fn(rec_batch, rec))
             
-            input_batch_new = dict()
-            for k, v in input_batch.items():
-                input_batch_new[k] = tf.convert_to_tensor(v)
-            input_batch = input_batch_new
-            # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
-
-            enc_layer, class_out, dann_out, rec_out = self.dann_ae(input_batch, training=True).values()
-            # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
-            
-
-            class_loss = tf.reduce_mean(clas_loss_fn(clas_batch, class_out))
-            dann_loss = tf.reduce_mean(dann_loss_fn(dann_batch, dann_out))
-            rec_loss = tf.reduce_mean(rec_loss_fn(rec_batch, rec_out))
-
-            # logger.debug(f"class loss: {class_loss}")
-            # logger.debug(f"dann_loss loss: {dann_loss}")
-            # logger.debug(f"rec_loss loss: {rec_loss}")
-            # logger.debug(f"ae losses {ae.losses}")
-
-            if training_strategy == "full_model":
+            if training_strategy in [
+                "full_model",
+                "full_model_pseudolabels",
+            ]:
                 loss = tf.add_n(
-                    [self.run_file.clas_w * class_loss]
-                    + [self.run_file.dann_w * dann_loss]
-                    + [self.run_file.rec_w * rec_loss]
+                    [self.clas_w * clas_loss]
+                    + [self.dann_w * dann_loss]
+                    + [self.rec_w * rec_loss]
                     + self.dann_ae.losses
                 )
-            elif training_strategy == "warmup_dann":
+            elif training_strategy in [
+                "warmup_dann",
+                "warmup_dann_pseudolabels",
+                "warmup_dann_train",
+                "warmup_dann_semisup",
+            ]:
                 loss = tf.add_n(
-                    [self.run_file.dann_w * dann_loss]
-                    + [self.run_file.rec_w * rec_loss]
+                    [self.dann_w * dann_loss]
+                    + [self.rec_w * rec_loss]
                     + self.dann_ae.losses
                 )
             elif training_strategy == "warmup_dann_no_rec":
-                loss = tf.add_n([self.run_file.dann_w * dann_loss] + self.dann_ae.losses)
+                loss = tf.add_n([self.dann_w * dann_loss] + self.dann_ae.losses)
             elif training_strategy == "dann_with_ae":
                 loss = tf.add_n(
-                    [self.run_file.dann_w * dann_loss]
-                    + [self.run_file.rec_w * rec_loss]
+                    [self.dann_w * dann_loss]
+                    + [self.rec_w * rec_loss]
                     + self.dann_ae.losses
                 )
             elif training_strategy == "classifier_branch":
-                loss = tf.add_n([self.run_file.clas_w * class_loss])
+                loss = tf.add_n([self.clas_w * clas_loss])
+            elif training_strategy == "encoder_classifier":
+                loss = tf.add_n([self.clas_w * clas_loss] + self.dann_ae.losses)
             elif training_strategy == "permutation_only":
-                loss = tf.add_n([self.run_file.rec_w * rec_loss] + self.dann_ae.losses)
+                loss = tf.add_n([self.rec_w * rec_loss] + self.dann_ae.losses)
             elif training_strategy == "no_dann":
                 loss = tf.add_n(
-                    [self.run_file.rec_w * rec_loss]
-                    + [self.run_file.clas_w * class_loss]
+                    [self.rec_w * rec_loss]
+                    + [self.clas_w * clas_loss]
                     + self.dann_ae.losses
                 )
             elif training_strategy == "no_decoder":
                 loss = tf.add_n(
-                    [self.run_file.dann_w * dann_loss]
-                    + [self.run_file.clas_w * class_loss]
+                    [self.dann_w * dann_loss]
+                    + [self.clas_w * clas_loss]
                     + self.dann_ae.losses
                 )
-            # logger.debug(f"Loss: {loss}")
-      
+        n_samples += enc.shape[0]
+        
+        # Backpropagation
         # --- Main Gradients for the Total Loss ---
-        gradients = tape.gradient(loss, self.dann_ae.trainable_variables) # Request only for unfrozen
+        # logger.debug("Decipher gradients")
+        gradients = tape.gradient(loss, self.dann_ae.trainable_variables)
 
         # logger.debug("\n--- Gradients from TOTAL LOSS ---")
         # for grad, var in zip(gradients, ae.trainable_variables):
@@ -909,12 +926,11 @@ class Workflow:
         
         del tape # Don't forget to delete persistent tape
     
-    
+        # logger.debug("Back propagation")
         optimizer.apply_gradients(zip(gradients, self.dann_ae.trainable_variables))
-        # print(f"optimizer {asizeof.asizeof(optimizer)}")
-        # gpu_mem.append(tf.config.experimental.get_memory_info("GPU:0")["current"])
+
         self.mean_loss_fn(loss.__float__())
-        self.mean_clas_loss_fn(class_loss.__float__())
+        self.mean_clas_loss_fn(clas_loss.__float__())
         self.mean_dann_loss_fn(dann_loss.__float__())
         self.mean_rec_loss_fn(rec_loss.__float__())
 
@@ -1082,15 +1098,17 @@ class Workflow:
         Returns:
             an optimizer object
         """
-        logger.debug(f"Optimizer: {optimizer_type}")
+        logger.debug(f"Optimizer type: {optimizer_type}")
         if optimizer_type == "adam":
             optimizer = tf.keras.optimizers.Adam(
                 learning_rate=learning_rate,
-                #  decay=weight_decay
+                clipnorm=1.0
             )
         elif optimizer_type == "adamw":
             optimizer = tf.keras.optimizers.AdamW(
-                learning_rate=learning_rate, weight_decay=weight_decay
+                learning_rate=learning_rate, 
+                weight_decay=weight_decay,
+                clipnorm=1.0
             )
         elif optimizer_type == "rmsprop":
             optimizer = tf.keras.optimizers.RMSprop(

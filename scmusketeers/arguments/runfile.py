@@ -304,7 +304,7 @@ def create_argparser():
         "--learning_rate",
         type=float,
         nargs="?",
-        default=0.0009913638603687327,
+        default=0.0002913638603687327,
         help="Starting learning rate for training",
     )  # Default identified with hp optimization
     training_group.add_argument(
@@ -312,7 +312,7 @@ def create_argparser():
         type=str,
         nargs="?",
         choices=["adam", "adamw", "rmsprop"],
-        default="adam",
+        default="adamw",
         help="Name of the optimizer to use",
     )
 

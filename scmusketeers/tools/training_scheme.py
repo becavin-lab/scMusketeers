@@ -59,7 +59,7 @@ def get_training_scheme(training_scheme_id, run_file):
             (
                 "warmup_dann",
                 run_file.warmup_epoch,
-                True,
+                False,
             ),  # Permutating with pseudo labels during warmup
             ("full_model", run_file.fullmodel_epoch, False),
             ("classifier_branch", run_file.classifier_epoch, False),
