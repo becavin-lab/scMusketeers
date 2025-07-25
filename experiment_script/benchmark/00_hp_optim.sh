@@ -2,13 +2,16 @@
 #
 #SBATCH --account=cell     # The account name for the job.
 
-dataset_name=$1
-class_key=$2
-batch_key=$3
-task=$4
-neptune_name=$5
-hparam_path=$6
-total_trial=$7
+working_dir=$1
+scmusk_path=$2
+task=$3
+neptune_name=$4
+dataset_name=$5
+class_key=$6
+batch_key=$7
+hparam_path=$8
+total_trial=$9
+
 
 ### Tests
 #dataset_name="ajrccm_by_batch"
@@ -19,12 +22,6 @@ total_trial=$7
 #class_key="ann_finest_level"
 #batch_key="dataset"
 
-### Sc-Musketeers directory parameters
-#working_dir="/workspace/cell/scMusketeers"
-#working_dir="/data/analysis/data_becavin/scMusketeers"
-working_dir="/data/analysis/data_becavin/scMusketeers-data"
-scmusk_path="/data/analysis/data_becavin/scMusketeers"
-#scmusk_path=$working_dir
 
 ### Dataset settings
 out_dir=${working_dir}"/results"
@@ -91,7 +88,7 @@ echo "|--- BASH  train_obs=$keep_obs"
 warmup_epoch=30   # default 100, help - Number of epoch to warmup DANN
 fullmodel_epoch=100   # default = 100, help = Number of epoch to train full model
 permonly_epoch=100   # default = 100, help = Number of epoch to train in permutation only mode
-classifier_epoch=100   # default = 50, help = Number of epoch to train te classifier only
+classifier_epoch=50   # default = 50, help = Number of epoch to train te classifier only
 #warmup_epoch=1   # default 100, help - Number of epoch to warmup DANN
 #fullmodel_epoch=1   # default = 100, help = Number of epoch to train full model
 #permonly_epoch=1   # default = 100, help = Number of epoch to train in permutation only mode

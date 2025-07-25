@@ -322,7 +322,7 @@ def create_argparser():
         "--warmup_epoch",
         type=int,
         nargs="?",
-        default=36,
+        default=30,
         help="Number of epoch to warmup DANN",
     )
     epoch_group.add_argument(
