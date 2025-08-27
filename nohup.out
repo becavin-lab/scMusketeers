@@ -2202,3 +2202,64 @@ Entropy mixing ----- step 90
 |--- INFO        #HP_optim--- Hyperparam optimization finished
 |--- DEBUG       Best parameters {'use_hvg': 654, 'batch_size': 357, 'clas_w': 75.9059544539962, 'dann_w': 0.0006800634789046336, 'learning_rate': 0.007181802826807251, 'weight_decay': 3.457969993736587e-05, 'warmup_epoch': 1, 'dropout': 0.17059661448001862, 'bottleneck': 42, 'layer2': 153, 'layer1': 905}
 |--- INFO        Best hyperparameters saved in /data/analysis/data_becavin/scMusketeers-data/results/scMusk_ajrccm_by_batch_best_hp.json
+h5ad_path: /data/analysis/data_becavin/scMusketeers-data/data/hlca_par_dataset_harmonized.h5ad
+|--- BASH  #####     Hyperparameters optimization of Sc-Musketeers with dataset=hlca_par_dataset_harmonized
+|--- BASH  the dataset will be loaded from /data/analysis/data_becavin/scMusketeers-data/data/hlca_par_dataset_harmonized.h5ad
+|--- BASH  test_obs=Krasnow_2020 Meyer_2019
+|--- BASH  train_obs=Banovich_Kropski_2020 Misharin_2021 Teichmann_Meyer_2019 Lafyatis_Rojas_2019_10Xv1 Lafyatis_Rojas_2019_10Xv2
+2025-08-22 17:15:31.929615: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2025-08-22 17:15:31.946124: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:467] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1755875731.965131 2608086 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1755875731.970808 2608086 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1755875731.986363 2608086 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1755875731.986404 2608086 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1755875731.986408 2608086 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1755875731.986411 2608086 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+2025-08-22 17:15:31.991001: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+usage: sc-musketeers transfer ref_path [OPTIONS]
+sc-musketeers: error: argument --total_trial: invalid int value: '/data/analysis/data_becavin/scMusketeers-data0'
+h5ad_path: /data/analysis/data_becavin/scMusketeers-data/data/hlca_par_dataset_harmonized.h5ad
+|--- BASH  #####     Hyperparameters optimization of Sc-Musketeers with dataset=hlca_par_dataset_harmonized
+|--- BASH  the dataset will be loaded from /data/analysis/data_becavin/scMusketeers-data/data/hlca_par_dataset_harmonized.h5ad
+|--- BASH  test_obs=Krasnow_2020 Meyer_2019
+|--- BASH  train_obs=Banovich_Kropski_2020 Misharin_2021 Teichmann_Meyer_2019 Lafyatis_Rojas_2019_10Xv1 Lafyatis_Rojas_2019_10Xv2
+2025-08-22 17:16:08.576129: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2025-08-22 17:16:08.593861: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:467] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1755875768.613439 2608415 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1755875768.619163 2608415 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1755875768.635083 2608415 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1755875768.635134 2608415 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1755875768.635138 2608415 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1755875768.635141 2608415 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+2025-08-22 17:16:08.639936: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+usage: sc-musketeers transfer ref_path [OPTIONS]
+sc-musketeers: error: argument --total_trial: invalid int value: '/data/analysis/data_becavin/scMusketeers-data0'
+h5ad_path: /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- BASH  #####     Hyperparameters optimization of Sc-Musketeers with dataset=ajrccm_by_batch
+|--- BASH  the dataset will be loaded from /data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad
+|--- BASH  test_obs=D322_Biop_Nas1 D354_Brus_Dis1 D326_Brus_Dis1 D353_Biop_Pro1 D337_Brus_Dis1 D354_Biop_Int2 D367_Brus_Dis1
+|--- BASH  train_obs=D367_Brus_Nas1 D372_Brus_Nas1 D326_Biop_Int1 D367_Biop_Pro1 D339_Biop_Pro1 D372_Biop_Int2 D353_Brus_Dis1 D372_Biop_Pro1 D354_Biop_Pro1 D326_Biop_Pro1 D367_Biop_Int1 D363_Brus_Dis1 D363_Biop_Int2 D344_Brus_Dis1 D339_Biop_Int1 D372_Brus_Dis1 D372_Biop_Int1 D339_Brus_Dis1 D344_Biop_Int1 D353_Biop_Int2 D339_Biop_Nas1 D344_Biop_Pro1
+2025-08-26 08:53:28.596684: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2025-08-26 08:53:28.612173: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:467] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1756191208.629519 2970546 cuda_dnn.cc:8579] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1756191208.634762 2970546 cuda_blas.cc:1407] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+W0000 00:00:1756191208.649276 2970546 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1756191208.649301 2970546 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1756191208.649304 2970546 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+W0000 00:00:1756191208.649307 2970546 computation_placer.cc:177] computation placer already registered. Please check linkage and avoid linking the same target more than once.
+2025-08-26 08:53:28.653555: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX512F AVX512_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+|--- DEBUG       Program arguments: Namespace(process='hp_optim', ref_path='/data/analysis/data_becavin/scMusketeers-data/data/ajrccm_by_batch.h5ad', debug=True, class_key='celltype', batch_key='manip', query_path=None, out_dir='/data/analysis/data_becavin/scMusketeers-data/results', out_name='scMusk_', training_scheme='training_scheme_1', log_neptune=True, neptune_name='scmusk-hp', opt_metric='val-balanced_mcc', verbose=True, bestparam_path='/data/analysis/data_becavin/scMusketeers/experiment_script/hyperparam/none.csv', hparam_path='/data/analysis/data_becavin/scMusketeers/experiment_script/hp_ranges/ajrccm_r2_sch3.json', working_dir=None, total_trial=None, dataset_name='ajrccm_by_batch', task='hp_param', unlabeled_category='UNK', filter_min_counts=True, normalize_size_factors=True, size_factor='default', scale_input=False, logtrans_input=True, use_hvg=None, batch_size=430, test_split_key='TRAIN_TEST_split_batch', test_obs=['D322_Biop_Nas1', 'D354_Brus_Dis1', 'D326_Brus_Dis1', 'D353_Biop_Pro1', 'D337_Brus_Dis1', 'D354_Biop_Int2', 'D367_Brus_Dis1'], test_index_name=None, mode='entire_condition', pct_split=0.9, obs_key='manip', n_keep=None, split_strategy=None, keep_obs=['D367_Brus_Nas1', 'D372_Brus_Nas1', 'D326_Biop_Int1', 'D367_Biop_Pro1', 'D339_Biop_Pro1', 'D372_Biop_Int2', 'D353_Brus_Dis1', 'D372_Biop_Pro1', 'D354_Biop_Pro1', 'D326_Biop_Pro1', 'D367_Biop_Int1', 'D363_Brus_Dis1', 'D363_Biop_Int2', 'D344_Brus_Dis1', 'D339_Biop_Int1', 'D372_Brus_Dis1', 'D372_Biop_Int1', 'D339_Brus_Dis1', 'D344_Biop_Int1', 'D353_Biop_Int2', 'D339_Biop_Nas1', 'D344_Biop_Pro1'], train_test_random_seed=0, obs_subsample=None, make_fake=False, true_celltype=None, false_celltype=None, pct_false=None, weight_decay=4.631975708726384e-06, learning_rate=8.414230867858422e-05, optimizer_type='adamw', warmup_epoch=20, fullmodel_epoch=50, permonly_epoch=50, classifier_epoch=50, balance_classes=True, clas_loss_name='categorical_focal_crossentropy', dann_loss_name='categorical_crossentropy', rec_loss_name='MSE', clas_w=0.33157074856597474, dann_w=3.3941467292805104e-05, rec_w=0.022339522184988584, dropout=0.22089440817089676, layer1=1084, layer2=404, bottleneck=126, ae_hidden_size=[128, 64, 128], ae_hidden_dropout=None, ae_activation='relu', ae_bottleneck_activation='linear', ae_output_activation='relu', ae_init='glorot_uniform', ae_batchnorm=True, ae_l1_enc_coef=None, ae_l2_enc_coef=None, class_hidden_size=[64], class_hidden_dropout=None, class_batchnorm=True, class_activation='relu', class_output_activation='softmax', dann_hidden_size=[64], dann_hidden_dropout=None, dann_batchnorm=True, dann_activation='relu', dann_output_activation='softmax')
+|--- INFO        Setting hyperparameters provided for the model in: /data/analysis/data_becavin/scMusketeers/experiment_script/hyperparam/none.csv
+Traceback (most recent call last):
+  File "/data/analysis/data_becavin/scMusketeers/scmusketeers/__main__.py", line 110, in <module>
+    run_sc_musketeers()
+  File "/data/analysis/data_becavin/scMusketeers/scmusketeers/__main__.py", line 35, in run_sc_musketeers
+    with open(run_file.bestparam_path, mode='r', newline='') as csv_file:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/data/analysis/data_becavin/scMusketeers/experiment_script/hyperparam/none.csv'

@@ -1,5 +1,6 @@
 import os
 import logging
+import csv
 
 from scmusketeers.arguments.neptune_log import (start_neptune_log,
                                                 stop_neptune_log)
@@ -19,12 +20,61 @@ def run_sc_musketeers():
     # Get all arguments
     run_file = get_runfile()
     
+
     # Set logger level
     if run_file.debug:
         logger.setLevel(getattr(logging, "DEBUG"))
     else:
         logger.setLevel(getattr(logging, "INFO"))
     logger.debug(f"Program arguments: {run_file}")
+
+    # set model parameters if provided
+    if "none.csv" not in run_file.bestparam_path:
+    #if run_file.bestparam_path != "" or "none.csv" not in run_file.bestparam_path:
+        logger.info(f"Setting hyperparameters provided for the model in: {run_file.bestparam_path}")
+        # Open the CSV file
+        with open(run_file.bestparam_path, mode='r', newline='') as csv_file:
+            # Create a DictReader object
+            reader = csv.DictReader(csv_file)
+            
+            # Read the first data row into a dictionary
+            # The next() function retrieves the next item from an iterator
+            data_dict = next(reader)
+
+
+        print(data_dict)
+        if "use_hvg" in data_dict:
+            run_file.use_hvg = int(data_dict["use_hvg"])
+        if "batch_size" in data_dict:
+            run_file.batch_size = int(data_dict["batch_size"])
+        if "clas_w" in data_dict:
+            run_file.clas_w = float(data_dict["clas_w"])
+        if "dann_w" in data_dict:
+            run_file.dann_w = float(data_dict["dann_w"])
+        if "rec_w" in data_dict:
+            run_file.rec_w = float(data_dict["rec_w"])
+        if "ae_bottleneck_activation" in data_dict:
+            run_file.ae_bottleneck_activation = data_dict["ae_bottleneck_activation"]
+        if "clas_loss_name" in data_dict:
+            run_file.clas_loss_name = data_dict["clas_loss_name"]
+        if "size_factor" in data_dict:
+            run_file.size_factor = data_dict["size_factor"]
+        if "weight_decay" in data_dict:
+            run_file.weight_decay = float(data_dict["weight_decay"])
+        if "learning_rate" in data_dict:
+            run_file.learning_rate = float(data_dict["learning_rate"])
+        if "warmup_epoch" in data_dict:
+            run_file.warmup_epoch = int(data_dict["warmup_epoch"])
+        if "dropout" in data_dict:
+            run_file.dropout = float(data_dict["dropout"])
+        if "layer1" in data_dict:
+            run_file.layer1 = int(data_dict["layer1"])
+        if "layer2" in data_dict:
+            run_file.layer2 = int(data_dict["layer2"])
+        if "bottleneck" in data_dict:
+            run_file.bottleneck = int(data_dict["bottleneck"])
+        if "training_scheme" in data_dict:
+            run_file.training_scheme = data_dict["training_scheme"]
 
     # Run transfer
     if run_file.process == PROCESS_TYPE[0]:

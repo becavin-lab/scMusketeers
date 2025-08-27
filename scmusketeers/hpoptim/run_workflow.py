@@ -83,10 +83,10 @@ def run_workflow(run_file):
             trial_index=trial_index,
             raw_data=experiment.train(parametrization),
         )
-        if i%10 == 0:
-            logger.info(f"#HP_optim--- Trial {i} status")
-            best_parameters, values = ax_client.get_best_parameters()
-            logger.debug(f"Best parameters {best_parameters}")
+        #if i%10 == 0:
+        logger.info(f"#HP_optim--- Trial {i} status")
+        best_parameters, values = ax_client.get_best_parameters()
+        logger.debug(f"Best parameters {best_parameters}")
 
 
 

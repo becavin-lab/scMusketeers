@@ -60,7 +60,7 @@ def get_training_scheme(training_scheme_id, run_file):
                 "warmup_dann",
                 run_file.warmup_epoch,
                 False,
-            ),  # Permutating with pseudo labels during warmup
+            ),  # No Permutating with pseudo labels during warmup
             ("full_model", run_file.fullmodel_epoch, False),
             ("classifier_branch", run_file.classifier_epoch, False),
         ]  # This will end with a callback]

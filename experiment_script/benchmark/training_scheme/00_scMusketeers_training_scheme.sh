@@ -86,7 +86,7 @@ classifier_epoch=100   # default = 50, help = Number of epoch to train te classi
 #permonly_epoch=1   # default = 100, help = Number of epoch to train in permutation only mode
 #classifier_epoch=1   # default = 50, help = Number of epoch to train te classifier only
 
-training_scheme="training_scheme_8"
+training_scheme="training_scheme_7"
 
 python ${python_path} hp_optim ${h5ad_path} --debug --training_scheme=${training_scheme} --task ${task} --log_neptune "True" \
 --neptune_name ${neptune_name} --out_dir ${out_dir} --total_trial ${total_trial} \

@@ -9,8 +9,9 @@ neptune_name=$4
 dataset_name=$5
 class_key=$6
 batch_key=$7
-hparam_path=$8
-total_trial=$9
+bestparam_path=$8
+hparam_path=$9
+total_trial=${10}
 
 
 ### Tests
@@ -28,16 +29,7 @@ out_dir=${working_dir}"/results"
 python_path=${scmusk_path}"/scmusketeers/__main__.py"
 data_path=${working_dir}"/data"
 hparam_path=${scmusk_path}"/experiment_script/hp_ranges/"${hparam_path}
-
-### task specific
-# For hyperparameters optimiziation
-#task="hp_hpparam"
-#neptune_name="scmusk-hp"
-
-# For training_scheme comparison
-#task="hp_tscheme"
-#neptune_name="scmusk-scheme"
-#hparam_path=${scmusk_path}"/experiment_script/hp_ranges/besthp_tscheme.json"
+bestparam_path=${scmusk_path}"/experiment_script/hyperparam/"${bestparam_path}
 
 
 # Read dataset json to get h5ad path
@@ -85,18 +77,18 @@ keep_obs=$(echo "$keep_obs" | tr -d '[:space:]' | tr -d '"' | tr ',' ' ')
 echo "|--- BASH  train_obs=$keep_obs"
 
 ### Run scMusketeers hyperparameters optimization
-warmup_epoch=30   # default 100, help - Number of epoch to warmup DANN
-fullmodel_epoch=100   # default = 100, help = Number of epoch to train full model
-permonly_epoch=100   # default = 100, help = Number of epoch to train in permutation only mode
+warmup_epoch=20   # default 100, help - Number of epoch to warmup DANN
+fullmodel_epoch=50   # default = 100, help = Number of epoch to train full model
+permonly_epoch=50   # default = 100, help = Number of epoch to train in permutation only mode
 classifier_epoch=50   # default = 50, help = Number of epoch to train te classifier only
 #warmup_epoch=1   # default 100, help - Number of epoch to warmup DANN
 #fullmodel_epoch=1   # default = 100, help = Number of epoch to train full model
 #permonly_epoch=1   # default = 100, help = Number of epoch to train in permutation only mode
 #classifier_epoch=1   # default = 50, help = Number of epoch to train te classifier only
 
-training_scheme="training_scheme_8"
+training_scheme="training_scheme_1"
 
-python ${python_path} hp_optim ${h5ad_path} --debug --training_scheme=${training_scheme} --task ${task} --log_neptune "True" \
+python ${python_path} hp_optim ${h5ad_path} --debug --bestparam_path=${bestparam_path} --training_scheme=${training_scheme} --task ${task} --log_neptune "True" \
 --neptune_name ${neptune_name} --out_dir ${out_dir} --total_trial ${total_trial} \
 --hparam_path ${hparam_path} --dataset_name ${dataset_name} \
 --class_key $class_key --batch_key $batch_key --test_obs $test_obs \

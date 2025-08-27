@@ -632,9 +632,8 @@ class Workflow:
         scheme_index = 0
         for strategy, n_epochs, use_perm in training_scheme:
             running_epoch = self.run_single_scheme(strategy, history, use_perm, loop_params, scheme_index, running_epoch, n_epochs, total_epochs)
-
-        if self.run_file.log_neptune:
-            self.run_neptune[f"training/{group}/total_epochs"] = running_epoch
+            if self.run_file.log_neptune:
+                self.run_neptune[f"training/train/epoch_{strategy}_running"] = running_epoch
         return history
 
 
@@ -791,6 +790,7 @@ class Workflow:
 
         logger.info(f"Use permutation strategy? use_perm = {use_perm}")
 
+        
         for epoch in range(1, n_epochs + 1):
             running_epoch += 1
             logger.info(
@@ -865,11 +865,17 @@ class Workflow:
                 if wait >= patience_es and epoch > min_epochs:
                     logger.info(f"Early stopping triggered at epoch {epoch}. Restoring best model from epoch {best_epoch_es} with score {es_best:.4f}.")
                     self.dann_ae.set_weights(best_model)
+                    self.run_neptune[f"training/train/epoch_{strategy}_lastepoch"] = epoch
+                    self.run_neptune[f"training/train/epoch_{strategy}_bestepoch"] = best_epoch_es                 
                     break  # Exit the loop for this training scheme
-                
+
+            self.run_neptune[f"training/train/epoch_{strategy}_lastepoch"] = epoch
+            self.run_neptune[f"training/train/epoch_{strategy}_bestepoch"] = best_epoch_es                 
+                        
 
         time_out = time.time()
         logger.info(f"Strategy {strategy} duration : {time_out - time_in} s")
+
         # Ensure monitored_value is defined for the log message
         try:
             final_score_log = f"Final score for {monitored}: {monitored_value:.4f} at {strategy}"

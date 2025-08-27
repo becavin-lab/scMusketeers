@@ -3,6 +3,7 @@
 
 #outdir="/workspace/cell/scMusketeers"
 outdir="/data/analysis/data_becavin/scMusketeers-data"
+scmusk_path="/data/analysis/data_becavin/scMusketeers"
 dataset=${outdir}"/data/Deprez-Lung-unknown-0.2.h5ad"
 outname=Deprez-Lung-unknown-0.2-pred
 classkey="celltype"
@@ -21,19 +22,21 @@ outname_query="Deprez-2020-query-0.2-pred"
 # fullmodel_epoch=2   # default = 100, help = Number of epoch to train full model
 # permonly_epoch=50 # default = 100, help = Number of epoch to train in permutation only mode
 # classifier_epoch=2   # default = 50, help = Number of epoch to train te classifier only
-warmup_epoch=50   # default 100, help - Number of epoch to warmup DANN
+warmup_epoch=20   # default 100, help - Number of epoch to warmup DANN
 fullmodel_epoch=50   # default = 100, help = Number of epoch to train full model
 permonly_epoch=50 # default = 100, help = Number of epoch to train in permutation only mode
 classifier_epoch=50   # default = 50, help = Number of epoch to train te classifier only
 
-log_neptune=False
+log_neptune=True
 neptune_name="sc-musketeers"
-training_scheme="training_scheme_8"
+training_scheme="training_scheme_1"
+bestparam_path=${scmusk_path}"/experiment_script/hyperparam/hp_best_ajrccm.csv"
 
 ##### Sampling_percentage 20%
 # Transfer Cell annotation to all Unknown cells
+sc-musketeers transfer ${dataset} --debug --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
 #sc-musketeers transfer ${dataset} --class_key=celltype --unlabeled_category="Unknown" --batch_key=manip --out_dir=${outdir} --out_name=${outname}
-sc-musketeers transfer ${dataset} --debug --training_scheme=${training_scheme} --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
+#sc-musketeers transfer ${dataset} --debug --log_neptune=${log_neptune} --neptune_name=${neptune_name} --bestparam_path=${bestparam_path} --training_scheme=${training_scheme} --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
 #python scmusketeers/__main__.py transfer ${dataset} --debug --training_scheme="training_scheme_13" --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}
 
 # python scmusketeers/__main__.py transfer ${dataset} --debug --training_scheme="training_scheme_8" --log_neptune=${log_neptune} --neptune_name=${neptune_name} --class_key=${classkey} --unlabeled_category=${unlabeled} --batch_key=${batchkey} --out_dir=${outdir} --out_name=${outname} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch} --classifier_epoch=${classifier_epoch}

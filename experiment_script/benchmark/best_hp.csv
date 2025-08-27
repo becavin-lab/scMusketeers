@@ -1,4 +1,4 @@
-,dataset_name,use_hvg,batch_size,clas_w,dann_w,rec_w,ae_bottleneck_activation,clas_loss_name,size_factor,weight_decay,learning_rate,warmup_epoch,dropout,layer1,layer2,bottleneck,training_scheme,sys_id
+dataset_name,use_hvg,batch_size,clas_w,dann_w,rec_w,ae_bottleneck_activation,clas_loss_name,size_factor,weight_decay,learning_rate,warmup_epoch,dropout,layer1,layer2,bottleneck,training_scheme,sys_id
 htap,htap,3211,440,0.09755080554495098,0.006609181137564076,0.0008451063745276943,linear,categorical_focal_crossentropy,default,3.281857499198112e-08,0.0008054836895660669,42,0.18095524473139676,1381,244,110,training_scheme_8,BEN-7987
 ajrccm_by_batch,ajrccm_by_batch,3597,468,0.903029507838807,0.03631834911435026,0.00917123430480649,linear,categorical_focal_crossentropy,default,9.168327015665287e-07,0.0006442455571092805,27,0.23437816610670065,945,247,87,training_scheme_8,BEN-7977
 hlca_par_dataset_harmonized,hlca_par_dataset_harmonized,3434,230,0.0007225309459494693,5.743930723102198,0.00011792479799400927,linear,categorical_focal_crossentropy,default,6.941217010633642e-06,0.0009390881829984964,27,0.35983533691614866,1377,393,117,training_scheme_7,BEN-7886

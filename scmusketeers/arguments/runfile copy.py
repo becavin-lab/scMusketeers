@@ -305,14 +305,14 @@ def create_argparser():
         "--weight_decay",
         type=float,
         nargs="?",
-        default=4.631975708726384E-6,
+        default=9.447375593939065e-07,
         help="Weight decay applied by th optimizer",
     )  # Default identified with hp optimization
     training_group.add_argument(
         "--learning_rate",
         type=float,
         nargs="?",
-        default=8.414230867858422E-5,
+        default=0.0002913638603687327,
         help="Starting learning rate for training",
     )  # Default identified with hp optimization
     training_group.add_argument(
@@ -392,21 +392,21 @@ def create_argparser():
         "--clas_w",
         type=float,
         nargs="?",
-        default=0.33157074856597474,
+        default=0.3066763716843436,
         help="Weight of the classification loss",
     )
     loss_group.add_argument(
         "--dann_w",
         type=float,
         nargs="?",
-        default=3.3941467292805104E-5,
+        default=0.01865515471175812,
         help="Weight of the DANN loss",
     )
     loss_group.add_argument(
         "--rec_w",
         type=float,
         nargs="?",
-        default=0.022339522184988584,
+        default=0.013070252184855429,
         help="Weight of the reconstruction loss",
     )
 
@@ -416,28 +416,28 @@ def create_argparser():
         "--dropout",
         type=int,
         nargs="?",
-        default=0.22089440817089676,
+        default=0.27058450953709307,
         help="dropout applied to every layers of the model. If specified, overwrites other dropout arguments",
     )
     architecture_group.add_argument(
         "--layer1",
         type=int,
         nargs="?",
-        default=1084,
+        default=1151,
         help="size of the first layer for a 2-layers model. If specified, overwrites ae_hidden_size",
     )
     architecture_group.add_argument(
         "--layer2",
         type=int,
         nargs="?",
-        default=404,
+        default=235,
         help="size of the second layer for a 2-layers model. If specified, overwrites ae_hidden_size",
     )
     architecture_group.add_argument(
         "--bottleneck",
         type=int,
         nargs="?",
-        default=126,
+        default=84,
         help="size of the bottleneck layer. If specified, overwrites ae_hidden_size",
     )
 

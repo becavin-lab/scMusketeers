@@ -1,7 +1,6 @@
-[{"name": "use_hvg", "type": "range", "bounds": [2000, 7000], "log_scale": false, "value_type": "int"},
+[{"name": "use_hvg", "type": "range", "bounds": [2000, 5000], "log_scale": false, "value_type": "int"},
  {"name": "batch_size", "type": "range", "bounds": [100, 450], "log_scale": false, "value_type": "int"},
   {"name": "ae_bottleneck_activation", "type": "fixed", "value": "linear", "value_type": "str"},
-   {"name": "clas_loss_name", "type": "choice", "values": ["categorical_focal_crossentropy"], "value_type": "str"},
    {"name": "clas_w", "type": "range", "bounds": [0.001, 2], "log_scale": true, "value_type": "float"},
     {"name": "rec_w", "type": "range", "bounds": [0.0001, 2], "log_scale": true, "value_type": "float"},
      {"name": "dann_w", "type": "range", "bounds": [0.00001, 2], "log_scale": true, "value_type": "float"},
