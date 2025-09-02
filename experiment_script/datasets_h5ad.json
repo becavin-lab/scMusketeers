@@ -3,13 +3,13 @@
     "ajrccm_by_batch": "ajrccm_by_batch",
     "hlca_par_dataset_harmonized": "hlca_par_dataset_harmonized",
     "hlca_trac_dataset_harmonized": "hlca_trac_dataset_harmonized",
-    "koenig_2022": "celltypist_dataset/koenig_2022/koenig_2022_healthy",
-    "tosti_2021": "celltypist_dataset/tosti_2021/tosti_2021",
-    "yoshida_2021": "celltypist_dataset/yoshida_2021/yoshida_2021",
-    "tran_2021": "celltypist_dataset/tran_2021/tran_2021",
-    "dominguez_2022_lymph": "celltypist_dataset/dominguez_2022/dominguez_2022_lymph",
-    "dominguez_2022_spleen": "celltypist_dataset/dominguez_2022/dominguez_2022_spleen",
-    "tabula_2022_spleen": "celltypist_dataset/tabula_2022/tabula_2022_spleen",
-    "litvinukova_2020": "celltypist_dataset/litvinukova_2020/litvinukova_2020",
-    "lake_2021": "celltypist_dataset/lake_2021/lake_2021"
+    "koenig_2022": "koenig_2022/koenig_2022_healthy", 
+    "tosti_2021": "tosti_2021/tosti_2021", 
+    "yoshida_2021": "yoshida_2021/yoshida_2021",
+    "tran_2021": "tran_2021/tran_2021",
+    "dominguez_2022_lymph": "dominguez_2022_lymph/dominguez_2022_lymph",
+    "dominguez_2022_spleen": "dominguez_2022_spleen/dominguez_2022_spleen",
+    "tabula_2022_spleen": "tabula_2022/tabula_2022_spleen",
+    "litvinukova_2020": "litvinukova_2020/litvinukova_2020",
+    "lake_2021": "lake_2021/lake_2021"
 }
