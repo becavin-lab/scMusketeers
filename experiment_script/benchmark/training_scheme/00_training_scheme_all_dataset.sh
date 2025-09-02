@@ -1,0 +1,35 @@
+### Sc-Musketeers directory parameters
+#working_dir="/workspace/cell/scMusketeers"
+#working_dir="/data/analysis/data_becavin/scMusketeers"
+working_dir="/data/analysis/data_becavin/scMusketeers-data"
+scmusk_path="/data/analysis/data_becavin/scMusketeers"
+#scmusk_path=$working_dir
+
+#######################################
+###         Hp_optim for training scheme
+#######################################
+# For training_scheme comparison
+#task="hp_tscheme"
+#neptune_name="scmusk-scheme"
+#hparam_path=${scmusk_path}"/experiment_script/hp_ranges/besthp_tscheme.json"
+
+task="hp_tscheme"
+neptune_name="scmusk-scheme"
+total_trial=10
+
+#### AJRCCM
+dataset_name="ajrccm_by_batch"
+class_key="celltype"
+batch_key="manip"
+hparam_path="besthp_tscheme.json"
+bestparam_path="hp_best_ajrccm.csv"
+# nohup ./experiment_script/benchmark/00_hp_optim.sh ${working_dir} ${scmusk_path} ${task} ${neptune_name} ${dataset_name} ${class_key} ${batch_key} ${bestparam_path} ${hparam_path} ${total_trial} > experiment_script/benchmark/logs/${dataset_name}_tscheme.log 2>&1 &
+
+#### HLCA Parenchyma
+dataset_name="hlca_par_dataset_harmonized"
+class_key="ann_finest_level"
+batch_key="dataset"
+hparam_path="besthp_tscheme.json"
+bestparam_path="hp_best_hlca_par.csv"
+#nohup ./experiment_script/benchmark/00_hp_optim.sh ${working_dir} ${scmusk_path} ${task} ${neptune_name} ${dataset_name} ${class_key} ${batch_key} ${bestparam_path} ${hparam_path} ${total_trial} > experiment_script/benchmark/logs/${dataset_name}_tscheme.log 2>&1 &
+

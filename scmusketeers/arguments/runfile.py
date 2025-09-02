@@ -164,6 +164,10 @@ def create_argparser():
         "--task", type=str, nargs="?", default=None, help="Name of the task for Neptune log"
     )
 
+    benchmark_group = parser.add_argument_group("Benchmark of ScMusketeers Parameters")
+    benchmark_group.add_argument(
+        "--gpu_models", type=str, nargs="?", default="True", help=""
+    )
 
 
     # Dataset arguments

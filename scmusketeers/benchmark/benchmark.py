@@ -60,13 +60,12 @@ logger = logging.getLogger("Sc-Musketeers")
 
 
 class Workflow:
-    def __init__(self, run_file, working_dir):
+    def __init__(self, run_file):
         """
         run_file : a dictionary outputed by the function load_runfile
         """
         self.run_file = run_file
-        self.working_dir = working_dir
-        self.data_dir = working_dir + "/data"
+        
         # dataset identifiers
         self.dataset_name = self.run_file.dataset_name
         self.class_key = self.run_file.class_key
@@ -156,7 +155,8 @@ class Workflow:
 
     def process_dataset(self, model_list):
         # Loading dataset
-        adata = load_dataset(self.run_file.ref_path, query_path="", class_key="", unlabeled_category="")
+        logger.debug("Load dataset {self.run_file.ref_path}")
+        adata = load_dataset(self.run_file.ref_path, query_path=None, class_key="", unlabeled_category="")
 
         if "celltypist" in model_list:
             logger.debug(f"Test celltypist gene overlap")
@@ -169,7 +169,7 @@ class Workflow:
             common_genes = set(adata.var_names).intersection(model.features)
             logger.debug(f"Number of overlapping genes: {len(common_genes)}")
         
-        logger.debug("Create Dataset")
+        logger.debug("Create Dataset object")
         print(adata.var['gene_ids'])
         self.dataset = Dataset(
             adata=adata,
