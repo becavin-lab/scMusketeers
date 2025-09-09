@@ -39,4 +39,8 @@ h5ad_path=${data_path}/${h5ad_suffix}".h5ad"
 echo "|--- BASH  the dataset will be loaded from $h5ad_path"
 
 echo "|--- BASH  Running python script for benchmark task1"
-python ${scmusk_path}/experiment_script/benchmark/task1/01_label_transfer_between_batch.py benchmark ${h5ad_path} --out_dir ${out_dir} --neptune_name ${neptune_name} --dataset_name ${dataset_name} --class_key ${class_key} --use_hvg 3000 --batch_key $batch_key --mode entire_condition --obs_key $batch_key --gpu_models $gpu_models
+#python ${scmusk_path}/experiment_script/benchmark/task1/01_label_transfer_between_batch.py benchmark ${h5ad_path} --out_dir ${out_dir} --neptune_name ${neptune_name} --dataset_name ${dataset_name} --class_key ${class_key} --use_hvg 3000 --batch_key $batch_key --mode entire_condition --obs_key $batch_key --gpu_models $gpu_models
+
+
+echo "|--- BASH  Running python script for benchmark scMusketeers task1"
+python ${scmusk_path}/experiment_script/benchmark/task1/01_label_transfer_between_batch_scPermut.py --working_dir ${working_dir} --dataset_name ${dataset_name} --class_key ${class_key} --use_hvg 3000 --batch_key $batch_key --mode entire_condition --obs_key $batch_key
