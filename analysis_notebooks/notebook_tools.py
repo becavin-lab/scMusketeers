@@ -19,7 +19,8 @@ from scmusketeers.hpoptim.dataset import load_dataset
 from scmusketeers.tools.utils import ann_subset, check_raw,save_json, load_json, rgb2hex,hex2rgb, check_dir, df_to_dict,dict_to_df
 from scmusketeers.tools.plot import get_scanpy_cmap
 
-working_dir = '/workspace/cell/scPermut_Antoine/'
+working_dir = '/data/analysis/data_becavin/scMusketeers/'
+# working_dir = '/workspace/cell/scPermut_Antoine/'
 
 
 dataset_names = {'htap':'htap',
