@@ -179,9 +179,10 @@ def load_expe(neptune_id, working_dir):
     pred = load_pred(neptune_id, working_dir)
     adata = sc.AnnData(X = X, obs = pred)
     # proba_pred = load_proba_pred(neptune_id, working_dir)
-    umap = load_umap(neptune_id, working_dir)
+    print(f"Neptune: {neptune_id}")
+    #umap = load_umap(neptune_id, working_dir)
     # adata.obsm['proba_pred'] = proba_pred
-    adata.obsm['X_umap'] = umap
+    #adata.obsm['X_umap'] = umap
     return adata
 
 def plot_umap_proba(adata, celltype, **kwargs):
@@ -280,7 +281,7 @@ def umap_subset(adata, obs_key, subset, **kwargs):
             legend_text.set_text('other cell types')
     return ax
 
-def load_best_t1(runs_table_df,dataset_name):
+def load_best_t1(runs_table_df,dataset_name, split, met):
     task_1 = runs_table_df.query("task == 'task_1'").query(f"dataset_name == '{dataset_name}'").query(f"test_fold_nb == {test_fold_selection[dataset_name]}").query('deprecated_status == False').query('use_hvg == 3000')
     task_1 = task_1.loc[~((task_1['model'] == 'scPermut_default') & (task_1['training_scheme'] != 'training_scheme_8')),:]
     ad_list = {}
@@ -292,10 +293,29 @@ def load_best_t1(runs_table_df,dataset_name):
         if not sub.loc[sub[f'{split}_{met}'] == sub[f'{split}_{met}'].max(),'sys_id'].empty :
             best_id = sub.loc[sub[f'{split}_{met}'] == sub[f'{split}_{met}'].max(),'sys_id'].values[0]
             ad = load_expe(best_id,working_dir)
+            print(model)
             ad_list[model] = ad
     return ad_list
 
-def load_fold_t1(runs_table_df,dataset_name, fold):
+def load_best_model_t1(runs_table_df,dataset_name, best_model, split, met):
+    task_1 = runs_table_df.query("task == 'task_1'").query(f"dataset_name == '{dataset_name}'").query(f"test_fold_nb == {test_fold_selection[dataset_name]}").query('deprecated_status == False').query('use_hvg == 3000')
+    task_1 = task_1.loc[~((task_1['model'] == 'scPermut_default') & (task_1['training_scheme'] != 'training_scheme_8')),:]
+    ad_list = {}
+    for model in np.unique(task_1['model']):
+        if model == best_model:
+        
+            # if model == 'scPermut':
+            #     sub = task_1.query(f'model == "{model}"').query('training_scheme == "training_scheme_8"')
+            # else:
+            sub = task_1.query(f'model == "{model}"')
+            if not sub.loc[sub[f'{split}_{met}'] == sub[f'{split}_{met}'].max(),'sys_id'].empty :
+                best_id = sub.loc[sub[f'{split}_{met}'] == sub[f'{split}_{met}'].max(),'sys_id'].values[0]
+                ad = load_expe(best_id,working_dir)
+                print(model)
+                ad_list[model] = ad
+    return ad_list
+
+def load_fold_t1(runs_table_df,dataset_name, fold, split, met):
     task_1 = runs_table_df.query("task == 'task_1'").query(f"dataset_name == '{dataset_name}'").query(f"test_fold_nb == {test_fold_selection[dataset_name]}").query('deprecated_status == False').query('use_hvg == 3000')
     task_1 = task_1.loc[~((task_1['model'] == 'scPermut_default') & (task_1['training_scheme'] != 'training_scheme_8')),:]
     task_1 = task_1.query(f"val_fold_nb == {fold}")
