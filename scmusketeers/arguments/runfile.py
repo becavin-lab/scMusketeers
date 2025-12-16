@@ -7,6 +7,38 @@ from scmusketeers.tools.utils import str2bool
 PROCESS_TYPE = ["transfer", "optim"]
 
 
+import os
+import sys
+
+if sys.version_info >= (3, 8):
+    from importlib import metadata
+else:
+    import importlib_metadata as metadata
+
+
+def get_version():
+    try:
+        return metadata.version("sc-musketeers")
+    except metadata.PackageNotFoundError:
+        # If the package is not installed, try to read pyproject.toml
+        try:
+            # Assumes runfile.py is at scmusketeers/arguments/runfile.py
+            # So pyproject.toml is at ../../../pyproject.toml
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            pyproject_path = os.path.join(current_dir, "..", "..", "..", "pyproject.toml")
+            
+            if os.path.exists(pyproject_path):
+                with open(pyproject_path, "r") as f:
+                    for line in f:
+                        if line.strip().startswith('version = "'):
+                            return line.split('"')[1]
+                        elif line.strip().startswith("version = '"):
+                            return line.split("'")[1]
+        except Exception:
+            pass
+        return "unknown"
+
+
 def get_runfile():
     parser = create_argparser()
     return parser.parse_args()
@@ -24,6 +56,7 @@ def create_argparser():
     Returns:
         argparse.Namespace: A namespace object containing parsed arguments.
     """
+    version = get_version()
     parser = argparse.ArgumentParser(
         prog="sc-musketeers",
         usage="sc-musketeers transfer ref_path [OPTIONS]",
@@ -45,6 +78,13 @@ def create_argparser():
                     "establishing itself as a valuable tool for single-cell data "
                     "integration and analysis.",
         epilog="Enjoy scMusketeers!",
+    )
+
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {version}",
+        help="Show the version number and exit",
     )
 
     parser.add_argument(

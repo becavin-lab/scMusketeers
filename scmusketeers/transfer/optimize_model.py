@@ -781,10 +781,10 @@ class Workflow:
         n_obs,
     ):
         if self.run_file.log_neptune:
-            self.run_neptune["training/train/tf_GPU_memory_step"].append(
-                tf.config.experimental.get_memory_info("GPU:0")["current"]
-                / 1e6
-            )
+#            self.run_neptune["training/train/tf_GPU_memory_step"].append(
+#                tf.config.experimental.get_memory_info("GPU:0")["current"]
+#                / 1e6
+#            )
             self.run_neptune["training/train/step"].append(step)
         # self.tr.print_diff()
         input_batch, output_batch = next(batch_generator)
