@@ -1,9 +1,10 @@
 # Get GPU
 # srun -A cell -p gpu -t 10:00:00 --gres=gpu:1 --pty bash -i
 
-#outdir="/workspace/cell/scMusketeers"
-outdir="/data/analysis/data_becavin/scMusketeers-data"
-scmusk_path="/data/analysis/data_becavin/scMusketeers"
+outdir="/workspace/cell/scMusketeers"
+#outdir="/data/analysis/data_becavin/scMusketeers-data"
+#scmusk_path="/data/analysis/data_becavin/scMusketeers"
+scmusk_path="/home/becavin/scMusketeers"
 dataset=${outdir}"/data/Deprez-Lung-unknown-0.2.h5ad"
 outname=Deprez-Lung-unknown-0.2-pred
 classkey="celltype"
