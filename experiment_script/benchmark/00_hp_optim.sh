@@ -88,7 +88,7 @@ classifier_epoch=50   # default = 50, help = Number of epoch to train te classif
 
 training_scheme="training_scheme_1"
 
-python ${python_path} hp_optim ${h5ad_path} --debug --bestparam_path=${bestparam_path} --training_scheme=${training_scheme} --task ${task} --log_neptune "True" \
+sc-musketeers hp_optim ${h5ad_path} --debug --bestparam_path=${bestparam_path} --training_scheme=${training_scheme} --task ${task} --log_neptune "True" \
 --neptune_name ${neptune_name} --out_dir ${out_dir} --total_trial ${total_trial} \
 --hparam_path ${hparam_path} --dataset_name ${dataset_name} \
 --class_key $class_key --batch_key $batch_key --test_obs $test_obs \
@@ -96,13 +96,5 @@ python ${python_path} hp_optim ${h5ad_path} --debug --bestparam_path=${bestparam
 --test_split_key TRAIN_TEST_split_batch \
 --classifier_epoch=${classifier_epoch} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch}
 
-
-#module load singularity
-
-#singularity exec --nv --bind $working_dir:$singularity_working_dir $singularity_path python $working_dir/scpermut/run_hp.py --dataset_name $dataset_name --class_key $class_key --batch_key $batch_key --test_obs $test_obs --mode entire_condition --obs_key $batch_key --keep_obs $keep_obs --working_dir $working_dir &> $working_dir/experiment_script/benchmark/logs/hp_optim_$dataset_name.log
-
-#!/bin/bash
-# Get GPU
-# srun -A cell -p gpu -t 10:00:00 --gres=gpu:1 --pty bash -i
 
 

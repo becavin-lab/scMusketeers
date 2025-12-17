@@ -1,9 +1,9 @@
 ### Sc-Musketeers directory parameters
-#working_dir="/workspace/cell/scMusketeers"
+working_dir="/workspace/cell/scMusketeers"
 #working_dir="/data/analysis/data_becavin/scMusketeers"
-working_dir="/data/analysis/data_becavin/scMusketeers-data"
-scmusk_path="/data/analysis/data_becavin/scMusketeers"
-#scmusk_path=$working_dir
+#working_dir="/data/analysis/data_becavin/scMusketeers-data"
+#scmusk_path="/data/analysis/data_becavin/scMusketeers"
+scmusk_path=$working_dir
 
 
 #######################################
@@ -20,7 +20,7 @@ batch_key="manip"
 hparam_path="ajrccm_r2_sch3.json"
 bestparam_path="none.csv"
 #echo "HP LOOP - ${dataset_name}"
-# nohup ./experiment_script/benchmark/00_hp_optim.sh ${working_dir} ${scmusk_path} ${task} ${neptune_name} ${dataset_name} ${class_key} ${batch_key} ${bestparam_path} ${hparam_path} ${total_trial} > experiment_script/benchmark/logs/${dataset_name}_hyperparameters_optim.log 2>&1 &
+#nohup ./experiment_script/benchmark/00_hp_optim.sh ${working_dir} ${scmusk_path} ${task} ${neptune_name} ${dataset_name} ${class_key} ${batch_key} ${bestparam_path} ${hparam_path} ${total_trial} > experiment_script/benchmark/logs/${dataset_name}_hyperparameters_optim.log 2>&1 &
 
 #### HTAP
 dataset_name="htap"
@@ -55,8 +55,9 @@ class_key="Original_annotation"
 batch_key="batch"
 hparam_path="generic_r1.json"
 bestparam_path="none.csv"
-for dataset_name in  "dominguez_2022_spleen";
-#for dataset_name in  "dominguez_2022_lymph" "dominguez_2022_spleen" "tosti_2021" "tran_2021" "tabula_2022_spleen" "yoshida_2021" "litvinukova_2020" "koenig_2022" "lake_2021" "dominguez_2022_spleen";
+#for dataset_name in  "dominguez_2022_lymph" "dominguez_2022_spleen";
+for dataset_name in  "tosti_2021" "tran_2021" "tabula_2022_spleen" "yoshida_2021" ;
+#for dataset_name in  "dominguez_2022_lymph" "dominguez_2022_spleen" "tosti_2021" "tran_2021" "tabula_2022_spleen" "yoshida_2021" "litvinukova_2020" "koenig_2022" "lake_2021" ;
 do
     echo "HP LOOP - ${dataset_name}"
     nohup ./experiment_script/benchmark/00_hp_optim.sh ${working_dir} ${scmusk_path} ${task} ${neptune_name} ${dataset_name} ${class_key} ${batch_key} ${bestparam_path} ${hparam_path} ${total_trial} > experiment_script/benchmark/logs/${dataset_name}_hyperparameters_optim.log 2>&1 &

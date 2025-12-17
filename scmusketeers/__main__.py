@@ -1,6 +1,7 @@
 import os
 import logging
 import csv
+from importlib.metadata import version
 
 from scmusketeers.arguments.neptune_log import (start_neptune_log,
                                                 stop_neptune_log)
@@ -16,11 +17,11 @@ logger = logging.getLogger("Sc-Musketeers")
 def run_sc_musketeers():
     # Set up logging
     logging.basicConfig(format="|--- %(levelname)-8s    %(message)s")
+    logger.info(f"Sc-Musketeers {version("sc-musketeers")} started")
 
     # Get all arguments
     run_file = get_runfile()
     
-
     # Set logger level
     if run_file.debug:
         logger.setLevel(getattr(logging, "DEBUG"))
@@ -29,8 +30,12 @@ def run_sc_musketeers():
     logger.debug(f"Program arguments: {run_file}")
 
     # set model parameters if provided
-    if "none.csv" not in run_file.bestparam_path:
-    #if run_file.bestparam_path != "" or "none.csv" not in run_file.bestparam_path:
+    logger.debug(f"Bestparam path: {run_file.bestparam_path}")
+
+    if "none.csv" in run_file.bestparam_path.strip():
+        run_file.bestparam_path=""
+    
+    if (not run_file.bestparam_path.strip()=="") and (not run_file.bestparam_path.strip()=="none.csv"):
         logger.info(f"Setting hyperparameters provided for the model in: {run_file.bestparam_path}")
         # Open the CSV file
         with open(run_file.bestparam_path, mode='r', newline='') as csv_file:

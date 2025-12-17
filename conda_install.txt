@@ -1,16 +1,16 @@
-conda create --name sc_musketeers python=3.12
+conda create --name sc_musketeers python=3.13
 conda activate sc_musketeers
 
 pip install poetry
 cd sc_musketeers/
 poetry install
 
-# Be sure to have tensorflow and cuda installed for GPU
-pip install tensorflow[and-cuda]
-
 # Development version
 poetry install --with dev
 
 # HPoptimization and workflow
 poetry install --with workflow
+
+# Be sure to have tensorflow and cuda installed for GPU
+#pip install tensorflow[and-cuda]
 

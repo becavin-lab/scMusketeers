@@ -4,6 +4,7 @@ logs
 build
 *.egg-info
 .Rproj.user
+.vscode/
 docs/build
 data/simulation/
 

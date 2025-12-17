@@ -1,4 +1,7 @@
 import logging
+from importlib.metadata import version
+
+__version__ = version("sc-musketeers")
 
 # print("import arguments")
 from . import arguments

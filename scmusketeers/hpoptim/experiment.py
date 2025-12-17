@@ -101,7 +101,7 @@ class MakeExperiment:
             logger.debug("")
             start_neptune_log(self.workflow)
             logger.debug("Log the trial on Neptune")
-            trial_name = f"HyperParam_Optim_{self.run_file.task}_{self.run_file.dataset_name}_{self.trial_count}/{self.total_trial}"
+            trial_name = f"HyperParam_Optim_{self.run_file.dataset_name}_{self.trial_count}/{self.total_trial}"
             logger.debug(f" -- {trial_name} -- ")
             add_custom_log(self.workflow,"task", self.run_file.task)
             add_custom_log(self.workflow,"trial_name", trial_name)

@@ -1,5 +1,6 @@
 import argparse
 
+import scmusketeers
 from scmusketeers.tools.utils import str2bool
 
 """Parses command-line arguments for a workflow involving model training and hyperparameter optimization."""
@@ -45,6 +46,12 @@ def create_argparser():
                     "establishing itself as a valuable tool for single-cell data "
                     "integration and analysis.",
         epilog="Enjoy scMusketeers!",
+    )
+
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {scmusketeers.__version__}",
     )
 
     parser.add_argument(
