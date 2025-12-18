@@ -1,15 +1,19 @@
 import os
 import logging
 import csv
+import json
 from importlib.metadata import version
 
 from scmusketeers.arguments.neptune_log import (start_neptune_log,
                                                 stop_neptune_log)
 from scmusketeers.arguments.runfile import (PROCESS_TYPE, create_argparser,
                                             get_default_param, get_runfile)
-from scmusketeers.hpoptim.experiment import MakeExperiment
-from scmusketeers.transfer.optimize_model import Workflow
+
+import scmusketeers.transfer.optimize_model as om
+import scmusketeers.hpoptim.hyperparameters as hp
+
 from scmusketeers.transfer.dataset_tf import process_dataset
+from scmusketeers.hpoptim.run_workflow import run_workflow
 from scmusketeers.hpoptim.run_workflow import run_workflow
 
 logger = logging.getLogger("Sc-Musketeers")
@@ -85,7 +89,7 @@ def run_sc_musketeers():
     if run_file.process == PROCESS_TYPE[0]:
         logger.info("Run transfer")
         # Transfer data
-        workflow = Workflow(run_file=run_file)
+        workflow = om.Workflow(run_file=run_file)
         start_neptune_log(workflow)
         process_dataset(workflow)
         workflow.dataset.train_val_split_transfer()
@@ -107,6 +111,37 @@ def run_sc_musketeers():
     # Run models benchmark
     elif run_file.process == PROCESS_TYPE[2]:
         logger.info("Run benchmark")
+    # Run single HP trial
+    elif run_file.process == PROCESS_TYPE[3]:
+        logger.info("Run single HP trial")
+        if not run_file.trial_params_path or not os.path.exists(run_file.trial_params_path):
+            raise ValueError("trial_params_path must be provided and exist for hp_optim_single")
+        
+        with open(run_file.trial_params_path, 'r') as f:
+            params = json.load(f)
+                
+        workflow = hp.Workflow(run_file=run_file)
+        workflow.set_hyperparameters(params)
+        
+        start_neptune_log(workflow)
+        # Add custom logs similar to experiment.py if needed, but Ax usually tracks this via param dict
+        # We can add a tag or something if needed.
+        
+        workflow.process_dataset()
+        workflow.dataset.test_split(
+            test_obs=workflow.test_obs,
+            test_index_name=workflow.test_index_name,
+        )
+        workflow.split_train_val()
+        
+        opt_metric = workflow.make_experiment()
+        
+        if run_file.trial_result_path:
+             with open(run_file.trial_result_path, 'w') as f:
+                 json.dump({"opt_metric": opt_metric}, f)
+        
+        stop_neptune_log(workflow)
+
     else:
         # No process
         logger.info("Process not recognized")

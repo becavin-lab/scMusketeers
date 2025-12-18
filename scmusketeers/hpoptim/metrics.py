@@ -1,6 +1,7 @@
 import os
 import logging
 import sys
+import csv
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -20,6 +21,23 @@ except ImportError:
 logger = logging.getLogger("Sc-Musketeers")
 
 
+def log_to_csv(save_dir, group, metric, value, subset=None):
+    """
+    Log metric to csv file
+    """
+    file_path = os.path.join(save_dir, "metrics.csv")
+    
+    # Check if file exists to write header
+    file_exists = os.path.isfile(file_path)
+    
+    with open(file_path, mode='a', newline='') as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(['group', 'subset', 'metric', 'value'])
+            
+        writer.writerow([group, subset if subset else "all", metric, value])
+
+
 def metric_confusion_matrix(workflow, y_pred, y_true, group, save_dir):
     logger.debug(f"Calculate confusion matrix - {group}")
     labels = list(
@@ -37,9 +55,10 @@ def metric_confusion_matrix(workflow, y_pred, y_true, group, save_dir):
     cm_to_plot = cm_to_plot.fillna(value=0)
     cm_to_save = cm_to_save.fillna(value=0)
     cm_to_save.to_csv(os.path.join(save_dir,f"confusion_matrix_{group}.csv"))
-    workflow.run_neptune[
-        f"evaluation/{group}/confusion_matrix_file"
-    ].track_files(os.path.join(save_dir,f"confusion_matrix_{group}.csv"))
+    if workflow.run_file.log_neptune:
+        workflow.run_neptune[
+            f"evaluation/{group}/confusion_matrix_file"
+        ].track_files(os.path.join(save_dir,f"confusion_matrix_{group}.csv"))
     size = len(labels)
     f, ax = plt.subplots(figsize=(size / 1.5, size / 1.5))
     sns.heatmap(
@@ -58,10 +77,11 @@ def metric_confusion_matrix(workflow, y_pred, y_true, group, save_dir):
     ):
         text.set_visible(show_annot)
     # Upload matrix on Neptune
-    workflow.run_neptune[f"evaluation/{group}/confusion_matrix"].upload(f)
+    if workflow.run_file.log_neptune:
+        workflow.run_neptune[f"evaluation/{group}/confusion_matrix"].upload(f)
 
 
-def metric_batch_mixing(workflow, batch_list, group, enc, batches):
+def metric_batch_mixing(workflow, batch_list, group, enc, batches, save_dir):
     logger.debug(f"Save batch mixing metrics - {group}")
     if (
         len(
@@ -73,26 +93,37 @@ def metric_batch_mixing(workflow, batch_list, group, enc, batches):
     ):  # If there are more than 2 batches in this group
         for metric in workflow.batch_metrics_list:
             # logger.debug(f"{metric} calculation")
-            workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
-                workflow.batch_metrics_list[metric](enc, batches)
-            )
+                if workflow.run_file.log_neptune:
+                    workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
+                        workflow.batch_metrics_list[metric](enc, batches)
+                    )
+                # Save metric to csv
+                log_to_csv(save_dir, group, metric, workflow.batch_metrics_list[metric](enc, batches))
+
+                
             
 
-def metric_classification(workflow, y_pred, y_true, group, sizes):
+def metric_classification(workflow, y_pred, y_true, group, sizes, save_dir):
     logger.debug(f"Save classification metrics - {group}")
     for metric in workflow.pred_metrics_list:
         # logger.debug(f"{metric} calculation")
-        workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
-            workflow.pred_metrics_list[metric](y_true, y_pred)
-        )
+        if workflow.run_file.log_neptune:
+            workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
+                workflow.pred_metrics_list[metric](y_true, y_pred)
+            )
+        # Save metric to csv
+        log_to_csv(save_dir, group, metric, workflow.pred_metrics_list[metric](y_true, y_pred))
 
     for metric in workflow.pred_metrics_list_balanced:
         # logger.debug(f"{metric} calculation")
-        workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
-            workflow.pred_metrics_list_balanced[metric](
-                y_true, y_pred
+        if workflow.run_file.log_neptune:
+            workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
+                workflow.pred_metrics_list_balanced[metric](
+                    y_true, y_pred
+                )
             )
-        )
+        # Save metric to csv
+        log_to_csv(save_dir, group, metric, workflow.pred_metrics_list_balanced[metric](y_true, y_pred))
 
     # Metrics by size of ct
     logger.debug(f"Save classification metrics by size of cell type - {group}")
@@ -104,31 +135,40 @@ def metric_classification(workflow, y_pred, y_true, group, sizes):
         y_pred_sub = y_pred[idx_s]
         for metric in workflow.pred_metrics_list:
             # logger.debug(f"{metric} calculation (per cell type size)")
-            workflow.run_neptune[f"evaluation/{group}/{s}/{metric}"] = (
-                nan_to_0(
-                    workflow.pred_metrics_list[metric](
-                        y_true_sub, y_pred_sub
+            if workflow.run_file.log_neptune:
+                workflow.run_neptune[f"evaluation/{group}/{s}/{metric}"] = (
+                    nan_to_0(
+                        workflow.pred_metrics_list[metric](
+                            y_true_sub, y_pred_sub
+                        )
                     )
-                )
             )
+            # Save metric to csv
+            log_to_csv(save_dir, group, metric, nan_to_0(workflow.pred_metrics_list[metric](y_true_sub, y_pred_sub)), subset=s)
 
         for metric in workflow.pred_metrics_list_balanced:
             # logger.debug(f"{metric} calculation (per cell type size)")
-            workflow.run_neptune[f"evaluation/{group}/{s}/{metric}"] = (
-                nan_to_0(
-                    workflow.pred_metrics_list_balanced[metric](
-                        y_true_sub, y_pred_sub
+            if workflow.run_file.log_neptune:
+                workflow.run_neptune[f"evaluation/{group}/{s}/{metric}"] = (
+                    nan_to_0(
+                        workflow.pred_metrics_list_balanced[metric](
+                            y_true_sub, y_pred_sub
+                        )
                     )
-                )
             )
+            # Save metric to csv
+            log_to_csv(save_dir, group, metric, nan_to_0(workflow.pred_metrics_list_balanced[metric](y_true_sub, y_pred_sub)), subset=s)
 
-def metric_clustering(workflow, y_pred, group, enc):
+def metric_clustering(workflow, y_pred, group, enc, save_dir):
     logger.debug(f"Save clustering metrics - {group}")
     for metric in workflow.clustering_metrics_list:
         # logger.debug(f"{metric} calculation")
-        workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
-            workflow.clustering_metrics_list[metric](enc, y_pred)
-        )
+        if workflow.run_file.log_neptune:
+            workflow.run_neptune[f"evaluation/{group}/{metric}"] = (
+                workflow.clustering_metrics_list[metric](enc, y_pred)
+            )
+        # Save metric to csv
+        log_to_csv(save_dir, group, metric, workflow.clustering_metrics_list[metric](enc, y_pred))
 
 
 def save_results(workflow, y_pred, y_true, adata_list, group, save_dir, split, enc):
@@ -142,12 +182,13 @@ def save_results(workflow, y_pred, y_true, adata_list, group, save_dir, split, e
     np.save(os.path.join(save_dir,f"latent_space_{group}.npy"), enc.numpy())
     y_pred_df.to_csv(os.path.join(save_dir,f"predictions_{group}.csv"))
     split.to_csv(os.path.join(save_dir,f"split_{group}.csv"))
-    workflow.run_neptune[
-        f"evaluation/{group}/latent_space"
-    ].track_files(os.path.join(save_dir,f"latent_space_{group}.npy"))
-    workflow.run_neptune[
-        f"evaluation/{group}/predictions"
-    ].track_files(os.path.join(save_dir,f"predictions_{group}.csv"))
+    if workflow.run_file.log_neptune:
+        workflow.run_neptune[
+            f"evaluation/{group}/latent_space"
+        ].track_files(os.path.join(save_dir,f"latent_space_{group}.npy"))
+        workflow.run_neptune[
+            f"evaluation/{group}/predictions"
+        ].track_files(os.path.join(save_dir,f"predictions_{group}.csv"))
 
     # Saving umap representation
     pred_adata = sc.AnnData(
@@ -165,9 +206,10 @@ def save_results(workflow, y_pred, y_true, adata_list, group, save_dir, split, e
         os.path.join(save_dir,f"umap_{group}.npy"),
         pred_adata.obsm["X_umap"],
     )
-    workflow.run_neptune[f"evaluation/{group}/umap"].track_files(
-        os.path.join(save_dir,f"umap_{group}.npy")
-    )
+    if workflow.run_file.log_neptune:
+        workflow.run_neptune[f"evaluation/{group}/umap"].track_files(
+            os.path.join(save_dir,f"umap_{group}.npy")
+        )
     sc.set_figure_params(figsize=(15, 10), dpi=300)
     fig_class = sc.pl.umap(
         pred_adata,
@@ -193,15 +235,16 @@ def save_results(workflow, y_pred, y_true, adata_list, group, save_dir, split, e
         size=10,
         return_fig=True,
     )
-    workflow.run_neptune[f"evaluation/{group}/true_umap"].upload(
-        fig_class
-    )
-    workflow.run_neptune[f"evaluation/{group}/pred_umap"].upload(
-        fig_pred
-    )
-    workflow.run_neptune[f"evaluation/{group}/batch_umap"].upload(
-        fig_batch
-    )
-    workflow.run_neptune[f"evaluation/{group}/split_umap"].upload(
-        fig_split
-    )
+    if workflow.run_file.log_neptune:
+        workflow.run_neptune[f"evaluation/{group}/true_umap"].upload(
+            fig_class
+        )
+        workflow.run_neptune[f"evaluation/{group}/pred_umap"].upload(
+            fig_pred
+        )
+        workflow.run_neptune[f"evaluation/{group}/batch_umap"].upload(
+            fig_batch
+        )
+        workflow.run_neptune[f"evaluation/{group}/split_umap"].upload(
+            fig_split
+        )

@@ -70,10 +70,23 @@ def add_custom_log(workflow, name, value):
     if workflow.run_file.log_neptune:
         workflow.run_neptune[f"parameters/{name}"] = stringify_unsupported(value)
 
+def add_evaluation_log(workflow, name, value):
+    if workflow.run_file.log_neptune:
+        workflow.run_neptune[f"evaluation/{name}"] = value
+
+def add_training_log(workflow, name, value):
+    if workflow.run_file.log_neptune:
+        workflow.run_neptune[f"training/train/{name}"] = value
+
+def add_validation_log(workflow, name, value):
+    if workflow.run_file.log_neptune:
+        workflow.run_neptune[f"training/val/{name}"] = value
+
 
 def stop_neptune_log(workflow):
     if workflow.run_file.log_neptune:
         workflow.run_neptune.stop()
+
 
 def load_run_df(task):
     print("Run neptune benchmark")

@@ -33,7 +33,7 @@ from sklearn.metrics import (confusion_matrix, accuracy_score, adjusted_mutual_i
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
 try:
-    from ..arguments.neptune_log import NEPTUNE_INFO
+    from ..arguments.neptune_log import NEPTUNE_INFO, add_custom_log, add_evaluation_log, add_training_log
     from ..arguments.ae_param import AE_PARAM
     from ..arguments.class_param import CLASS_PARAM
     from ..arguments.dann_param import DANN_PARAM
@@ -51,7 +51,7 @@ try:
                                        batch_entropy_mixing_score, lisi_avg,
                                        nn_overlap)
 except ImportError:
-    from scmusketeers.arguments.neptune_log import NEPTUNE_INFO
+    from scmusketeers.arguments.neptune_log import NEPTUNE_INFO, add_custom_log, add_evaluation_log, add_training_log
     from scmusketeers.arguments.ae_param import AE_PARAM
     from scmusketeers.arguments.class_param import CLASS_PARAM
     from scmusketeers.arguments.dann_param import DANN_PARAM
@@ -188,6 +188,8 @@ class Workflow:
     def set_hyperparameters(self, params):
 
         logger.debug(f"Setting hparams {params}")
+        if "trial_name" in params:
+            self.run_file.trial_name = params["trial_name"]
         if "use_hvg" in params:
             self.use_hvg = params["use_hvg"]
         if "batch_size" in params:
@@ -461,92 +463,117 @@ class Workflow:
 
         logger.info("##-- Performing model prediction")
         with tf.device('/CPU:0'):
-            if self.log_neptune:
-                # TODO also make it on gpu with smaller batch size
-                self.run_neptune["evaluation/training_time"] = stop_time - start_time
-                neptune_run_id = self.run_neptune["sys/id"].fetch()
-                save_dir = os.path.join(self.run_file.out_dir,str(neptune_run_id))
-                logger.info(f"Save results to: {save_dir}")
-                if not os.path.exists(save_dir):
-                    os.makedirs(save_dir)
-                
-                # Setting model inference
-                y_true_full = adata_list["full"].obs[f"true_{self.class_key}"]
-                ct_prop = (
-                    pd.Series(y_true_full).value_counts()
-                    / pd.Series(y_true_full).value_counts().sum()
-                )
-                sizes = {
-                    "xxsmall": list(ct_prop[ct_prop < 0.001].index),
-                    "small": list(
-                        ct_prop[(ct_prop >= 0.001) & (ct_prop < 0.01)].index
-                    ),
-                    "medium": list(
-                        ct_prop[(ct_prop >= 0.01) & (ct_prop < 0.1)].index
-                    ),
-                    "large": list(ct_prop[ct_prop >= 0.1].index),
+            save_dir = os.path.join(self.run_file.out_dir,"predict")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            save_dir = os.path.join(save_dir,self.run_file.trial_name)
+            logger.info(f"Save results to: {save_dir}")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            add_evaluation_log(self,"training_time", stop_time - start_time)
+            
+            # Setting model inference
+            y_true_full = adata_list["full"].obs[f"true_{self.class_key}"]
+            ct_prop = (
+                pd.Series(y_true_full).value_counts()
+                / pd.Series(y_true_full).value_counts().sum()
+            )
+            sizes = {
+                "xxsmall": list(ct_prop[ct_prop < 0.001].index),
+                "small": list(
+                    ct_prop[(ct_prop >= 0.001) & (ct_prop < 0.01)].index
+                ),
+                "medium": list(
+                    ct_prop[(ct_prop >= 0.01) & (ct_prop < 0.1)].index
+                ),
+                "large": list(ct_prop[ct_prop >= 0.1].index),
+            }
+            for group in ["full", "train", "val", "test"]:
+                logger.info(f"Prediction for dataset - {group}")
+                input_tensor = {
+                    k: tf.convert_to_tensor(v)
+                    for k, v in scanpy_to_input(
+                        adata_list[group], ["size_factors"]
+                    ).items()
                 }
-                for group in ["full", "train", "val", "test"]:
-                    logger.info(f"Prediction for dataset - {group}")
-                    input_tensor = {
-                        k: tf.convert_to_tensor(v)
-                        for k, v in scanpy_to_input(
-                            adata_list[group], ["size_factors"]
-                        ).items()
-                    }
-                    enc, clas, dann, rec = self.dann_ae(
-                        input_tensor, training=False
-                    ).values()  # Model predict
+                enc, clas, dann, rec = self.dann_ae(
+                    input_tensor, training=False
+                ).values()  # Model predict
 
-                    if (
-                        group == "full"
-                    ):  # saving full predictions as probability output from the classifier
-                        logger.debug(f"Saving predicted matrix and embedding - {group}")
-                        y_pred_proba = pd.DataFrame(
-                            np.asarray(clas),
-                            index=adata_list["full"].obs_names,
-                            columns=self.dataset.ohe_celltype.categories_[0],
-                        )
-                        y_pred_proba.to_csv(os.path.join(save_dir,"y_pred_proba_full.csv"))
-                        self.run_neptune[
-                            f"evaluation/{group}/y_pred_proba_full"
-                        ].track_files(os.path.join(save_dir,"y_pred_proba_full.csv"))
-
-                    # Create predicted cell types
-                    clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
-                    y_pred = self.dataset.ohe_celltype.inverse_transform(
-                        clas
-                    ).reshape(
-                        -1,
+                if (
+                    group == "full"
+                ):  # saving full predictions as probability output from the classifier
+                    logger.debug(f"Saving predicted matrix and embedding - {group}")
+                    y_pred_proba = pd.DataFrame(
+                        np.asarray(clas),
+                        index=adata_list["full"].obs_names,
+                        columns=self.dataset.ohe_celltype.categories_[0],
                     )
-                    y_true = adata_list[group].obs[f"true_{self.class_key}"]
-                    batches = np.asarray(
-                        batch_list[group].argmax(axis=1)
-                    ).reshape(
-                        -1,
-                    )
-                    split = adata_list[group].obs["train_split"]
+                    y_pred_proba.to_csv(os.path.join(save_dir,"y_pred_proba_full.csv"))
+                    add_evaluation_log(self,"y_pred_proba_full", os.path.join(save_dir,"y_pred_proba_full.csv"))
 
-                    # Saving confusion matrices
-                    metrics.metric_confusion_matrix(self, y_pred, y_true, group, save_dir)
+                # Create predicted cell types
+                clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
+                y_pred = self.dataset.ohe_celltype.inverse_transform(
+                    clas
+                ).reshape(
+                    -1,
+                )
+                y_true = adata_list[group].obs[f"true_{self.class_key}"]
+                batches = np.asarray(
+                    batch_list[group].argmax(axis=1)
+                ).reshape(
+                    -1,
+                )
+                split = adata_list[group].obs["train_split"]
 
-                    # Computing batch mixing metrics
-                    metrics.metric_batch_mixing(self, batch_list, group, enc, batches)
+                # Saving confusion matrices
+                # metrics.metric_confusion_matrix(self, y_pred, y_true, group, save_dir)
 
-                    # Save classification metrics
-                    metrics.metric_classification(self, y_pred, y_true, group, sizes)
+                # Computing batch mixing metrics
+                #metrics.metric_batch_mixing(self, batch_list, group, enc, batches, save_dir)
 
-                    # save clustering metrics
-                    metrics.metric_clustering(self, y_pred, group, enc)
+                # Save classification metrics
+                metrics.metric_classification(self, y_pred, y_true, group, sizes, save_dir)
 
-                    logger.debug(f"Save all matrices and figures - {group}")
-                    if group == "full":
-                        metrics.save_results(self, y_pred, y_true, adata_list, group, save_dir, split, enc)
+                # save clustering metrics
+                #metrics.metric_clustering(self, y_pred, group, enc, save_dir)
 
+                logger.debug(f"Save all matrices and figures - {group}")
+                #f group == "full":
+                #    metrics.save_results(self, y_pred, y_true, adata_list, group, save_dir, split, enc)
+       
         if self.opt_metric:
+            opt_metric = 0 # Default if not found
             split, metric = self.opt_metric.split("-")
-            self.run_neptune.wait()
-            opt_metric = self.run_neptune[f"evaluation/{split}/{metric}"].fetch()
+            if self.run_file.log_neptune:
+                logger.debug("Get opt_metric from neptune")
+                self.run_neptune.wait()
+                try:
+                    opt_metric = self.run_neptune[f"evaluation/{split}/{metric}"].fetch()
+                except:
+                    logger.warning(f"Could not fetch metric {self.opt_metric} from Neptune")
+                    opt_metric = 0
+            else:
+                logger.debug("Get opt_metric from metrics.csv")
+                csv_path = os.path.join(save_dir, "metrics.csv")
+                if os.path.exists(csv_path):
+                    try:
+                        df_metrics = pd.read_csv(csv_path)
+                        # Filter for group=split, subset=all, metric=metric
+                        row = df_metrics[
+                            (df_metrics["group"] == split) & 
+                            (df_metrics["subset"] == "all") & 
+                            (df_metrics["metric"] == metric)
+                        ]
+                        if not row.empty:
+                            opt_metric = float(row.iloc[0]["value"])
+                        else:
+                            logger.warning(f"Optimal metric {self.opt_metric} not found in {csv_path}")
+                    except Exception as e:
+                        logger.error(f"Error reading metrics from {csv_path}: {e}")
+                else:
+                    logger.warning(f"Metrics file {csv_path} not found")
             logger.info(f"optimal metric:{opt_metric}")
         else:
             opt_metric = None
@@ -865,12 +892,12 @@ class Workflow:
                 if wait >= patience_es and epoch > min_epochs:
                     logger.info(f"Early stopping triggered at epoch {epoch}. Restoring best model from epoch {best_epoch_es} with score {es_best:.4f}.")
                     self.dann_ae.set_weights(best_model)
-                    self.run_neptune[f"training/train/epoch_{strategy}_lastepoch"] = epoch
-                    self.run_neptune[f"training/train/epoch_{strategy}_bestepoch"] = best_epoch_es                 
+                    add_training_log(self, f"epoch_{strategy}_lastepoch", epoch)
+                    add_training_log(self, f"epoch_{strategy}_bestepoch", best_epoch_es)
                     break  # Exit the loop for this training scheme
 
-            self.run_neptune[f"training/train/epoch_{strategy}_lastepoch"] = epoch
-            self.run_neptune[f"training/train/epoch_{strategy}_bestepoch"] = best_epoch_es                 
+            add_training_log(self, f"epoch_{strategy}_lastepoch", epoch)
+            add_training_log(self, f"epoch_{strategy}_bestepoch", best_epoch_es)
                         
 
         time_out = time.time()
@@ -980,13 +1007,7 @@ class Workflow:
         n_samples,
         n_obs
     ):
-        if self.run_file.log_neptune:
-            self.run_neptune["training/train/tf_GPU_memory_step"].append(
-                tf.config.experimental.get_memory_info("GPU:0")["current"]
-                / 1e6
-            )
-            self.run_neptune["training/train/step"].append(step)
-
+        
         input_batch, output_batch = next(batch_generator)
         # X_batch, sf_batch = input_batch.values()
         clas_batch, dann_batch, rec_batch = output_batch.values()

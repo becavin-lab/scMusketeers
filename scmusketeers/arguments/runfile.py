@@ -5,7 +5,7 @@ from scmusketeers.tools.utils import str2bool
 
 """Parses command-line arguments for a workflow involving model training and hyperparameter optimization."""
 
-PROCESS_TYPE = ["transfer", "hp_optim", "benchmark"]
+PROCESS_TYPE = ["transfer", "hp_optim", "benchmark", "hp_optim_single"]
 
 
 def get_runfile():
@@ -57,7 +57,7 @@ def create_argparser():
     parser.add_argument(
         "process",
         type=str,
-        help="Type of process to run : Cell type Transfer (transfer), Hyperparameter optimization (hp_optim), Benchmark models (benchmark)"
+        help="Type of process to run : Cell type Transfer (transfer), Hyperparameter optimization (hp_optim), Benchmark models (benchmark), Single HP Trial (hp_optim_single)"
         f" among {PROCESS_TYPE}",
         default="",
     )
@@ -172,7 +172,21 @@ def create_argparser():
     )
 
     benchmark_group = parser.add_argument_group("Benchmark of ScMusketeers Parameters")
-    benchmark_group.add_argument(
+    hparam_group.add_argument(
+        "--trial_params_path", type=str, nargs="?", default=None, help="Path to json file with trial parameters"
+    )
+    hparam_group.add_argument(
+        "--trial_result_path", type=str, nargs="?", default=None, help="Path to save trial result metric"
+    )
+    hparam_group.add_argument(
+        "--hp_resume",
+        type=bool,
+        nargs="?",
+        default=False,
+        help="If True, resume optimization by checking for existing result files",
+    )
+    
+    hparam_group.add_argument(
         "--gpu_models", type=str, nargs="?", default="True", help=""
     )
 

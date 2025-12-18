@@ -19,8 +19,9 @@ class_key="celltype"
 batch_key="manip"
 hparam_path="ajrccm_r2_sch3.json"
 bestparam_path="none.csv"
-#echo "HP LOOP - ${dataset_name}"
-#nohup ./experiment_script/benchmark/00_hp_optim.sh ${working_dir} ${scmusk_path} ${task} ${neptune_name} ${dataset_name} ${class_key} ${batch_key} ${bestparam_path} ${hparam_path} ${total_trial} > experiment_script/benchmark/logs/${dataset_name}_hyperparameters_optim.log 2>&1 &
+log_file="experiment_script/results/logs/${dataset_name}_hyperparameters_optim.log"
+echo "HP LOOP - ${dataset_name}"
+nohup ./experiment_script/benchmark/00_hp_optim.sh ${working_dir} ${scmusk_path} ${task} ${neptune_name} ${dataset_name} ${class_key} ${batch_key} ${bestparam_path} ${hparam_path} ${total_trial} > ${log_file} 2>&1 &
 
 #### HTAP
 dataset_name="htap"
@@ -60,6 +61,6 @@ for dataset_name in  "tosti_2021" "tran_2021" "tabula_2022_spleen" "yoshida_2021
 #for dataset_name in  "dominguez_2022_lymph" "dominguez_2022_spleen" "tosti_2021" "tran_2021" "tabula_2022_spleen" "yoshida_2021" "litvinukova_2020" "koenig_2022" "lake_2021" ;
 do
     echo "HP LOOP - ${dataset_name}"
-    nohup ./experiment_script/benchmark/00_hp_optim.sh ${working_dir} ${scmusk_path} ${task} ${neptune_name} ${dataset_name} ${class_key} ${batch_key} ${bestparam_path} ${hparam_path} ${total_trial} > experiment_script/benchmark/logs/${dataset_name}_hyperparameters_optim.log 2>&1 &
+    #nohup ./experiment_script/benchmark/00_hp_optim.sh ${working_dir} ${scmusk_path} ${task} ${neptune_name} ${dataset_name} ${class_key} ${batch_key} ${bestparam_path} ${hparam_path} ${total_trial} > experiment_script/benchmark/logs/${dataset_name}_hyperparameters_optim.log 2>&1 &
 done
 
