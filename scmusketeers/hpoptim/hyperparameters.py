@@ -210,8 +210,8 @@ class Workflow:
             self.weight_decay = params["weight_decay"]
         if "learning_rate" in params:
             self.learning_rate = params["learning_rate"]
-        if "warmup_epoch" in params:
-            self.warmup_epoch = params["warmup_epoch"]
+        #if "warmup_epoch" in params:
+        #    self.warmup_epoch = params["warmup_epoch"]
         if "dropout" in params:
             self.dropout = params["dropout"]
         if "layer1" in params:

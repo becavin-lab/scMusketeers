@@ -25,7 +25,7 @@ total_trial=${10}
 
 
 ### Dataset settings
-out_dir=${working_dir}"/experiment_script/results"
+out_dir=${working_dir}"/experiment_script/results/${dataset_name}"
 python_path=${scmusk_path}"/scmusketeers/__main__.py"
 data_path=${working_dir}"/data"
 hparam_path=${scmusk_path}"/experiment_script/hp_ranges/"${hparam_path}
@@ -77,10 +77,10 @@ keep_obs=$(echo "$keep_obs" | tr -d '[:space:]' | tr -d '"' | tr ',' ' ')
 echo "|--- BASH  train_obs=$keep_obs"
 
 ### Run scMusketeers hyperparameters optimization
-#warmup_epoch=20   # default 100, help - Number of epoch to warmup DANN
-#fullmodel_epoch=50   # default = 100, help = Number of epoch to train full model
-#permonly_epoch=50   # default = 100, help = Number of epoch to train in permutation only mode
-#classifier_epoch=50   # default = 50, help = Number of epoch to train te classifier only
+# warmup_epoch=20   # default 100, help - Number of epoch to warmup DANN
+# fullmodel_epoch=50   # default = 100, help = Number of epoch to train full model
+# permonly_epoch=50   # default = 100, help = Number of epoch to train in permutation only mode
+# classifier_epoch=50   # default = 50, help = Number of epoch to train te classifier only
 warmup_epoch=1   # default 100, help - Number of epoch to warmup DANN
 fullmodel_epoch=1   # default = 100, help = Number of epoch to train full model
 permonly_epoch=1   # default = 100, help = Number of epoch to train in permutation only mode
@@ -88,13 +88,22 @@ classifier_epoch=1   # default = 50, help = Number of epoch to train te classifi
 
 training_scheme="training_scheme_1"
 
-sc-musketeers hp_optim ${h5ad_path} --debug --bestparam_path=${bestparam_path} --training_scheme=${training_scheme} --task ${task} --log_neptune "True" \
---neptune_name ${neptune_name} --out_dir ${out_dir} --total_trial ${total_trial} \
+# With neptune
+# sc-musketeers hp_optim ${h5ad_path} --debug --bestparam_path=${bestparam_path} --training_scheme=${training_scheme} --task ${task} --log_neptune "True" \
+# --neptune_name ${neptune_name} --out_dir ${out_dir} --total_trial ${total_trial} \
+# --hparam_path ${hparam_path} --dataset_name ${dataset_name} \
+# --class_key $class_key --batch_key $batch_key --test_obs $test_obs \
+# --mode entire_condition --obs_key $batch_key --keep_obs $keep_obs \
+# --test_split_key TRAIN_TEST_split_batch \
+# --classifier_epoch=${classifier_epoch} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch}
+
+# Without neptune
+sc-musketeers hp_optim ${h5ad_path} --debug --bestparam_path=${bestparam_path} --training_scheme=${training_scheme} --task ${task} \
+--out_dir ${out_dir} --total_trial ${total_trial} \
 --hparam_path ${hparam_path} --dataset_name ${dataset_name} \
 --class_key $class_key --batch_key $batch_key --test_obs $test_obs \
 --mode entire_condition --obs_key $batch_key --keep_obs $keep_obs \
 --test_split_key TRAIN_TEST_split_batch \
 --classifier_epoch=${classifier_epoch} --warmup_epoch=${warmup_epoch} --fullmodel_epoch=${fullmodel_epoch} --permonly_epoch=${permonly_epoch}
-
 
 

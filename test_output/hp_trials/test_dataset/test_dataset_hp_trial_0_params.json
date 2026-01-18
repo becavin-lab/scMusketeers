@@ -1,0 +1,5 @@
+{
+    "learning_rate": 0.001,
+    "batch_size": 32,
+    "trial_name": "HyperParam_Optim_test_dataset_0_1"
+}

@@ -47,7 +47,8 @@ def run_trial_sbatch(experiment, params, trial_index, run_file):
     Run a single trial via sbatch
     """
     # 1. Prepare paths
-    trial_dir = os.path.join(run_file.out_dir, "hp_trials")
+    # 1. Prepare paths
+    trial_dir = os.path.join(run_file.out_dir, "hp_trials", run_file.dataset_name)
     if not os.path.exists(trial_dir):
         os.makedirs(trial_dir)
 
@@ -96,7 +97,8 @@ def run_trial_sbatch(experiment, params, trial_index, run_file):
     full_cmd = " ".join(cmd_args)
     
     # 3. Create sbatch script
-    log_dir = os.path.join(run_file.out_dir, "logs","sbatch")
+    log_dir = os.path.join(run_file.out_dir, "logs_sbatch", run_file.dataset_name)
+    #log_dir = os.path.join(run_file.out_dir, "logs", "sbatch", run_file.dataset_name)
     if not os.path.exists(log_dir):
         try:
              os.makedirs(log_dir)
@@ -114,7 +116,8 @@ def run_trial_sbatch(experiment, params, trial_index, run_file):
 #SBATCH --error={log_err}
 #SBATCH --account=cell
 #SBATCH --partition=cpucourt
-#SBATCH --mem=8G
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=16G
 #SBATCH --time=10:00:00
 
 # Environment setup
@@ -254,14 +257,24 @@ def run_workflow(run_file):
         # We try to keep submitting until we reach total_trial limit
         # Ax will block or error if it needs more data (e.g. Sobol done, need results for BoTorch)
         
-        if started_trials_count < run_file.total_trial:
+        # 2. Submission Phase: Submit new trials if possible
+        # We try to keep submitting until we reach total_trial limit or MAX_PARALLEL
+        # Using a loop here ensures we fill the queue quickly instead of 1 per 10s.
+        
+        # Max parallel running trials (soft limit to avoid spamming cluster too hard)
+        MAX_PARALLEL = 5 
+        
+        while started_trials_count < run_file.total_trial:
+            # Check parallelism
+            active_trials = len(submitted_trials)
+            if active_trials >= MAX_PARALLEL:
+                break
+                
             try:
                 # Check if we should wait for data? 
                 # AxClient.get_next_trial() might raise exception if generation strategy cannot generate.
                 # Or it might just take a long time?
                 # We wrap in try block.
-                
-                # Check max parallelism if needed? For now we trust Ax/User capacity.
                 
                 parametrization, trial_index = ax_client.get_next_trial()
                 
@@ -280,7 +293,10 @@ def run_workflow(run_file):
                 # If Ax cannot generate a trial (e.g. waiting for data), we just log and continue waiting
                 # We should be careful not to spam logs if it fails repeatedly.
                 # logger.debug(f"Waiting for new trial generation: {e}")
-                pass
+                
+                # IMPORTANT: If we cannot generate, we MUST break the inner loop 
+                # to allow result collection in the outer loop.
+                break
         
         # 3. Wait before next poll
         # If we have running trials, we wait. If we finished everything, loop terminates.
@@ -289,9 +305,17 @@ def run_workflow(run_file):
 
 
     logger.info("#HP_optim--- Hyperparam optimization finished")
-    best_parameters, values = ax_client.get_best_parameters()
+    
+    try:
+        best_trial_index, best_parameters, best_values = ax_client.get_best_trial(use_model_predictions=False)
+        logger.info(f"Best Trial Index: {best_trial_index}")
+    except Exception as e:
+        logger.warning(f"Could not retrieve best trial index directly: {e}")
+        best_parameters, values = ax_client.get_best_parameters()
+
     logger.debug(f"Best parameters {best_parameters}")
-    path_bestparam = os.path.join(run_file.out_dir,run_file.out_name+run_file.dataset_name+"_best_hp.json")
+#    path_bestparam = os.path.join(run_file.out_dir,run_file.out_name+run_file.dataset_name+"_best_hp.json")
+    path_bestparam = os.path.join(run_file.out_dir,run_file.out_name+run_file.dataset_name+"_best_hp_tscheme.json")
     with open(path_bestparam, 'w') as json_file:
         json.dump(best_parameters, json_file, indent=4)
     logger.info(f"Best hyperparameters saved in {path_bestparam}")

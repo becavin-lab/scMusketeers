@@ -180,7 +180,7 @@ def get_training_scheme(training_scheme_id, run_file):
     if training_scheme_id == "training_scheme_21":
         training_scheme = [
             ("warmup_dann", run_file.warmup_epoch, False),
-            ("no_dann", 100, False),
+            ("no_dann", run_file.fullmodel_epoch, False),
             ("classifier_branch", run_file.classifier_epoch, False),
         ]
 

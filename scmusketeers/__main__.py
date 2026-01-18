@@ -14,7 +14,6 @@ import scmusketeers.hpoptim.hyperparameters as hp
 
 from scmusketeers.transfer.dataset_tf import process_dataset
 from scmusketeers.hpoptim.run_workflow import run_workflow
-from scmusketeers.hpoptim.run_workflow import run_workflow
 
 logger = logging.getLogger("Sc-Musketeers")
 
