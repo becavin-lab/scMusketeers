@@ -1,7 +1,7 @@
 # Get GPU
 # srun -A cell -p gpu -t 10:00:00 --gres=gpu:1 --pty bash -i
 
-which sc-musketeers
+sc-musketeers --version
 
 
 outdir="/workspace/cell/scMusketeers"
