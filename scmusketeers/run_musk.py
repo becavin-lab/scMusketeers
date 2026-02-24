@@ -1,4 +1,5 @@
 import os
+import logging
 
 from scmusketeers.arguments.neptune_log import (start_neptune_log,
                                                 stop_neptune_log)
@@ -8,6 +9,7 @@ from scmusketeers.transfer.experiment import MakeExperiment
 from scmusketeers.transfer.optimize_model import Workflow
 from scmusketeers.workflow.run_workflow import run_workflow
 
+logger = logging.getLogger("Sc-Musketeers")
 
 def run_sc_musketeers(run_file):
     # Run transfer

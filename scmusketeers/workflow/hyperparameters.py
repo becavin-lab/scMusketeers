@@ -7,6 +7,7 @@ import argparse
 import functools
 import os
 import sys
+import logging
 
 import keras
 from sklearn.metrics import (accuracy_score, adjusted_mutual_info_score,
@@ -77,6 +78,8 @@ from neptune.utils import stringify_unsupported
 physical_devices = tf.config.list_physical_devices("GPU")
 for gpu_instance in physical_devices:
     tf.config.experimental.set_memory_growth(gpu_instance, True)
+
+logger = logging.getLogger("Sc-Musketeers")
 
 
 # Reset Keras Session

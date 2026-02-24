@@ -8,6 +8,7 @@ import argparse
 import functools
 import os
 import sys
+import logging
 
 # try :
 #     from .dataset import Dataset, load_dataset
@@ -67,6 +68,8 @@ import scanpy as sc
 import seaborn as sns
 # from numba import cuda
 from neptune.utils import stringify_unsupported
+
+logger = logging.getLogger("Sc-Musketeers")
 
 
 def train_dummy(X_list, y_list, batch_list, train_plit, **kwargs):

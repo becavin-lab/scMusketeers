@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 
 import anndata
 import numpy as np
@@ -15,6 +16,8 @@ try:
     from ..tools.utils import densify
 except ImportError:
     from tools.utils import densify
+
+logger = logging.getLogger("Sc-Musketeers")
 
 
 def get_hvg_common(

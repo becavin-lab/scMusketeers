@@ -8,6 +8,7 @@ import functools
 import os
 import sys
 from unittest import TestResult
+import logging
 
 try:
     from ae_param import AE_PARAM
@@ -90,6 +91,9 @@ import tensorflow as tf
 physical_devices = tf.config.list_physical_devices("GPU")
 for gpu_instance in physical_devices:
     tf.config.experimental.set_memory_growth(gpu_instance, True)
+
+logger = logging.getLogger("Sc-Musketeers")
+
 
 PRED_METRICS_LIST = {
     "acc": accuracy_score,

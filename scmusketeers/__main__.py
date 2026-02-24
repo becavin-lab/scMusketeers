@@ -1,5 +1,6 @@
 from scmusketeers.arguments.runfile import get_runfile
 from scmusketeers.run_musk import run_sc_musketeers
+import logging
 
 
 def main_entry_point():

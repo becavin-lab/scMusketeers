@@ -4,6 +4,7 @@ import pandas as pd
 import scanpy as sc
 from sklearn import svm
 from sklearn.neighbors import KNeighborsClassifier
+import logging
 
 try:
     import celltypist
@@ -23,6 +24,7 @@ except ImportError:
 
 # from tools.utils import densify
 
+logger = logging.getLogger("Sc-Musketeers")
 
 # print("Last run with scvi-tools version:", scvi.__version__)
 
