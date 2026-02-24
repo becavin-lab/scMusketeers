@@ -88,6 +88,13 @@ def create_argparser():
     )
 
     parser.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Print out all debug messages.",
+    )
+
+    parser.add_argument(
         "process",
         type=str,
         help="Type of process to run : Training, Hyperparameter optimization"
