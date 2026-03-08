@@ -11,7 +11,6 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.utils import shuffle
 
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
-print(sys.path[0])
 try:
     from ..tools.utils import densify
 except ImportError:
@@ -26,10 +25,10 @@ def get_hvg_common(
     """
     Computes a list of hvg which are common to the most different batches.
     """
-    print(f"Selecting {n_hvg} HVG")
+    logger.debug(f"Selecting {n_hvg} HVG")
 
     if n_hvg >= adata_.n_vars:
-        print(f"Dataset has less than {n_hvg} genes, keeping every genes")
+        logger.debug(f"Dataset has less than {n_hvg} genes, keeping every genes")
         if reduce_adata:
             return adata_
         else:
@@ -51,7 +50,7 @@ def get_hvg_common(
         adata.var["highly_variable_nbatches"] == n_batches
     ]  # Starts with genes hvg for every batches
     dispersion_nbatches = dispersion_nbatches.sort_values(ascending=False)
-    print(f"Searching for highly variable genes in {n_batches} batches")
+    logger.debug(f"Searching for highly variable genes in {n_batches} batches")
     if (
         len(dispersion_nbatches) >= n_hvg
     ):  # If there are already enough hvg in every batch, returns them
@@ -60,7 +59,7 @@ def get_hvg_common(
             return adata[:, top_genes]
         else:
             return top_genes
-    print(
+    logger.debug(
         f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches"
     )
     top_genes = list(
@@ -73,7 +72,7 @@ def get_hvg_common(
         n_batches = (
             n_batches - 1
         )  # Looks for genes hvg for one fewer batch at each iteration
-        print(f"Searching for highly variable genes in {n_batches} batches")
+        logger.debug(f"Searching for highly variable genes in {n_batches} batches")
         remaining_genes = n_hvg - len(top_genes)  # nb of genes left to find
         dispersion_nbatches = adata.var["dispersions_norm"][
             adata.var["highly_variable_nbatches"] == n_batches
@@ -82,14 +81,14 @@ def get_hvg_common(
         if (
             len(dispersion_nbatches) > remaining_genes
         ):  # Enough genes to fill in the rest
-            print(
+            logger.debug(
                 f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches. Selecting top {remaining_genes}"
             )
-            # print(dispersion_nbatches)
+            # logger.debug(dispersion_nbatches)
             top_genes += list(dispersion_nbatches[:remaining_genes].index)
             enough = True
         else:
-            print(
+            logger.debug(
                 f"Found {len(dispersion_nbatches)} highly variable genes using {n_batches} batches"
             )
             top_genes += list(dispersion_nbatches.index)
@@ -225,8 +224,8 @@ def load_dataset(dataset_name, dataset_dir):
     adata = sc.read_h5ad(dataset_path)
     if not adata.raw:
         adata.raw = adata
-    print(f"dataset loaded at {dataset_path}")
-    print(adata)
+    logger.debug(f"dataset loaded at {dataset_path}")
+    logger.debug(adata)
     return adata
 
 
@@ -326,11 +325,11 @@ class Dataset:
             )
         elif self.size_factor == "constant":
             self.adata.obs["size_factors"] = 1.0
-        # print('right after loading')
-        # print(self.adata)
-        # print(self.adata_test)
-        # print(self.adata_train_extended)
-        # print(self.adata_train_extended.obs[self.class_key].value_counts())
+        # logger.debug('right after loading')
+        # logger.debug(self.adata)
+        # logger.debug(self.adata_test)
+        # logger.debug(self.adata_train_extended)
+        # logger.debug(self.adata_train_extended.obs[self.class_key].value_counts())
         # self.adata_train = self.adata_train_extended.copy()
 
     def test_split(self, test_index_name=None, test_obs=None):
@@ -338,7 +337,7 @@ class Dataset:
         if test_index_name:
             test_idx = self.adata.obs_names.isin(test_index_name)
         if test_obs:
-            print(f"test obs :{test_obs}")
+            logger.debug(f"test obs :{test_obs}")
             test_idx = self.adata.obs[self.batch_key].isin(test_obs)
 
             split = pd.Series(
@@ -421,7 +420,7 @@ class Dataset:
                 )
         if mode == "percentage":
             self.pct_split = pct_split
-            print(self.adata_train_extended.obs[self.class_key].value_counts())
+            logger.debug(self.adata_train_extended.obs[self.class_key].value_counts())
             if split_strategy == "random" or not split_strategy:
                 # Dirty workaround for celltypes with 1 cell only, which is a rare case
                 stratification = self.adata_train_extended.obs[
@@ -494,7 +493,7 @@ class Dataset:
         elif mode == "entire_condition":
             self.obs_key = obs_key
             self.keep_obs = keep_obs
-            print(
+            logger.debug(
                 f"splitting this adata train/val : {self.adata_train_extended}"
             )
             keep_idx = self.adata_train_extended.obs[obs_key].isin(
@@ -587,7 +586,7 @@ class Dataset:
             to_keep[remove_idx] = "val"
             self.adata_train_extended.obs["train_split"] = to_keep
         else:
-            print(f"{mode} is not a valid splitting mode")
+            logger.debug(f"{mode} is not a valid splitting mode")
             return
 
         train_split = self.adata.obs[self.test_split_key].astype(
@@ -598,7 +597,7 @@ class Dataset:
         )
         self.adata.obs["train_split"] = train_split
 
-        print(
+        logger.debug(
             f'train, test, val proportions : {self.adata.obs["train_split"].value_counts()}'
         )
 
@@ -726,13 +725,13 @@ class Dataset:
         obs_series = self.adata_train.obs[self.class_key].astype(
             "str"
         )  # The training labels, which include nan and faked
-        # print(f'1 {obs_series_true.value_counts()}')
-        # print(f'2 {obs_series_true[false_idx]}')
-        # print(f'2.5 {false_idx}')
-        # print(f'2.75 {len(false_idx)}')
+        # logger.debug(f'1 {obs_series_true.value_counts()}')
+        # logger.debug(f'2 {obs_series_true[false_idx]}')
+        # logger.debug(f'2.5 {false_idx}')
+        # logger.debug(f'2.75 {len(false_idx)}')
         obs_series_true[false_idx] = self.false_celltype
         obs_series[false_idx] = self.false_celltype
-        # print(f'3 {obs_series_true.value_counts()}')
+        # logger.debug(f'3 {obs_series_true.value_counts()}')
         self.adata_train.obs[self.class_key] = obs_series
         adata_obs = self.adata.obs[f"true_{self.class_key}"].astype(
             "str"
@@ -740,19 +739,19 @@ class Dataset:
         adata_obs_train = self.adata.obs[self.class_key].astype(
             "str"
         )  # The training labels, which should include nan and faked
-        # print(f'4 {adata_obs.value_counts()}')
-        # print(f'adata_obs.index : {adata_obs.index}')
-        # print(f'obs_series.index : {obs_series.index}')
+        # logger.debug(f'4 {adata_obs.value_counts()}')
+        # logger.debug(f'adata_obs.index : {adata_obs.index}')
+        # logger.debug(f'obs_series.index : {obs_series.index}')
         adata_obs.loc[obs_series_true.index] = (
             obs_series_true  # Les valeurs trafiquées
         )
         adata_obs_train.loc[obs_series.index] = (
             obs_series  # Les valeurs trafiquées
         )
-        # print(f"il y a {len(true_series)} True ({self.true_celltype}) et {len(false_series)} False ({self.false_celltype})")
-        # print(f"on fake donc {len(false_idx)} cellules avec un pct_false de {self.pct_false}")
-        # print(f"adata_obs  (faked) : {adata_obs.value_counts()}")
-        # print(f"true celltype : {self.adata.obs[f'true_{self.class_key}']}")
+        # logger.debug(f"il y a {len(true_series)} True ({self.true_celltype}) et {len(false_series)} False ({self.false_celltype})")
+        # logger.debug(f"on fake donc {len(false_idx)} cellules avec un pct_false de {self.pct_false}")
+        # logger.debug(f"adata_obs  (faked) : {adata_obs.value_counts()}")
+        # logger.debug(f"true celltype : {self.adata.obs[f'true_{self.class_key}']}")
         self.adata.obs[f"fake_{self.class_key}"] = adata_obs
         self.adata.obs[self.class_key] = adata_obs_train
         self.adata.obs["faked"] = (
@@ -762,7 +761,7 @@ class Dataset:
         self.adata.obs["faked_color"] = self.adata.obs["faked"].replace(
             {True: "faked", False: "not faked"}
         )
-        # print(self.adata.obs['faked'].value_counts())
+        # logger.debug(self.adata.obs['faked'].value_counts())
 
     def small_clusters_totest(self):
         inf_n_cells = ~self.adata_train.obs[self.class_key].isin(

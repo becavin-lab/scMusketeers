@@ -4,7 +4,7 @@ from sklearn.model_selection import GroupShuffleSplit
 import pandas as pd
 import neptune
 
-WD_PATH = '/home/acollin/scPermut/'
+WD_PATH = '/workspace/cell/scMusketeers/'
 sys.path.append(WD_PATH)
 
 from scmusketeers.tools.utils import str2bool
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--log_neptune', type=str2bool, nargs='?',const=True, default=True , help ='')
     parser.add_argument('--gpu_models', type=str2bool, nargs='?',const=False, default=False , help ='')
-    parser.add_argument('--working_dir', type=str, nargs='?',const='/home/acollin/scPermut/', default='/home/acollin/scPermut/', help ='')
+    parser.add_argument('--working_dir', type=str, nargs='?',const='/workspace/cell/scMusketeers/', default='/workspace/cell/scMusketeers/', help ='')
 
 
     run_file = parser.parse_args()
@@ -51,14 +51,14 @@ if __name__ == '__main__':
     working_dir = run_file.working_dir
     print(f'working directory : {working_dir}')
 
-    project = neptune.init_project(
-            project="becavin-lab/benchmark",
-        api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiJiMmRkMWRjNS03ZGUwLTQ1MzQtYTViOS0yNTQ3MThlY2Q5NzUifQ==",
-        mode="read-only",
-            )# For checkpoint
+    # project = neptune.init_project(
+    #         project="becavin-lab/benchmark",
+    #     api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiJiMmRkMWRjNS03ZGUwLTQ1MzQtYTViOS0yNTQ3MThlY2Q5NzUifQ==",
+    #     mode="read-only",
+    #         )# For checkpoint
 
-    runs_table_df = project.fetch_runs_table().to_pandas()
-    project.stop()
+    # runs_table_df = project.fetch_runs_table().to_pandas()
+    # project.stop()
     
     if run_file.gpu_models :
         model_list = model_list_gpu

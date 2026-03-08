@@ -74,7 +74,7 @@ def make_training_set(
     same_class_pct : When using contrastive loss, indicates the pct of samples to permute within their class. set to None when not using contrastive loss
     """
     permutations = [[], []]
-    print("switching perm")
+    print("Switching permutation in make_training_set()")
 
     # y = np.array(y).astype(str) If passing labels as string
 
@@ -120,7 +120,7 @@ def make_training_set_tf(
     same_class_pct : When using contrastive loss, indicates the pct of samples to permute within their class. set to None when not using contrastive loss
     """
     permutations = [[], []]
-    print("switching perm")
+    print("Switching permutation in make_training_set_tf()")
     # y = np.array(y).astype(str) If passing labels as string
     y_cl = tf.math.argmax(y, axis=1)
     classes = tf.unique(y_cl)

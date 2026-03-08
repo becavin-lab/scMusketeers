@@ -5,12 +5,20 @@ from sklearn.model_selection import GroupShuffleSplit
 import pandas as pd
 import neptune
 
-WD_PATH = '/home/acollin/scPermut/'
+WD_PATH = '/workspace/cell/scMusketeers/'
 sys.path.append(WD_PATH)
+import logging  
 
 from scmusketeers.tools.utils import str2bool, load_json
-print(str2bool('True'))
+#print(str2bool('True'))
 from scmusketeers.workflow.hyperparameters import Workflow
+
+from importlib.metadata import version
+
+logger = logging.getLogger("Sc-Musketeers")
+logging.basicConfig(format="|--- %(levelname)-8s    %(message)s")
+logger.setLevel(getattr(logging, "DEBUG"))
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -86,35 +94,35 @@ if __name__ == '__main__':
     parser.add_argument('--dann_activation', type = str ,nargs='?', default = 'relu' , help ='')
     parser.add_argument('--dann_output_activation', type = str,nargs='?', default = 'softmax', help ='')
     parser.add_argument('--training_scheme', type = str,nargs='?', default = 'training_scheme_1', help ='')
-    parser.add_argument('--log_neptune', type=str2bool, nargs='?',const=True, default=True , help ='')
+    parser.add_argument('--log_neptune', type=str2bool, nargs='?',const=True, default=False , help ='')
     parser.add_argument('--hparam_path', type=str, nargs='?', default=None, help ='')
     parser.add_argument('--opt_metric', type=str, nargs='?', default='val-balanced_acc', help ='The metric used for early stopping as well as optimizes in hp search. Should be formatted as it appears in neptune (split-metricname)')
 
     run_file = parser.parse_args()
-    print(run_file.class_key, run_file.batch_key)
+    logger.debug(f'class_key : {run_file.class_key}, batch_key : {run_file.batch_key}')
     working_dir = run_file.working_dir
-    print(f'working directory : {working_dir}')
+    logger.debug(f'working directory : {working_dir}')
 
-    project = neptune.init_project(
-            project="becavin-lab/benchmark",
-        api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiJiMmRkMWRjNS03ZGUwLTQ1MzQtYTViOS0yNTQ3MThlY2Q5NzUifQ==",
-        mode="read-only",
-            )# For checkpoint
+    # project = neptune.init_project(
+    #         project="becavin-lab/benchmark",
+    #     api_token="eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiJiMmRkMWRjNS03ZGUwLTQ1MzQtYTViOS0yNTQ3MThlY2Q5NzUifQ==",
+    #     mode="read-only",
+    #         )# For checkpoint
     
-    runs_table_df = project.fetch_runs_table(query = '`parameters/task`:string = "task_1"' , columns = ['parameters/dataset_name',
-                            'parameters/training_scheme',
-                            'parameters/clas_loss_name',
-                            'parameters/use_hvg',
-                            'parameters/task',
-                            'parameters/model',
-                            'parameters/test_fold_nb',
-                            'parameters/val_fold_nb',
-                            'parameters/deprecated_status',
-                            'parameters/debug_status']).to_pandas()
-    print('run table : ')
-    print(runs_table_df.shape)
-    print(runs_table_df['parameters/debug_status'].head())
-    project.stop()
+    # runs_table_df = project.fetch_runs_table(query = '`parameters/task`:string = "task_1"' , columns = ['parameters/dataset_name',
+    #                         'parameters/training_scheme',
+    #                         'parameters/clas_loss_name',
+    #                         'parameters/use_hvg',
+    #                         'parameters/task',
+    #                         'parameters/model',
+    #                         'parameters/test_fold_nb',
+    #                         'parameters/val_fold_nb',
+    #                         'parameters/deprecated_status',
+    #                         'parameters/debug_status']).to_pandas()
+    # logger.debug('run table : ')
+    # logger.debug(runs_table_df.shape)
+    # logger.debug(runs_table_df['parameters/debug_status'].head())
+    # project.stop()
     
     experiment = Workflow(run_file=run_file, working_dir=working_dir)
 
@@ -156,15 +164,15 @@ if __name__ == '__main__':
                 experiment.keep_obs = list(groups_train_val[train_index].unique()) # keeping only train idx
                 val_obs = list(groups_train_val[val_index].unique())
 
-                print(f"Fold {i,j}:")
-                print(f"train = {list(groups_train_val.iloc[train_index].unique())}, len = {len(groups_train_val.iloc[train_index].unique())}")
-                print(f"val = {list(groups_train_val.iloc[val_index].unique())}, len = {len(groups_train_val.iloc[val_index].unique())}")
-                print(f"test = {list(groups.iloc[test_index].unique())}, len = {len(groups.iloc[test_index].unique())}")
+                logger.debug(f"Fold {i,j}:")
+                logger.debug(f"train = {list(groups_train_val.iloc[train_index].unique())}, len = {len(groups_train_val.iloc[train_index].unique())}")
+                logger.debug(f"val = {list(groups_train_val.iloc[val_index].unique())}, len = {len(groups_train_val.iloc[val_index].unique())}")
+                logger.debug(f"test = {list(groups.iloc[test_index].unique())}, len = {len(groups.iloc[test_index].unique())}")
 
                 
-                print(set(groups_train_val.iloc[train_index].unique()) & set(groups.iloc[test_index].unique()))
-                print(set(groups_train_val.iloc[train_index].unique()) & set(groups_train_val.iloc[val_index].unique()))
-                print(set(groups_train_val.iloc[val_index].unique()) & set(groups.iloc[test_index].unique()))
+                logger.debug(set(groups_train_val.iloc[train_index].unique()) & set(groups.iloc[test_index].unique()))
+                logger.debug(set(groups_train_val.iloc[train_index].unique()) & set(groups_train_val.iloc[val_index].unique()))
+                logger.debug(set(groups_train_val.iloc[val_index].unique()) & set(groups.iloc[test_index].unique()))
 
                 experiment.split_train_val()
                 checkpoint={'parameters/dataset_name': experiment.dataset_name, 
@@ -179,18 +187,16 @@ if __name__ == '__main__':
                             'parameters/debug_status': 'fixed_1'}
                 # for k, v in vars(run_file).items():
                 #     checkpoint['parameters/' + k] = v
-                print(f'checkpoint : {checkpoint}')
-                result = runs_table_df[runs_table_df[list(checkpoint.keys())].eq(list(checkpoint.values())).all(axis=1)]
-                if result.empty:
-                    print(f'Running {model}')
-                    experiment.start_neptune_log()
-                    experiment.make_experiment()
-                    experiment.add_custom_log('test_fold_nb',i)
-                    experiment.add_custom_log('val_fold_nb',j)
-                    experiment.add_custom_log('test_obs',test_obs)
-                    experiment.add_custom_log('val_obs',val_obs)
-                    experiment.add_custom_log('train_obs',experiment.keep_obs)
-                    experiment.add_custom_log('task','task_1')
-                    experiment.add_custom_log('deprecated_status', False)
-                    experiment.add_custom_log('debug_status', "fixed_1")
-                    experiment.stop_neptune_log()
+                logger.debug(f'checkpoint : {checkpoint}')
+                logger.debug(f'Running {model}')
+                #experiment.start_neptune_log()
+                experiment.make_experiment()
+                #experiment.add_custom_log('test_fold_nb',i)
+                #experiment.add_custom_log('val_fold_nb',j)
+                #experiment.add_custom_log('test_obs',test_obs)
+                #experiment.add_custom_log('val_obs',val_obs)
+                #experiment.add_custom_log('train_obs',experiment.keep_obs)
+                #experiment.add_custom_log('task','task_1')
+                #experiment.add_custom_log('deprecated_status', False)
+                #experiment.add_custom_log('debug_status', "fixed_1")
+                #experiment.stop_neptune_log()

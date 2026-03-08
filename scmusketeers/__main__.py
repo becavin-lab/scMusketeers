@@ -18,10 +18,9 @@ def main_entry_point():
         logger.setLevel(getattr(logging, "DEBUG"))
     else:
         logger.setLevel(getattr(logging, "INFO"))
-
+    logger.debug(f"Program arguments: {run_file}")
     
     #run_file = get_default_param()
-    logger.debug(run_file)
     run_sc_musketeers(run_file)
 
 if __name__ == "__main__":
