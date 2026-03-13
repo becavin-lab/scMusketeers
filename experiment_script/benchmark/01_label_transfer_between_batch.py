@@ -16,9 +16,11 @@ logger = logging.getLogger("Sc-Musketeers")
 logging.basicConfig(format="|--- %(levelname)-8s    %(message)s")
 logger.setLevel(getattr(logging, "DEBUG"))
 
-#model_list_cpu = ['uce','celltypist'] #'scmap_cells', 'scmap_cluster', 'pca_svm', 'pca_knn','harmony_svm','celltypist','uce']
+# all_model_list_cpu = ['uce','celltypist'] #'scmap_cells', 'scmap_cluster', 'pca_svm', 'pca_knn','harmony_svm','celltypist','uce']
+
+model_list_cpu = ['uce','celltypist', 'scmap_cells', 'scmap_cluster', 'pca_svm', 'pca_knn']
 #harmony_svm
-model_list_cpu = ['uce']
+#model_list_cpu = ['uce']
 model_list_gpu = ['scanvi', ]
 
 if __name__ == '__main__':

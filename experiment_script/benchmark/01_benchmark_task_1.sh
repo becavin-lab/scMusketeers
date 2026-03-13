@@ -1,7 +1,6 @@
 #!/bin/sh
 #
 #SBATCH --account=cell     # The account name for the job.
-#SBATCH --output=/home/acollin/ajrccm_hyperparam.log # Important to retrieve the port where the notebook is running, if not included a slurm file with the job-id will be outputted. 
 
 
 working_dir="/workspace/cell/scMusketeers/experiment_script/benchmark/"
