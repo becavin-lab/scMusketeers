@@ -552,7 +552,7 @@ class Workflow:
             for epoch in range(1, n_epochs + 1):
                 running_epoch += 1
                 logger.debug(
-                    f"Epoch {running_epoch}/{total_epochs}, Current strat Epoch {epoch}/{n_epochs}"
+                    f"Epoch {running_epoch}/{total_epochs}, Current strategy {strategy}, Epoch {epoch}/{n_epochs}"
                 )
                 history, _, _, _, _ = self.training_loop(
                     history=history,
@@ -659,7 +659,7 @@ class Workflow:
             "warmup_dann_semisup",
         ]:
             group = "full"  # semi-supervised setting
-            layers_to_freeze = freeze.freeze_block(ae, "warmup_dann")
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "warmup_dann")
             freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "warmup_dann_train":
             group = "train"  # semi-supervised setting
@@ -667,28 +667,28 @@ class Workflow:
             freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "warmup_dann_no_rec":
             group = "full"
-            layers_to_freeze = freeze.freeze_block(ae, "all_but_dann")
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_dann")
             freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "dann_with_ae":
             group = "train"
-            ae.classifier.trainable = False
+            self.dann_ae.classifier.trainable = False
         elif training_strategy == "classifier_branch":
             group = "train"
             layers_to_freeze = freeze.freeze_block(
-                ae, "all_but_classifier_branch"
+                self.dann_ae, "all_but_classifier_branch"
             )  # training only classifier branch
             freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "permutation_only":
             group = "train"
-            layers_to_freeze = freeze.freeze_block(ae, "all_but_autoencoder")
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_autoencoder")
             freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "no_dann":
             group = "train"
-            layers_to_freeze = freeze.freeze_block(ae, "freeze_dann")
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "freeze_dann")
             freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "no_decoder":
             group = "train"
-            layers_to_freeze = freeze.freeze_block(ae, "freeze_dec")
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "freeze_dec")
             freeze.freeze_layers(layers_to_freeze)
 
 
@@ -849,18 +849,18 @@ class Workflow:
         self.mean_dann_loss_fn(dann_loss.__float__())
         self.mean_rec_loss_fn(rec_loss.__float__())
 
-        if self.run_file.verbose:
-            print_status_bar(
-                n_samples,
-                n_obs,
-                [
-                    self.mean_loss_fn,
-                    self.mean_clas_loss_fn,
-                    self.mean_dann_loss_fn,
-                    self.mean_rec_loss_fn,
-                ],
-                self.metrics,
-            )
+        # if self.run_file.verbose:
+        #     print_status_bar(
+        #         n_samples,
+        #         n_obs,
+        #         [
+        #             self.mean_loss_fn,
+        #             self.mean_clas_loss_fn,
+        #             self.mean_dann_loss_fn,
+        #             self.mean_rec_loss_fn,
+        #         ],
+        #         self.metrics,
+        #     )
 
     def evaluation_pass(
         self,

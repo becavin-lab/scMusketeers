@@ -18,20 +18,13 @@ from sklearn.metrics import (accuracy_score, adjusted_mutual_info_score,
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.utils import compute_class_weight
 
-# try :
-#     from .dataset import Dataset, load_dataset
-#     from ..tools.utils import scanpy_to_input, default_value, str2bool
-#     from ..tools.clust_compute import nn_overlap, batch_entropy_mixing_score,lisi_avg
-
-
+# Import scmusketeers library
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
+
 
 try:
     from .dataset import Dataset, load_dataset
-except ImportError:
-    from workflow.dataset import Dataset, load_dataset
-
-try:
+    from ..tools import freeze
     from ..tools.clust_compute import (balanced_cohen_kappa_score,
                                        balanced_f1_score,
                                        balanced_matthews_corrcoef,
@@ -43,6 +36,8 @@ try:
                                scanpy_to_input, str2bool)
 
 except ImportError:
+    from workflow.dataset import Dataset, load_dataset
+    from scmusketeers.tools import freeze
     from tools.clust_compute import (balanced_cohen_kappa_score,
                                      balanced_f1_score,
                                      balanced_matthews_corrcoef,
@@ -113,6 +108,7 @@ class Workflow:
         run_file : a dictionary outputed by the function load_runfile
         """
         self.run_file = run_file
+        self.task=self.run_file.task
         # dataset identifiers
         self.dataset_name = self.run_file.dataset_name
         self.class_key = self.run_file.class_key
@@ -404,6 +400,8 @@ class Workflow:
         self.dataset.create_inputs()
 
     def make_experiment(self):
+        dict_metrics = {}
+
         self.ae_hidden_size = [
             self.layer1,
             self.layer2,
@@ -574,14 +572,16 @@ class Workflow:
             rec_loss_fn=self.rec_loss_fn,
         )
         stop_time = time.time()
+        dict_metrics[f"evaluation/training_time"] = stop_time - start_time
         if self.log_neptune:
             self.run["evaluation/training_time"] = stop_time - start_time
             # TODO also make it on gpu with smaller batch size
         if self.log_neptune:
             neptune_run_id = self.run["sys/id"].fetch()
         else:
-            neptune_run_id = f"local_{self.dataset_name}"
-
+            neptune_run_id = f"{self.dataset_name}_{self.task}"
+        
+                
         save_dir = (
             self.working_dir
             + "experiment_script/results/"
@@ -590,6 +590,11 @@ class Workflow:
         )
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
+        
+        pd.DataFrame([self.run_file.__dict__]).to_csv(save_dir + "run_file.csv", index=False)
+        
+        
+        
         y_true_full = adata_list["full"].obs[f"true_{self.class_key}"]
         ct_prop = (
             pd.Series(y_true_full).value_counts()
@@ -605,7 +610,7 @@ class Workflow:
             ),
             "large": list(ct_prop[ct_prop >= 0.1].index),
         }
-
+        
         for group in ["full", "train", "val", "test"]:
             with tf.device("CPU"):
                 input_tensor = {
@@ -691,6 +696,8 @@ class Workflow:
 
                 if self.log_neptune:self.run[f"evaluation/{group}/confusion_matrix"].upload(f)
 
+
+
                 # Computing batch mixing metrics
                 if (
                     len(
@@ -701,32 +708,29 @@ class Workflow:
                     >= 2
                 ):  # If there are more than 2 batches in this group
                     for metric in self.batch_metrics_list:
-                        if self.log_neptune: 
-                            self.run[f"evaluation/{group}/{metric}"] = (
-                                self.batch_metrics_list[metric](enc, batches)
-                            )
-                        logger.debug(
-                            type(
-                                self.batch_metrics_list[metric](
-                                    enc, batches
-                                )
-                            )
-                        )
+                        dict_metrics[f"evaluation/{group}/{metric}"] = self.batch_metrics_list[metric](enc, batches)  
+                        # if self.log_neptune: 
+                        #     self.run[f"evaluation/{group}/{metric}"] = (
+                        #         self.batch_metrics_list[metric](enc, batches)
+                        #     )
+                        
 
                 # Computing classification metrics
                 for metric in self.pred_metrics_list:
+                    dict_metrics[f"evaluation/{group}/{metric}"] = self.pred_metrics_list[metric](y_true, y_pred)
                     if self.log_neptune:
                         self.run[f"evaluation/{group}/{metric}"] = (
                             self.pred_metrics_list[metric](y_true, y_pred)
                         )
 
                 for metric in self.pred_metrics_list_balanced:
-                    if self.log_neptune:
-                        self.run[f"evaluation/{group}/{metric}"] = (
-                            self.pred_metrics_list_balanced[metric](
-                                y_true, y_pred
-                            )
-                        )
+                    dict_metrics[f"evaluation/{group}/{metric}"] = self.pred_metrics_list_balanced[metric](y_true, y_pred)
+                    # if self.log_neptune:
+                    #     self.run[f"evaluation/{group}/{metric}"] = (
+                    #         self.pred_metrics_list_balanced[metric](
+                    #             y_true, y_pred
+                    #         )
+                    #     )
 
                 # Metrics by size of ct
                 for s in sizes:
@@ -737,33 +741,37 @@ class Workflow:
                     y_pred_sub = y_pred[idx_s]
                     logger.debug(s)
                     for metric in self.pred_metrics_list:
-                        if self.log_neptune:
-                            self.run[f"evaluation/{group}/{s}/{metric}"] = (
-                                nan_to_0(
-                                    self.pred_metrics_list[metric](
-                                        y_true_sub, y_pred_sub
-                                    )
-                                )
-                            )
+                        dict_metrics[f"evaluation/{group}/{s}/{metric}"] = nan_to_0(self.pred_metrics_list[metric](y_true_sub, y_pred_sub))
+                        # if self.log_neptune:
+                        #     self.run[f"evaluation/{group}/{s}/{metric}"] = (
+                        #         nan_to_0(
+                        #             self.pred_metrics_list[metric](
+                        #                 y_true_sub, y_pred_sub
+                        #             )
+                        #         )
+                        #     )
                         
 
                     for metric in self.pred_metrics_list_balanced:
-                        if self.log_neptune:
-                            self.run[f"evaluation/{group}/{s}/{metric}"] = (
-                                nan_to_0(
-                                    self.pred_metrics_list_balanced[metric](
-                                        y_true_sub, y_pred_sub
-                                    )
-                                )
-                            )
+                        dict_metrics[f"evaluation/{group}/{s}/{metric}"] = nan_to_0(self.pred_metrics_list_balanced[metric](y_true_sub, y_pred_sub))
+                        # if self.log_neptune:
+                        #     self.run[f"evaluation/{group}/{s}/{metric}"] = (
+                        #         nan_to_0(
+                        #             self.pred_metrics_list_balanced[metric](
+                        #                 y_true_sub, y_pred_sub
+                        #             )
+                        #         )
+                        #     )
                         
 
                 # Computing clustering metrics
                 for metric in self.clustering_metrics_list:
-                    if self.log_neptune:
-                        self.run[f"evaluation/{group}/{metric}"] = (
-                            self.clustering_metrics_list[metric](enc, y_pred)
-                        )
+                    dict_metrics[f"evaluation/{group}/{metric}"] = self.clustering_metrics_list[metric](enc, y_pred)
+                    # if self.log_neptune:
+                    #     self.run[f"evaluation/{group}/{metric}"] = (
+                    #         self.clustering_metrics_list[metric](enc, y_pred)
+                    #     )
+
 
                 if group == "full":
                     y_pred_df = pd.DataFrame(
@@ -845,22 +853,24 @@ class Workflow:
                             fig_split
                         )
 
-        # if self.opt_metric:
-        #     logger.debug(f"opt_metric {self.opt_metric}")
-        #     split, metric = self.opt_metric.split("-")
-        #     if self.log_neptune:
-        #         self.run.wait()
-        #         opt_metric = self.run[f"evaluation/{split}/{metric}"].fetch()
-        # else:
-        #     opt_metric = None
+        # Save list of metrics to savedir
+        save_path = os.path.join(save_dir, "all_metrics.csv")
+        pd.DataFrame.from_dict(dict_metrics, orient='index', columns=['Value']).to_csv(save_path)
+                
+        if self.opt_metric:
+            logger.debug(f"opt_metric {self.opt_metric}")
+            split, metric = self.opt_metric.split("-")
+            opt_metric = dict_metrics[f"evaluation/{split}/{metric}"]
+        else:
+            opt_metric = None
         # Redondant, à priori c'est le mcc qu'on a déjà calculé au dessus.
-        with tf.device('CPU'):
-            inp = scanpy_to_input(adata_list['val'],['size_factors'])
-            inp = {k:tf.convert_to_tensor(v) for k,v in inp.items()}
-            _, clas, dann, rec = self.dann_ae(inp, training=False).values()
-            clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
-            opt_metric = self.pred_metrics_list_balanced['balanced_mcc'](np.asarray(y_list['val'].argmax(axis=1)), clas.argmax(axis=1)) # We retrieve the last metric of interest
-        # if self.log_neptune:
+        # with tf.device('CPU'):
+        #     inp = scanpy_to_input(adata_list['val'],['size_factors'])
+        #     inp = {k:tf.convert_to_tensor(v) for k,v in inp.items()}
+        #     _, clas, dann, rec = self.dann_ae(inp, training=False).values()
+        #     clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
+        #     opt_metric = self.pred_metrics_list_balanced['balanced_mcc'](np.asarray(y_list['val'].argmax(axis=1)), clas.argmax(axis=1)) # We retrieve the last metric of interest
+        # # if self.log_neptune:
         #     self.run.stop()
         del enc
         del clas
@@ -881,6 +891,7 @@ class Workflow:
         tf.keras.backend.clear_session()
 
         return opt_metric
+
 
     def train_scheme(self, training_scheme, verbose=True, **loop_params):
         """
@@ -993,7 +1004,7 @@ class Workflow:
             for epoch in range(1, n_epochs + 1):
                 running_epoch += 1
                 logger.debug(
-                    f"Epoch {running_epoch}/{total_epochs}, Current strat Epoch {epoch}/{n_epochs}"
+                    f"Epoch {running_epoch}/{total_epochs}, Current strategy {strategy} Epoch {epoch}/{n_epochs}"
                 )
                 history, _, _, _, _ = self.training_loop(
                     history=history,
@@ -1085,46 +1096,56 @@ class Workflow:
         use_perm : True by default except form "warmup_dann" training strategy. Note that for training strategies that don't involve the reconstruction, this parameter has no impact on training
         """
 
-        self.unfreeze_all(ae)  # resetting freeze state
+        freeze.unfreeze_all(ae)  # resetting freeze state
         if training_strategy == "full_model":
             group = "train"
         elif training_strategy == "full_model_pseudolabels":
             group = "full"
         elif training_strategy == "encoder_classifier":
             group = "train"
-            self.freeze_block(ae, "all_but_classifier")  # training only
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_classifier")
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy in [
             "warmup_dann",
             "warmup_dann_pseudolabels",
             "warmup_dann_semisup",
         ]:
             group = "full"  # semi-supervised setting
-            ae.classifier.trainable = False  # Freezing classifier just to be sure but should not be necessary since gradient won't be propagating in this branch
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "warmup_dann")
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "warmup_dann_train":
             group = "train"  # semi-supervised setting
-            ae.classifier.trainable = False  # Freezing classifier just to be sure but should not be necessary since gradient won't be propagating in this branch
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "warmup_dann")
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "warmup_dann_no_rec":
             group = "full"
-            self.freeze_block(ae, "all_but_dann")
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_dann")
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "dann_with_ae":
             group = "train"
-            ae.classifier.trainable = False
+            self.dann_ae.classifier.trainable = False
         elif training_strategy == "classifier_branch":
             group = "train"
-            self.freeze_block(
-                ae, "all_but_classifier_branch"
+            layers_to_freeze = freeze.freeze_block(
+                self.dann_ae, "all_but_classifier_branch"
             )  # training only classifier branch
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "permutation_only":
             group = "train"
-            self.freeze_block(ae, "all_but_autoencoder")
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_autoencoder")
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "no_dann":
             group = "train"
-            self.freeze_block(ae, "freeze_dann")
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "freeze_dann")
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "no_decoder":
             group = "train"
-            self.freeze_block(ae, "freeze_dec")
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "freeze_dec")
+            freeze.freeze_layers(layers_to_freeze)
 
-        logger.debug(f"use_perm = {use_perm}")
+
+
+        logger.debug(f"Permutation - use_perm = {use_perm}")
         batch_generator = batch_generator_training_permuted(
             X=X_list[group],
             y=pseudo_y_list[
@@ -1138,6 +1159,7 @@ class Workflow:
             unlabeled_category=self.unlabeled_category,  # Those cells are matched with themselves during AE training
             use_perm=use_perm,
         )
+        
         n_obs = adata_list[group].n_obs
         steps = n_obs // self.batch_size + 1
         n_steps = steps
@@ -1194,8 +1216,7 @@ class Workflow:
                         + ae.losses
                     )
                 elif training_strategy == "classifier_branch":
-                    # loss = tf.add_n([self.clas_w * clas_loss] + ae.losses)
-                    loss = tf.add_n([self.clas_w * clas_loss])
+                    loss = tf.add_n([self.clas_w * clas_loss] + ae.losses)
                 elif training_strategy == "encoder_classifier":
                     loss = tf.add_n([self.clas_w * clas_loss] + ae.losses)
                 elif training_strategy == "permutation_only":
@@ -1224,18 +1245,18 @@ class Workflow:
             self.mean_dann_loss_fn(dann_loss.__float__())
             self.mean_rec_loss_fn(rec_loss.__float__())
 
-            if verbose:
-                self.print_status_bar(
-                    n_samples,
-                    n_obs,
-                    [
-                        self.mean_loss_fn,
-                        self.mean_clas_loss_fn,
-                        self.mean_dann_loss_fn,
-                        self.mean_rec_loss_fn,
-                    ],
-                    self.metrics,
-                )
+            # if verbose:
+            #     self.print_status_bar(
+            #         n_samples,
+            #         n_obs,
+            #         [
+            #             self.mean_loss_fn,
+            #             self.mean_clas_loss_fn,
+            #             self.mean_dann_loss_fn,
+            #             self.mean_rec_loss_fn,
+            #         ],
+            #         self.metrics,
+            #     )
         self.print_status_bar(
             n_samples,
             n_obs,
@@ -1486,8 +1507,8 @@ class Workflow:
                     self.warmup_epoch,
                     True,
                 ),  # Permutating with pseudo labels during warmup
-                ("full_model", 2, False),
-                ("classifier_branch", 2, False),
+                ("full_model", 100, False),
+                ("classifier_branch", 50, False),
             ]  # This will end with a callback]
 
         if self.training_scheme == "training_scheme_9":

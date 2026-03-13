@@ -9,7 +9,7 @@ def freeze_layers(layers_to_freeze):
     layers_to_freeze: List of layers to freeze.
     """
     for layer in layers_to_freeze:
-        logger.debug(f"Freezing layer: {layer}")
+        # logger.debug(f"Freezing layer: {layer}")
         layer.trainable = False
         if hasattr(layer, 'layers'): # If it's a nested model
             for sub_l in layer.layers:  
@@ -60,21 +60,21 @@ def freeze_all(ae):
 
 def unfreeze_all(ae):
     for layer in ae.layers:
-        logger.debug(f"Unfreezing layer: {layer}")
+        # logger.debug(f"Unfreezing layer: {layer}")
         layer.trainable = True
         if hasattr(layer, 'layers'): # If it's a nested model
             for sub_l in layer.layers:  
                 sub_l.trainable = True
     ae.dann_discriminator.trainable = True
     for layer in ae.dann_discriminator.layers:
-        logger.debug(f"Unfreezing dann-discri layer: {layer}")
+        # logger.debug(f"Unfreezing dann-discri layer: {layer}")
         layer.trainable = True
         if hasattr(layer, 'layers'): # If it's a nested model
             for sub_l in layer.layers:  
                 sub_l.trainable = True
     ae.classifier.trainable = True
     for layer in ae.classifier.layers:
-        logger.debug(f"Unfreezing classifier layer: {layer}")
+        # logger.debug(f"Unfreezing classifier layer: {layer}")
         layer.trainable = True
         if hasattr(layer, 'layers'): # If it's a nested model
             for sub_l in layer.layers:  

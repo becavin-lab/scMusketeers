@@ -1,7 +1,6 @@
 #!/bin/sh
 #
 #SBATCH --account=cell     # The account name for the job.
-#SBATCH --output=/home/acollin/ajrccm_hyperparam.log # Important to retrieve the port where the notebook is running, if not included a slurm file with the job-id will be outputted. 
 
 module load miniconda
 source ~/.cache/pypoetry/virtualenvs/sc-musketeers-voskaBul-py3.12/bin/activate
@@ -12,6 +11,7 @@ working_dir="/workspace/cell/scMusketeers/"
 dataset_name=$1
 class_key=$2
 batch_key=$3
+task="task1"
 
 json_test=$(cat $working_dir/experiment_script/benchmark/hp_test_obs.json)
 test_obs=$(echo "$json_test" | grep -o "\"$dataset_name\": \[[^]]*\]" | cut -d '[' -f 2 | cut -d ']' -f 1)
@@ -93,11 +93,11 @@ layer2=${hp_list[15]}
 bottleneck=${hp_list[16]}
 training_scheme=${hp_list[17]}
 
-python $working_dir/experiment_script/benchmark/01_label_transfer_between_batch_scPermut.py --dataset_name $dataset_name --class_key $class_key --batch_key $batch_key \
+python $working_dir/experiment_script/benchmark/01_label_transfer_between_batch_scPermut.py --task=${task} --dataset_name $dataset_name --class_key $class_key --batch_key $batch_key \
     --test_obs $test_obs --mode entire_condition --obs_key $batch_key --working_dir $working_dir --use_hvg $use_hvg --batch_size $batch_size --clas_w $clas_w \
     --dann_w $dann_w --rec_w $rec_w --ae_bottleneck_activation $ae_bottleneck_activation --size_factor $size_factor --weight_decay $weight_decay \
     --learning_rate $learning_rate --warmup_epoch $warmup_epoch --dropout $dropout --layer1 $layer1 --layer2 $layer2 --bottleneck $bottleneck \
-    --training_scheme $training_scheme --clas_loss_name $clas_loss_name --balance_classes True &> $working_dir/experiment_script/benchmark/logs/scPermut_task1_focal_${dataset_name}.log
+    --training_scheme $training_scheme --clas_loss_name $clas_loss_name --balance_classes True
 
 
 

@@ -24,6 +24,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--working_dir', type=str, nargs='?', default='', help ='The working directory')
+    parser.add_argument('--task', type=str, nargs='?', default='', help ='The task running: task1, task2, hyperparam, etc...')
     
     # parser.add_argument('--run_file', type = , default = , help ='')
     # parser.add_argument('--workflow_ID', type = , default = , help ='')
@@ -144,11 +145,12 @@ if __name__ == '__main__':
 
     test_obs_json = load_json(working_dir + 'experiment_script/benchmark/hp_test_obs.json')
     fixed_test_obs = test_obs_json[run_file.dataset_name]
-
+    run_id = 0
     for i, (train_index, test_index) in enumerate(kf_test.split(X, classes, groups)):
         test_obs = list(groups.iloc[test_index].unique()) # the batches that go in the test set, old
 
         if set(test_obs) == set(fixed_test_obs):
+            
             experiment.test_obs = test_obs
             experiment.split_train_test()
             # experiment.dataset.test_split(test_obs = test_obs) # splits the train and test dataset
@@ -168,7 +170,9 @@ if __name__ == '__main__':
                 logger.debug(f"train = {list(groups_train_val.iloc[train_index].unique())}, len = {len(groups_train_val.iloc[train_index].unique())}")
                 logger.debug(f"val = {list(groups_train_val.iloc[val_index].unique())}, len = {len(groups_train_val.iloc[val_index].unique())}")
                 logger.debug(f"test = {list(groups.iloc[test_index].unique())}, len = {len(groups.iloc[test_index].unique())}")
-
+                experiment.task = f"task_1_{i}_{j}"
+                logger.debug(f'Running run id : {experiment.task}')
+                
                 
                 logger.debug(set(groups_train_val.iloc[train_index].unique()) & set(groups.iloc[test_index].unique()))
                 logger.debug(set(groups_train_val.iloc[train_index].unique()) & set(groups_train_val.iloc[val_index].unique()))
@@ -179,7 +183,7 @@ if __name__ == '__main__':
                             'parameters/training_scheme': experiment.training_scheme,
                             'parameters/clas_loss_name': experiment.clas_loss_name,
                             'parameters/use_hvg': experiment.use_hvg,
-                            'parameters/task': 'task_1',
+                            'parameters/task': experiment.task,
                             'parameters/model': model, 
                             'parameters/test_fold_nb':i,
                             'parameters/val_fold_nb':j,

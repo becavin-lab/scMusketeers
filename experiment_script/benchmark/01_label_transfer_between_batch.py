@@ -3,6 +3,7 @@ import sys
 from sklearn.model_selection import GroupShuffleSplit
 import pandas as pd
 import neptune
+import logging
 
 WD_PATH = '/workspace/cell/scMusketeers/'
 sys.path.append(WD_PATH)
@@ -11,12 +12,20 @@ from scmusketeers.tools.utils import str2bool
 print(str2bool('True'))
 from scmusketeers.workflow.benchmark import Workflow
 
-model_list_cpu = ['uce','celltypist'] #'scmap_cells', 'scmap_cluster', 'pca_svm', 'pca_knn','harmony_svm','celltypist','uce']
+logger = logging.getLogger("Sc-Musketeers")
+logging.basicConfig(format="|--- %(levelname)-8s    %(message)s")
+logger.setLevel(getattr(logging, "DEBUG"))
+
+#model_list_cpu = ['uce','celltypist'] #'scmap_cells', 'scmap_cluster', 'pca_svm', 'pca_knn','harmony_svm','celltypist','uce']
+#harmony_svm
+model_list_cpu = ['uce']
 model_list_gpu = ['scanvi', ]
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('--task', type=str, nargs='?', default='', help ='The task running: task1, task2, hyperparam, etc...')
+    
     # parser.add_argument('--run_file', type = , default = , help ='')
     # parser.add_argument('--workflow_ID', type = , default = , help ='')
     parser.add_argument('--dataset_name', type = str, default = 'htap_final_by_batch', help ='Name of the dataset to use, should indicate a raw h5ad AnnData file')
@@ -41,15 +50,15 @@ if __name__ == '__main__':
     parser.add_argument('--test_obs', type = str,nargs='+', default = None, help ='batches from batch_key to use as test')
     parser.add_argument('--test_index_name', type = str,nargs='+', default = None, help ='indexes to be used as test. Overwrites test_obs')
     
-    parser.add_argument('--log_neptune', type=str2bool, nargs='?',const=True, default=True , help ='')
+    parser.add_argument('--log_neptune', type=str2bool, nargs='?',const=True, default=False , help ='')
     parser.add_argument('--gpu_models', type=str2bool, nargs='?',const=False, default=False , help ='')
     parser.add_argument('--working_dir', type=str, nargs='?',const='/workspace/cell/scMusketeers/', default='/workspace/cell/scMusketeers/', help ='')
 
 
     run_file = parser.parse_args()
-    print(run_file.class_key, run_file.batch_key)
+    logger.debug(run_file.class_key, run_file.batch_key)
     working_dir = run_file.working_dir
-    print(f'working directory : {working_dir}')
+    logger.debug(f'working directory : {working_dir}')
 
     # project = neptune.init_project(
     #         project="becavin-lab/benchmark",
@@ -98,32 +107,35 @@ if __name__ == '__main__':
         for j, (train_index, val_index) in enumerate(kf_val.split(X_train_val, classes_train_val, groups_train_val)):
             experiment.keep_obs = list(groups_train_val[train_index].unique()) # keeping only train idx
             val_obs = list(groups_train_val[val_index].unique())
-            print(f"Fold {i,j}:")
-            print(f"train = {list(groups_train_val.iloc[train_index].unique())}, len = {len(groups_train_val.iloc[train_index].unique())}")
-            print(f"val = {list(groups_train_val.iloc[val_index].unique())}, len = {len(groups_train_val.iloc[val_index].unique())}")
-            print(f"test = {list(groups.iloc[test_index].unique())}, len = {len(groups.iloc[test_index].unique())}")
+            logger.debug(f"Fold {i,j}:")
+            logger.debug(f"train = {list(groups_train_val.iloc[train_index].unique())}, len = {len(groups_train_val.iloc[train_index].unique())}")
+            logger.debug(f"val = {list(groups_train_val.iloc[val_index].unique())}, len = {len(groups_train_val.iloc[val_index].unique())}")
+            logger.debug(f"test = {list(groups.iloc[test_index].unique())}, len = {len(groups.iloc[test_index].unique())}")
 
+            logger.debug(f'Running run id : {experiment.task}')
             
-            print(set(groups_train_val.iloc[train_index].unique()) & set(groups.iloc[test_index].unique()))
-            print(set(groups_train_val.iloc[train_index].unique()) & set(groups_train_val.iloc[val_index].unique()))
-            print(set(groups_train_val.iloc[val_index].unique()) & set(groups.iloc[test_index].unique()))
+            logger.debug(set(groups_train_val.iloc[train_index].unique()) & set(groups.iloc[test_index].unique()))
+            logger.debug(set(groups_train_val.iloc[train_index].unique()) & set(groups_train_val.iloc[val_index].unique()))
+            logger.debug(set(groups_train_val.iloc[val_index].unique()) & set(groups.iloc[test_index].unique()))
             experiment.split_train_test_val()
-            print(experiment.dataset.adata.obs.loc[:,[experiment.test_split_key,experiment.batch_key]].drop_duplicates())
+            logger.debug(experiment.dataset.adata.obs.loc[:,[experiment.test_split_key,experiment.batch_key]].drop_duplicates())
             for model in model_list:
-                checkpoint={'parameters/dataset_name': experiment.dataset_name, 'parameters/task': 'task_1', 'parameters/use_hvg': experiment.use_hvg,
-                    'parameters/model': model, 'parameters/test_fold_nb':i,'parameters/val_fold_nb':j}
-                result = runs_table_df[runs_table_df[list(checkpoint.keys())].eq(list(checkpoint.values())).all(axis=1)]
-                if result.empty:
-                    print(checkpoint)
-                    print(f'Running {model}')
-                    experiment.start_neptune_log()
-                    experiment.add_custom_log('test_fold_nb',i)
-                    experiment.add_custom_log('val_fold_nb',j)
-                    experiment.add_custom_log('test_obs',test_obs)
-                    experiment.add_custom_log('val_obs',val_obs)
-                    experiment.add_custom_log('train_obs',experiment.keep_obs)
-                    experiment.add_custom_log('task','task_1')
-                    experiment.add_custom_log('deprecated_status','False')
-                    experiment.train_model(model)
-                    experiment.compute_metrics()
-                    experiment.stop_neptune_log()
+                experiment.task = f"task_1_{model}_{i}_{j}"
+                logger.debug(f'Running run id : {experiment.task}')
+                #checkpoint={'parameters/dataset_name': experiment.dataset_name, 'parameters/task': experiment.task, 'parameters/use_hvg': experiment.use_hvg,
+                #    'parameters/model': model, 'parameters/test_fold_nb':i,'parameters/val_fold_nb':j}
+                #result = runs_table_df[runs_table_df[list(checkpoint.keys())].eq(list(checkpoint.values())).all(axis=1)]
+                #if result.empty:
+                #logger.debug(checkpoint)
+                logger.debug(f'Running {model}')
+                #experiment.start_neptune_log()
+                # experiment.add_custom_log('test_fold_nb',i)
+                # experiment.add_custom_log('val_fold_nb',j)
+                # experiment.add_custom_log('test_obs',test_obs)
+                # experiment.add_custom_log('val_obs',val_obs)
+                # experiment.add_custom_log('train_obs',experiment.keep_obs)
+                # experiment.add_custom_log('task','task_1')
+                # experiment.add_custom_log('deprecated_status','False')
+                experiment.train_model(model)
+                experiment.compute_metrics()
+                #experiment.stop_neptune_log()

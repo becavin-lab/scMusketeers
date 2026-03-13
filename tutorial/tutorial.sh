@@ -22,14 +22,14 @@ ref_dataset=${outdir}/data/Deprez-Lung-ref-batch-0.2.h5ad
 query_dataset=${outdir}/data/Deprez-Lung-query-batch-0.2.h5ad
 outname_query=${outdir}/data/Deprez-Lung-transfer-0.2-pred
 
-warmup_epoch=2   # default 100, help - Number of epoch to warmup DANN
-fullmodel_epoch=2   # default = 100, help = Number of epoch to train full model
+# warmup_epoch=2   # default 100, help - Number of epoch to warmup DANN
+# fullmodel_epoch=2   # default = 100, help = Number of epoch to train full model
+# permonly_epoch=2 # default = 100, help = Number of epoch to train in permutation only mode
+# classifier_epoch=2   # default = 50, help = Number of epoch to train te classifier only
+warmup_epoch=20   # default 100, help - Number of epoch to warmup DANN
+fullmodel_epoch=50   # default = 100, help = Number of epoch to train full model
 permonly_epoch=50 # default = 100, help = Number of epoch to train in permutation only mode
-classifier_epoch=2   # default = 50, help = Number of epoch to train te classifier only
-# warmup_epoch=20   # default 100, help - Number of epoch to warmup DANN
-# fullmodel_epoch=50   # default = 100, help = Number of epoch to train full model
-# permonly_epoch=50 # default = 100, help = Number of epoch to train in permutation only mode
-# classifier_epoch=50   # default = 50, help = Number of epoch to train te classifier only
+classifier_epoch=50   # default = 50, help = Number of epoch to train te classifier only
 
 training_scheme="training_scheme_8"
 bestparam_path=${scmusk_path}"/experiment_script/hyperparam/hp_best_ajrccm.csv"

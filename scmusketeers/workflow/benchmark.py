@@ -87,6 +87,8 @@ class Workflow:
         run_file : a dictionary outputed by the function load_runfile
         """
         self.run_file = run_file
+        self.task=self.run_file.task
+        
         self.working_dir = working_dir
         self.data_dir = working_dir + "/data"
         # dataset identifiers
@@ -300,10 +302,12 @@ class Workflow:
             )
 
     def compute_metrics(self):
+        dict_metrics = {}
+        dict_metrics[f"evaluation/training_time"] = self.stop_time - self.start_time
         if self.log_neptune:
             neptune_run_id = self.run["sys/id"].fetch()
         else:
-            neptune_run_id = f"local_{self.run_file.dataset_name}"
+            neptune_run_id = f"{self.dataset_name}_{self.task}"
 
         save_dir = (
             self.working_dir
@@ -375,6 +379,11 @@ class Workflow:
                 len(np.unique(self.batch_list[group])) >= 2
             ):  # If there are more than 2 batches in this group
                 for metric in self.batch_metrics_list:
+                    dict_metrics[f"evaluation/{group}/{metric}"] = (
+                        self.batch_metrics_list[metric](latent, batches)
+                    )
+                
+                for metric in self.batch_metrics_list:
                     if self.log_neptune:
                         self.run[f"evaluation/{group}/{metric}"] = (
                             self.batch_metrics_list[metric](latent, batches)
@@ -382,16 +391,22 @@ class Workflow:
 
             # Computing classification metrics
             for metric in self.pred_metrics_list:
+                dict_metrics[f"evaluation/{group}/{metric}"] = (
+                        self.pred_metrics_list[metric](y_true, y_pred)
+                    )
                 if self.log_neptune:
                     self.run[f"evaluation/{group}/{metric}"] = (
                         self.pred_metrics_list[metric](y_true, y_pred)
                     )
 
             for metric in self.pred_metrics_list_balanced:
+                dict_metrics[f"evaluation/{group}/{metric}"] = (
+                        self.pred_metrics_list_balanced[metric](y_true, y_pred)
+                    )
                 if self.log_neptune:
                     self.run[f"evaluation/{group}/{metric}"] = (
-                    self.pred_metrics_list_balanced[metric](y_true, y_pred)
-                )
+                        self.pred_metrics_list_balanced[metric](y_true, y_pred)
+                    )
 
             # Metrics by size of ct
 
@@ -401,6 +416,13 @@ class Workflow:
                 y_pred_sub = y_pred[idx_s]
                 logger.debug(s)
                 for metric in self.pred_metrics_list:
+                    dict_metrics[f"evaluation/{group}/{s}/{metric}"] = (
+                        nan_to_0(
+                            self.pred_metrics_list[metric](
+                                y_true_sub, y_pred_sub
+                            )
+                        )
+                    )
                     if self.log_neptune:
                         self.run[f"evaluation/{group}/{s}/{metric}"] = (
                             nan_to_0(
@@ -411,6 +433,13 @@ class Workflow:
                     )
 
                 for metric in self.pred_metrics_list_balanced:
+                    dict_metrics[f"evaluation/{group}/{s}/{metric}"] = (
+                        nan_to_0(
+                            self.pred_metrics_list_balanced[metric](
+                                y_true_sub, y_pred_sub
+                            )
+                        )
+                    )
                     if self.log_neptune:
                         self.run[f"evaluation/{group}/{s}/{metric}"] = (
                             nan_to_0(
@@ -423,12 +452,23 @@ class Workflow:
             # Computing clustering metrics
             if len(np.unique(y_pred)) >= 2:
                 for metric in self.clustering_metrics_list:
+                    dict_metrics[f"evaluation/{group}/{metric}"] = (
+                        self.clustering_metrics_list[metric](
+                            latent, y_pred
+                        )
+                    )
                     if self.log_neptune:
                         self.run[f"evaluation/{group}/{metric}"] = (
                             self.clustering_metrics_list[metric](
                                 latent, y_pred
                             )
                         )
+
+            # Save list of metrics to savedir
+            save_path = os.path.join(save_dir, "all_metrics.csv")
+            pd.DataFrame.from_dict(dict_metrics, orient='index', columns=['Value']).to_csv(save_path)
+        
+
 
             if group == "full":
 
@@ -522,11 +562,11 @@ class Workflow:
                     self.run[f"evaluation/{group}/true_umap"].upload(fig_class)
                     self.run[f"evaluation/{group}/pred_umap"].upload(fig_pred)
                     self.run[f"evaluation/{group}/batch_umap"].upload(
-                    fig_batch
-                )
-                self.run[f"evaluation/{group}/split_umap"].upload(
-                    fig_split
-                )
+                        fig_batch
+                    )
+                    self.run[f"evaluation/{group}/split_umap"].upload(
+                        fig_split
+                    )
 
 
 if __name__ == "__main__":
