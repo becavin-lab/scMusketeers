@@ -166,41 +166,42 @@ if __name__ == '__main__':
                 experiment.keep_obs = list(groups_train_val[train_index].unique()) # keeping only train idx
                 val_obs = list(groups_train_val[val_index].unique())
 
-                logger.debug(f"Fold {i,j}:")
-                logger.debug(f"train = {list(groups_train_val.iloc[train_index].unique())}, len = {len(groups_train_val.iloc[train_index].unique())}")
-                logger.debug(f"val = {list(groups_train_val.iloc[val_index].unique())}, len = {len(groups_train_val.iloc[val_index].unique())}")
-                logger.debug(f"test = {list(groups.iloc[test_index].unique())}, len = {len(groups.iloc[test_index].unique())}")
-                experiment.task = f"task_1_{i}_{j}"
-                logger.debug(f'Running run id : {experiment.task}')
-                
-                
-                logger.debug(set(groups_train_val.iloc[train_index].unique()) & set(groups.iloc[test_index].unique()))
-                logger.debug(set(groups_train_val.iloc[train_index].unique()) & set(groups_train_val.iloc[val_index].unique()))
-                logger.debug(set(groups_train_val.iloc[val_index].unique()) & set(groups.iloc[test_index].unique()))
+                if i==0 and j==4:
+                    logger.debug(f"Fold {i,j}:")
+                    logger.debug(f"train = {list(groups_train_val.iloc[train_index].unique())}, len = {len(groups_train_val.iloc[train_index].unique())}")
+                    logger.debug(f"val = {list(groups_train_val.iloc[val_index].unique())}, len = {len(groups_train_val.iloc[val_index].unique())}")
+                    logger.debug(f"test = {list(groups.iloc[test_index].unique())}, len = {len(groups.iloc[test_index].unique())}")
+                    experiment.task = f"task_1_{i}_{j}"
+                    logger.debug(f'Running run id : {experiment.task}')
+                    
+                    
+                    logger.debug(set(groups_train_val.iloc[train_index].unique()) & set(groups.iloc[test_index].unique()))
+                    logger.debug(set(groups_train_val.iloc[train_index].unique()) & set(groups_train_val.iloc[val_index].unique()))
+                    logger.debug(set(groups_train_val.iloc[val_index].unique()) & set(groups.iloc[test_index].unique()))
 
-                experiment.split_train_val()
-                checkpoint={'parameters/dataset_name': experiment.dataset_name, 
-                            'parameters/training_scheme': experiment.training_scheme,
-                            'parameters/clas_loss_name': experiment.clas_loss_name,
-                            'parameters/use_hvg': experiment.use_hvg,
-                            'parameters/task': experiment.task,
-                            'parameters/model': model, 
-                            'parameters/test_fold_nb':i,
-                            'parameters/val_fold_nb':j,
-                            'parameters/deprecated_status': False,
-                            'parameters/debug_status': 'fixed_1'}
-                # for k, v in vars(run_file).items():
-                #     checkpoint['parameters/' + k] = v
-                logger.debug(f'checkpoint : {checkpoint}')
-                logger.debug(f'Running {model}')
-                #experiment.start_neptune_log()
-                experiment.make_experiment()
-                #experiment.add_custom_log('test_fold_nb',i)
-                #experiment.add_custom_log('val_fold_nb',j)
-                #experiment.add_custom_log('test_obs',test_obs)
-                #experiment.add_custom_log('val_obs',val_obs)
-                #experiment.add_custom_log('train_obs',experiment.keep_obs)
-                #experiment.add_custom_log('task','task_1')
-                #experiment.add_custom_log('deprecated_status', False)
-                #experiment.add_custom_log('debug_status', "fixed_1")
-                #experiment.stop_neptune_log()
+                    experiment.split_train_val()
+                    checkpoint={'parameters/dataset_name': experiment.dataset_name, 
+                                'parameters/training_scheme': experiment.training_scheme,
+                                'parameters/clas_loss_name': experiment.clas_loss_name,
+                                'parameters/use_hvg': experiment.use_hvg,
+                                'parameters/task': experiment.task,
+                                'parameters/model': model, 
+                                'parameters/test_fold_nb':i,
+                                'parameters/val_fold_nb':j,
+                                'parameters/deprecated_status': False,
+                                'parameters/debug_status': 'fixed_1'}
+                    # for k, v in vars(run_file).items():
+                    #     checkpoint['parameters/' + k] = v
+                    logger.debug(f'checkpoint : {checkpoint}')
+                    logger.debug(f'Running {model}')
+                    #experiment.start_neptune_log()
+                    experiment.make_experiment()
+                    #experiment.add_custom_log('test_fold_nb',i)
+                    #experiment.add_custom_log('val_fold_nb',j)
+                    #experiment.add_custom_log('test_obs',test_obs)
+                    #experiment.add_custom_log('val_obs',val_obs)
+                    #experiment.add_custom_log('train_obs',experiment.keep_obs)
+                    #experiment.add_custom_log('task','task_1')
+                    #experiment.add_custom_log('deprecated_status', False)
+                    #experiment.add_custom_log('debug_status', "fixed_1")
+                    #experiment.stop_neptune_log()
