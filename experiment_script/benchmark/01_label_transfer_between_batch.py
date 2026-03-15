@@ -23,11 +23,12 @@ model_list_cpu = ['uce','celltypist', 'scmap_cells', 'scmap_cluster', 'pca_svm',
 #model_list_cpu = ['uce']
 model_list_gpu = ['scanvi', ]
 
+test_fold_fixed_list = load_json(WD_PATH + 'experiment_script/benchmark/hp_test_folds.json')
+test_obs_fixed_list = load_json(WD_PATH + 'experiment_script/benchmark/hp_test_obs.json')
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--task', type=str, nargs='?', default='', help ='The task running: task1, task2, hyperparam, etc...')
-    
     # parser.add_argument('--run_file', type = , default = , help ='')
     # parser.add_argument('--workflow_ID', type = , default = , help ='')
     parser.add_argument('--dataset_name', type = str, default = 'htap_final_by_batch', help ='Name of the dataset to use, should indicate a raw h5ad AnnData file')
@@ -41,6 +42,9 @@ if __name__ == '__main__':
     parser.add_argument('--use_hvg', type=int, nargs='?', const=3000, default=None, help = "Number of hvg to use. If no tag, don't use hvg.")
 
     parser.add_argument('--test_split_key', type = str, default = 'TRAIN_TEST_split', help ='key of obs containing the test split')
+    parser.add_argument('--test_obs', type = str,nargs='+', default = None, help ='batches from batch_key to use as test')
+    parser.add_argument('--test_index_name', type = str,nargs='+', default = None, help ='indexes to be used as test. Overwrites test_obs')
+
     parser.add_argument('--mode', type = str, default = 'percentage', help ='Train test split mode to be used by Dataset.train_split')
     parser.add_argument('--pct_split', type = float,nargs='?', default = 0.9, help ='')
     parser.add_argument('--obs_key', type = str,nargs='?', default = 'manip', help ='')
@@ -49,16 +53,14 @@ if __name__ == '__main__':
     parser.add_argument('--keep_obs', type = str,nargs='+',default = None, help ='')
     parser.add_argument('--train_test_random_seed', type = float,nargs='?', default = 0, help ='')
     parser.add_argument('--obs_subsample', type = str,nargs='?', default = None, help ='')
-    parser.add_argument('--test_obs', type = str,nargs='+', default = None, help ='batches from batch_key to use as test')
-    parser.add_argument('--test_index_name', type = str,nargs='+', default = None, help ='indexes to be used as test. Overwrites test_obs')
     
-    parser.add_argument('--log_neptune', type=str2bool, nargs='?',const=True, default=False , help ='')
+    parser.add_argument('--log_neptune', type=str2bool, nargs='?',const=True, default=True , help ='')
     parser.add_argument('--gpu_models', type=str2bool, nargs='?',const=False, default=False , help ='')
     parser.add_argument('--working_dir', type=str, nargs='?',const='/workspace/cell/scMusketeers/', default='/workspace/cell/scMusketeers/', help ='')
 
 
     run_file = parser.parse_args()
-    logger.debug(run_file.class_key, run_file.batch_key)
+    logger.debug(f"Class_key: {run_file.class_key} Batch_key: {run_file.batch_key}")
     working_dir = run_file.working_dir
     logger.debug(f'working directory : {working_dir}')
 
@@ -114,8 +116,6 @@ if __name__ == '__main__':
             logger.debug(f"val = {list(groups_train_val.iloc[val_index].unique())}, len = {len(groups_train_val.iloc[val_index].unique())}")
             logger.debug(f"test = {list(groups.iloc[test_index].unique())}, len = {len(groups.iloc[test_index].unique())}")
 
-            logger.debug(f'Running run id : {experiment.task}')
-            
             logger.debug(set(groups_train_val.iloc[train_index].unique()) & set(groups.iloc[test_index].unique()))
             logger.debug(set(groups_train_val.iloc[train_index].unique()) & set(groups_train_val.iloc[val_index].unique()))
             logger.debug(set(groups_train_val.iloc[val_index].unique()) & set(groups.iloc[test_index].unique()))
@@ -140,4 +140,7 @@ if __name__ == '__main__':
                 # experiment.add_custom_log('deprecated_status','False')
                 experiment.train_model(model)
                 experiment.compute_metrics()
-                #experiment.stop_neptune_log()
+                # experiment.stop_neptune_log()
+    
+    logger.debug(f'Task1 finished for all models: {run_file.dataset_name}')
+

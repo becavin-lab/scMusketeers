@@ -1,6 +1,7 @@
 #!/bin/sh
 #
 working_dir="/workspace/cell/scMusketeers/experiment_script/benchmark/"
+task="task1"
 
 # srun -A cell -p gpu -t 10:00:00 --gres=gpu:1 --pty bash -i
 # srun -A cell -p cpucourt -t 10:00:00 --pty bash -i

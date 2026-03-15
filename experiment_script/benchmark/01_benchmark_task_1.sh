@@ -9,7 +9,9 @@ class_key=$2
 batch_key=$3
 gpu_models=$4
 
-python ${working_dir}01_label_transfer_between_batch.py --dataset_name $dataset_name --class_key $class_key --use_hvg 3000 --batch_key $batch_key --mode entire_condition --obs_key $batch_key --gpu_models $gpu_models
+python ${working_dir}01_label_transfer_between_batch.py --dataset_name $dataset_name \
+    --class_key $class_key --use_hvg 3000 --batch_key $batch_key --mode entire_condition \
+    --obs_key $batch_key --gpu_models $gpu_models
 
 # singularity version
 # module load singularity
