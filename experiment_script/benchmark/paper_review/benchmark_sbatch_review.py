@@ -2,16 +2,16 @@ import os
 import sys
 import csv
 
-MODELS = ["scMusk", "celltypist", "scmap_cells", "scmap_cluster", "pca_knn", "pca_svm", "uce"]
+MODELS = ["scMusketeers", "celltypist", "scmap_cells", "scmap_cluster", "pca_knn", "pca_svm", "scanvi", "harmony", "uce"]
 
 def get_expected_parameters(task):
     """Return the expected parameter list for a given task."""
     expected_params = []
     
     if task == "1":
-        # task1: i from 0 to 2, j from 0 to 3 -> i_j
+        # task1: i from 0 to 2, j from 0 to 4 -> i_j
         for i in range(3):
-            for j in range(4):
+            for j in range(5):
                 expected_params.append(f"{i}_{j}")
     elif task == "2":
         # task2: i from [0.05, 0.1, 0.5, 0.9], j from [30, 31, 32, 33, 34, 35] -> i_j
@@ -37,22 +37,30 @@ def find_completed_runs(results_dir):
                     parameter = parts[1] if len(parts) >= 2 else "None"
                     
                     # Extract model from parameter
-                    model_name = "scMusk"
-                    if "_" in parameter:
-                        first_val = parameter.split("_", 1)[0]
-                        if first_val in ["celltypist", "scmap", "scanvi", "pca", "uce"]:
-                            # It's an established baseline model, we need to extract the whole model name
-                            # parameter format e.g: celltypist_0_0, pca_svm_0_0, scmap_cells_0_0
-                            parts = parameter.split("_")
-                            if first_val == "pca" and len(parts) > 1 and parts[1] in ["knn", "svm"]:
-                                model_name = f"pca_{parts[1]}"
-                            elif first_val == "scmap" and len(parts) > 1 and parts[1] in ["cells", "cluster"]:
-                                model_name = f"scmap_{parts[1]}"
+                    model_name = "scMusketeers" # Default model
+                    if parameter.startswith(("celltypist", "scmap", "scanvi", "pca", "uce", "harmony")):
+                        # It's an established baseline model
+                        subparts = parameter.split("_")
+                        if parameter.startswith("pca") and len(subparts) > 1 and subparts[1] in ["knn", "svm"]:
+                            model_name = f"pca_{subparts[1]}"
+                            
+                            if len(subparts) > 2:
+                                parameter = "_".join(subparts[2:]) # e.g pca_svm_0_0 -> 0_0
                             else:
-                                model_name = first_val
-                                
-                    elif parameter in ["celltypist", "scanvi", "scmap", "pca", "uce"]:
-                         model_name = parameter
+                                parameter = "None"
+                        elif parameter.startswith("scmap") and len(subparts) > 1 and subparts[1] in ["cells", "cluster"]:
+                            model_name = f"scmap_{subparts[1]}"
+                            if len(subparts) > 2:
+                                parameter = "_".join(subparts[2:]) # e.g scmap_cells_0_0 -> 0_0
+                            else:
+                                parameter = "None"
+                        else:
+                            model_name = subparts[0] # e.g uce, celltypist
+                            if len(subparts) > 1:
+                                parameter = "_".join(subparts[1:]) # e.g uce_0_0 -> 0_0
+                            else:
+                                parameter = "None"
+                    # If it doesn't start with any of those, it stays scMusketeers and the parameter remains as is (e.g. 1_0 or 0.05_0.05)
 
                     completed_runs.append({
                         "dataset": dataset_name,
@@ -143,10 +151,10 @@ def find_missing_runs(completed_runs, output_dir):
         for ds in sorted(datasets):
             for model in MODELS:
                 # Need to account for the way we extracted model prefix
-                # Parameter format was either "i_j" (scMusk) or "{model}_i_j"
+                # Parameter format was either "i_j" (scMusketeers) or "{model}_i_j"
                 for expected_param in expected_params:
                     # Construct what the original parameter string would have looked like
-                    if model == "scMusk":
+                    if model == "scMusketeers":
                         search_param = expected_param
                     else:
                         search_param = f"{model}_{expected_param}"
@@ -154,7 +162,7 @@ def find_missing_runs(completed_runs, output_dir):
                     # Check if this run is in completed_mapped
                     is_completed = False
                     if ds in completed_mapped and task in completed_mapped[ds] and model in completed_mapped[ds][task]:
-                        if search_param in completed_mapped[ds][task][model]:
+                        if expected_param in completed_mapped[ds][task][model]:
                             is_completed = True
                             
                     if not is_completed:
@@ -162,7 +170,7 @@ def find_missing_runs(completed_runs, output_dir):
                             "dataset": ds,
                             "task": task,
                             "model": model,
-                            "parameter": search_param
+                            "parameter": expected_param
                         })
                         
         if missing_runs:
