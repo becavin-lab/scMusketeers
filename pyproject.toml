@@ -43,6 +43,7 @@ no-implicit-optional = "^1.4"
 types-pyyaml = "^6.0.12.12"
 mkdocs = "^1.6.1"
 twine = "^5.1.1"
+ipykernel = "^7.2.0"
 
 
 [tool.poetry.group.workflow]
