@@ -219,6 +219,16 @@ def load_dataset(dataset_name, dataset_dir):
         "tenx_hlca_par_nuc": "tenx_hlca_par_nuc",
         "wmb_full": "whole_mouse_brain_class_modality",
         "wmb_it_et": "it_et_brain_subclass_modality",
+        "Ageing-Mouse-All": "cellxgene_datasets/Ageing-Mouse-All",
+        "CellCards-Lung": "cellxgene_datasets/CellCards-Lung",
+        "HLCA-full": "cellxgene_datasets/HLCA-full",
+        "PBMC-Lee": "cellxgene_datasets/PBMC-Lee",
+        "TS-Blood": "cellxgene_datasets/TS-Blood",
+        "TS-BoneMarrow": "cellxgene_datasets/TS-BoneMarrow",
+        "TS-Immune": "cellxgene_datasets/TS-Immune",
+        "TS-Liver": "cellxgene_datasets/TS-Liver",
+        "TS-Neural": "cellxgene_datasets/TS-Neural",
+        "TS-Skin": "cellxgene_datasets/TS-Skin",
     }
     dataset_path = dataset_dir + "/" + dataset_names[dataset_name] + ".h5ad"
     adata = sc.read_h5ad(dataset_path)

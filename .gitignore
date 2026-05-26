@@ -8,7 +8,7 @@ docs/build
 data/simulation/
 *.h5ad
 */*/*.h5ad
-
+model_files/
 .neptune/
 mars/
 logs/

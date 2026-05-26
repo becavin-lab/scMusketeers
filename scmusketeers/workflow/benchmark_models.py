@@ -26,7 +26,7 @@ except ImportError:
 
 logger = logging.getLogger("Sc-Musketeers")
 
-# print("Last run with scvi-tools version:", scvi.__version__)
+# logger.debug("Last run with scvi-tools version:", scvi.__version__)
 
 
 def svm_label(X_full, y_list, assign, pred_full=True):
@@ -84,7 +84,7 @@ def pca_knn(X_list, y_list, batch_list, assign, adata_list, pred_full=True):
         "full"
     ]  # adding PCA to adata_list['full'] the first time and reuses it for the next function calls
     if not "X_pca" in adata.obsm:
-        print("Did not find existing PCA, computing it")
+        logger.debug("Did not find existing PCA, computing it")
         sc.tl.pca(adata)
     X_pca = adata.obsm["X_pca"]
     y_pred = knn_label(X_pca, y_list, assign, pred_full=pred_full)
@@ -115,7 +115,7 @@ def pca_svm(X_list, y_list, batch_list, assign, adata_list, pred_full=True):
         "full"
     ]  # adding PCA to adata_list['full'] the first time and reuses it for the next function calls
     if not "X_pca" in adata.obsm:
-        print("Did not find existing PCA, computing it")
+        logger.debug("Did not find existing PCA, computing it")
         sc.tl.pca(adata)
     X_pca = adata.obsm["X_pca"]
     y_pred = svm_label(X_pca, y_list, assign, pred_full=pred_full)
@@ -151,11 +151,14 @@ def harmony_svm(
     ]  # adding PCA to adata_list['full'] the first time and reuses it for the next function calls
     adata.obs["batch"] = batch_list["full"]
     if not "X_pca" in adata.obsm:
-        print("Did not find existing PCA, computing it")
+        logger.debug("Did not find existing PCA, computing it")
         sc.tl.pca(adata)
     if not "X_pca_harmony" in adata.obsm:
-        print("Did not find existing harmony, computing it")
-        sce.pp.harmony_integrate(adata, "batch")
+        logger.debug("Did not find existing harmony, computing it")
+        import harmonypy as hm
+        ho = hm.run_harmony(adata.obsm["X_pca"], adata.obs, "batch")
+        # In harmonypy>=0.2.0 the Z_corr property already returns (n_cells, n_pcs)
+        adata.obsm["X_pca_harmony"] = ho.Z_corr
     X_pca_harmony = adata.obsm["X_pca_harmony"].copy()
     y_pred = svm_label(X_pca_harmony, y_list, assign, pred_full=pred_full)
 
@@ -193,7 +196,7 @@ def celltypist_model(
     sc.tl.pca(adata)
     X_pca = adata.obsm["X_pca"]
 
-    print("Start train model")
+    logger.debug("Start train model")
     if adata_train.n_obs > 100000:
         model = celltypist.train(
             adata_train,
@@ -211,7 +214,7 @@ def celltypist_model(
     # .X = expect log1p normalized expression to 10000 counts per cell
     # if not -> check_expression = False
 
-    print("Start annotate dataset")
+    logger.debug("Start annotate dataset")
     predictions = celltypist.annotate(adata, model=model)
     # majority_voting = False default
 
@@ -219,7 +222,7 @@ def celltypist_model(
         "full"
     ]  # adding PCA to adata_list['full'] the first time and reuses it for the next function calls
     if not "X_pca" in adata.obsm:
-        print("Did not find existing PCA, computing it")
+        logger.debug("Did not find existing PCA, computing it")
         sc.tl.pca(adata)
     X_pca = adata.obsm["X_pca"]
 
@@ -278,7 +281,7 @@ def scmap_cluster(
         "full"
     ]  # adding PCA to adata_list['full'] the first time and reuses it for the next function calls
     if not "X_pca" in adata.obsm:
-        print("Did not find existing PCA, computing it")
+        logger.debug("Did not find existing PCA, computing it")
         sc.tl.pca(adata)
     X_pca = adata.obsm["X_pca"]
 
@@ -334,7 +337,7 @@ def scmap_cells(
         "full"
     ]  # adding PCA to adata_list['full'] the first time and reuses it for the next function calls
     if not "X_pca" in adata.obsm:
-        print("Did not find existing PCA, computing it")
+        logger.debug("Did not find existing PCA, computing it")
         sc.tl.pca(adata)
     X_pca = adata.obsm["X_pca"]
 
@@ -412,14 +415,10 @@ def scanvi(X_list, y_list, batch_list, assign, adata_list):
     scvi_model = scvi.model.SCVI(
         adata, n_layers=1, n_latent=50  # default = 10  or 50 ?
     )  # default = 1
-    print("start train scvi")
+    logger.debug("start train scvi")
     scvi_model.train(
-        train_size=1,
-        validation_size=None,
-        # shuffle_set_split = False,
-        max_epochs=200,
+        max_epochs=100,
         early_stopping=True,
-        # shuffle_set_split = False
     )
 
     # Run scanvi
@@ -429,7 +428,7 @@ def scanvi(X_list, y_list, batch_list, assign, adata_list):
         unlabeled_category=unlabeled_category,
         labels_key="celltype",
     )
-    print("start train scanvi")
+    logger.debug("start train scanvi")
     scanvi_model.train(
         max_epochs=20,
         n_samples_per_label=100,
@@ -468,12 +467,12 @@ def scBalance_model(X_list, y_list, batch_list, assign, adata_list):
         scale=False,
     )
     y_pred_full = sb.scBalance(full, reference, ref_label, "cpu")
-    print(len(y_pred_full))
+    logger.debug(len(y_pred_full))
     adata = adata_list[
         "full"
     ]  # adding PCA to adata_list['full'] the first time and reuses it for the next function calls
     if not "X_pca" in adata.obsm:
-        print("Did not find existing PCA, computing it")
+        logger.debug("Did not find existing PCA, computing it")
         sc.tl.pca(adata)
     X_pca = adata.obsm["X_pca"]
 
