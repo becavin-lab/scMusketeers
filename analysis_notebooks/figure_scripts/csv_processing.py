@@ -13,7 +13,7 @@ _MODEL_DISPLAY_NAME = {
 def _load_completed_entries(paper_review_dir):
     """Read completed_benchmark_runs_taskX.csv files and return list of (dataset, task, model, parameter) tuples."""
     entries = []
-    for task_num in ["1", "2"]:
+    for task_num in ["1", "1_New", "2", "2_New"]:
         csv_path = os.path.join(paper_review_dir, f"completed_benchmark_runs_task{task_num}.csv")
         if not os.path.isfile(csv_path):
             continue
@@ -36,7 +36,7 @@ def _reconstruct_folder_name(dataset, task, model, parameter):
     """
     if task == "1" and model == "scMusketeers":
         return f"{dataset}_task_1_{parameter}"
-    elif task == "1":
+    elif task in ("1", "1_New"):
         return f"{dataset}_task_1_{model}_{parameter}"
     else:
         return f"{dataset}_task_2_{model}_{parameter}"
@@ -63,8 +63,15 @@ def _read_metrics(metrics_file):
     }
 
 
-def csv_process(results_dir, checkpoint_path):
-    logger.info("Parsing result directories to build metrics table...")
+def csv_process(results_dir, checkpoint_path, task_filter=None):
+    """Process result metrics into per-task checkpoint CSVs.
+
+    Args:
+        task_filter: optional list of task numbers to process, e.g. ["1"] or
+                     ["1_New", "2", "2_New"]. None means process all tasks.
+    """
+    filter_label = f" (tasks: {task_filter})" if task_filter else " (all tasks)"
+    logger.info(f"Parsing result directories to build metrics table{filter_label}...")
     data = []
 
     if not os.path.exists(results_dir):
@@ -75,6 +82,9 @@ def csv_process(results_dir, checkpoint_path):
         os.path.join(results_dir, "..", "benchmark", "paper_review")
     )
     completed_entries = _load_completed_entries(paper_review_dir)
+
+    if task_filter is not None:
+        completed_entries = [e for e in completed_entries if e[1] in task_filter]
 
     if not completed_entries:
         logger.error(

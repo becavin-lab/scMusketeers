@@ -48,6 +48,8 @@ FIGURE2_MODEL_COLORS = {
 
 FIGURE2_MODEL_ORDER = list(dict.fromkeys(FIGURE2_MODEL_NAMES.values()))
 
+ENTROPY_EXCLUDED_MODELS = {"6-CellTypist", "7-scmap-cells", "8-scmap-cluster"}
+
 METRICS = [
     ('test_balanced_acc',        'Balanced accuracy'),
     ('full_batch_mixing_entropy', 'Batch Mixing Entropy'),
@@ -112,7 +114,7 @@ def produce_fig_3(checkpoint_base_path, working_dir, run_stats=False):
 
         datasets = df_plot['aestetic_data_name'].unique()
         n_rows = len(datasets)
-        order = [m for m in model_order if m in df_plot['aestetic_model_name'].unique()]
+        base_order = [m for m in model_order if m in df_plot['aestetic_model_name'].unique()]
         pct_order = sorted(df_plot['pct'].unique())
 
         fig, axes = plt.subplots(n_rows, 2, figsize=(14, n_rows * 3.5))
@@ -129,6 +131,8 @@ def produce_fig_3(checkpoint_base_path, working_dir, run_stats=False):
 
             for col_idx, (metric_col, ylabel) in enumerate(METRICS):
                 ax = axes[row_idx, col_idx]
+                order = base_order if metric_col != 'full_batch_mixing_entropy' else \
+                    [m for m in base_order if m not in ENTROPY_EXCLUDED_MODELS]
 
                 sns.boxplot(
                     data=ds_df,

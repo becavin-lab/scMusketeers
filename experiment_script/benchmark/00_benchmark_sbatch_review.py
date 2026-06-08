@@ -7,14 +7,14 @@ MODELS = ["scMusketeers", "celltypist", "scmap_cells", "scmap_cluster", "pca_knn
 
 # Populated by scan_results() from the results directory
 DATASETS = ['ajrccm_by_batch', 'dominguez_2022_lymph', 'dominguez_2022_spleen', 'hlca_par_dataset_harmonized', 'hlca_trac_dataset_harmonized', 'htap', 'koenig_2022', 'lake_2021', 'litvinukova_2020', 'tabula_2022_spleen', 'tosti_2021', 'yoshida_2021']
-DATASETS_TASK1_NEW = ['Ageing-Mouse-All', 'CellCards-Lung', 'PBMC-Lee', 'TS-Blood', 'TS-BoneMarrow', 'TS-Liver', 'TS-Neural', 'TS-Skin']
+DATASETS_TASK1_NEW = ['Ageing-Mouse-All', 'CellCards-Lung', 'PBMC-Lee', 'SmallIntestine-20k', 'SmallIntestine-All', 'TS-Blood', 'TS-BoneMarrow', 'TS-Liver', 'TS-Neural', 'TS-Skin']
 
 TASKS = ['1', '2']
 TASK1_TESTS = ['0', '1', '2']   # test fold indices (i) for task1
 TASK1_VALS = ['0', '1', '2', '3', '4']    # val fold indices (j) for task1
 TASK2_FOLDS = ['0', '1', '2']   # test fold indices (i) for task2 non-scMusk
 TASK2_PCTS = ['0.05', '0.1', '0.5', '0.9']    # pct_split values for task2
-TASK2_SEEDS = ['0.1', '0.9', '30', '31', '32', '33', '34', '35']   # random_seed values for task2
+TASK2_SEEDS = ['30', '31', '32', '33', '34', '35']   # random_seed values for task2
 
 # task1_New shares the same fold structure as task1
 TASK1_NEW_TESTS = ['0', '1', '2']
@@ -23,7 +23,7 @@ TASK1_NEW_VALS = ['0', '1', '2', '3', '4']
 
 def _datasets_for_task(task):
     """Return the dataset list that applies to a given task identifier."""
-    if task == "1_New":
+    if task in ("1_New", "2_New"):
         return DATASETS_TASK1_NEW
     return DATASETS
 
@@ -71,11 +71,18 @@ def parse_folder_name(folder_name):
                 return {"dataset": dataset, "task": effective_task, "model": model,
                         "test": parts[0], "val": parts[1]}
         elif task_num == "2":
+            # Promote to task 2_New when the dataset belongs to the new set
+            effective_task = "2_New" if dataset in DATASETS_TASK1_NEW else "2"
             if model == "scMusketeers" and len(parts) == 2:
+                # Legacy task2 format: pct_seed (no fold).
+                # Not valid for task2_New where fold is required.
+                if dataset in DATASETS_TASK1_NEW:
+                    return None
                 return {"dataset": dataset, "task": "2", "model": model,
                         "fold": None, "pct": parts[0], "seed": parts[1]}
-            elif model != "scMusketeers" and len(parts) == 3:
-                return {"dataset": dataset, "task": "2", "model": model,
+            elif len(parts) == 3:
+                # task2_New format for all models: fold_pct_seed
+                return {"dataset": dataset, "task": effective_task, "model": model,
                         "fold": parts[0], "pct": parts[1], "seed": parts[2]}
     return None
 
@@ -104,12 +111,16 @@ def scan_results(results_dir):
         elif parsed["task"] == "1_New":
             t1n_tests.add(parsed["test"])
             t1n_vals.add(parsed["val"])
-
-        else:
+        elif parsed["task"] in ("2", "2_New"):
             if parsed["fold"] is not None:
                 t2_folds.add(parsed["fold"])
             t2_pcts.add(parsed["pct"])
-            t2_seeds.add(parsed["seed"])
+            # Seeds are integers (30-35); skip legacy float seeds (0.1, 0.9)
+            try:
+                if float(parsed["seed"]) >= 1:
+                    t2_seeds.add(parsed["seed"])
+            except ValueError:
+                t2_seeds.add(parsed["seed"])
 
     DATASETS = sorted(d for d in datasets if d not in DATASETS_TASK1_NEW)
     TASKS = sorted(tasks)
@@ -135,12 +146,14 @@ def get_expected_parameters(task, model=None):
         for test in tests:
             for val in vals:
                 expected_params.append(f"{test}_{val}")
-    elif task == "2":
-        if model == "scMusketeers":
+    elif task in ("2", "2_New"):
+        if model == "scMusketeers" and task == "2":
+            # Legacy task2: no fold in parameter
             for pct in TASK2_PCTS:
                 for seed in TASK2_SEEDS:
                     expected_params.append(f"{pct}_{seed}")
         else:
+            # task2_New (all models) and task2 non-scMusk: fold_pct_seed
             for fold in TASK2_FOLDS:
                 for pct in TASK2_PCTS:
                     for seed in TASK2_SEEDS:
@@ -165,7 +178,7 @@ def find_completed_runs(results_dir):
             continue
         if parsed["task"] in ("1", "1_New"):
             parameter = f"{parsed['test']}_{parsed['val']}"
-        else:
+        elif parsed["task"] in ("2", "2_New"):
             if parsed["fold"] is None:
                 parameter = f"{parsed['pct']}_{parsed['seed']}"
             else:
@@ -253,6 +266,8 @@ def main():
     parser.add_argument("--task1-new", action="store_true", dest="task1_new",
                         help="Process task1_New runs (new CellxGene datasets)")
     parser.add_argument("--task2", action="store_true", help="Process task2 runs")
+    parser.add_argument("--task2-new", action="store_true", dest="task2_new",
+                        help="Process task2_New runs (new CellxGene datasets)")
     args = parser.parse_args()
 
     selected_tasks = []
@@ -262,8 +277,10 @@ def main():
         selected_tasks.append("1_New")
     if args.task2:
         selected_tasks.append("2")
+    if args.task2_new:
+        selected_tasks.append("2_New")
     if not selected_tasks:
-        selected_tasks = ["1", "1_New", "2"]
+        selected_tasks = ["1", "1_New", "2", "2_New"]
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     results_dir = os.path.abspath(os.path.join(script_dir, "..", "results"))

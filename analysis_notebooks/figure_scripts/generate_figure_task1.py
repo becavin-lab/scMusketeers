@@ -40,6 +40,8 @@ MODEL_COLORS = {
 
 FIGURE2_MODEL_ORDER = list(FIGURE2_MODEL_NAMES.values())
 
+ENTROPY_EXCLUDED_MODELS = {"6-CellTypist", "7-scmap-cells", "8-scmap-cluster"}
+
 FIGURE2_MODEL_COLORS = {
     aesthetic_name: MODEL_COLORS[orig_key]
     for orig_key, aesthetic_name in FIGURE2_MODEL_NAMES.items()
@@ -93,7 +95,7 @@ def produce_fig_2(checkpoint_base_path, working_dir, run_stats=False):
 
     model_order = FIGURE2_MODEL_ORDER
 
-    def generate_subfigures(metric_col, ylabel, output_prefix):
+    def generate_subfigures(metric_col, ylabel, output_prefix, exclude_models=None):
         for key, title_name in CATEGORY_TITLES.items():
             df_plot = task_dict_acc.get(key, pd.DataFrame())
             if df_plot.empty:
@@ -101,6 +103,8 @@ def produce_fig_2(checkpoint_base_path, working_dir, run_stats=False):
                 continue
 
             order = [m for m in model_order if m in df_plot['aestetic_model_name'].unique()]
+            if exclude_models:
+                order = [m for m in order if m not in exclude_models]
             n_datasets = df_plot['aestetic_data_name'].nunique()
             fig_width = max(8, n_datasets * 4)
 
@@ -162,4 +166,5 @@ def produce_fig_2(checkpoint_base_path, working_dir, run_stats=False):
         metric_col="full_batch_mixing_entropy",
         ylabel="Batch mixing entropy",
         output_prefix="Figure_task1_Entropy",
+        exclude_models=ENTROPY_EXCLUDED_MODELS,
     )

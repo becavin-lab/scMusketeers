@@ -173,7 +173,7 @@ def sum_marker_score(markers, adata, obs_key):
     adata.obs["sum_marker_score"] = sum_scores
 
 
-def load_dataset(dataset_name, dataset_dir):
+def load_dataset(dataset_name, dataset_dir, model=None):
     dataset_names = {
         "htap": "htap",
         "lca": "LCA_log1p",
@@ -229,8 +229,19 @@ def load_dataset(dataset_name, dataset_dir):
         "TS-Liver": "cellxgene_datasets/TS-Liver",
         "TS-Neural": "cellxgene_datasets/TS-Neural",
         "TS-Skin": "cellxgene_datasets/TS-Skin",
+        "SmallIntestine-All": "cellxgene_datasets/SmallIntestine-All",
+        "SmallIntestine-20k": "cellxgene_datasets/SmallIntestine-20k",
     }
-    dataset_path = dataset_dir + "/" + dataset_names[dataset_name] + ".h5ad"
+    base_path = dataset_dir + "/" + dataset_names[dataset_name]
+    if model == "uce":
+        uce_input_path = base_path + "_uce_input_uce_adata.h5ad"
+        uce_path = base_path + "_uce_adata.h5ad"
+        if os.path.exists(uce_input_path):
+            dataset_path = uce_input_path
+        else:
+            dataset_path = uce_path
+    else:
+        dataset_path = base_path + ".h5ad"
     adata = sc.read_h5ad(dataset_path)
     if not adata.raw:
         adata.raw = adata
@@ -253,6 +264,7 @@ class Dataset:
         use_hvg,
         test_split_key,
         unlabeled_category,
+        model=None,
     ):
         self.adata = adata
         self.adata_train_extended = anndata.AnnData()
@@ -269,6 +281,7 @@ class Dataset:
         self.size_factor = size_factor
         self.scale_input = scale_input
         self.logtrans_input = logtrans_input
+        self.model = model
         self.use_hvg = use_hvg
         self.test_split_key = test_split_key
         # if not semi_sup:
@@ -301,7 +314,7 @@ class Dataset:
                 self.adata.obs.n_counts / np.median(self.adata.obs.n_counts)
             )
 
-        if self.use_hvg:
+        if self.use_hvg and self.model != "uce":
             self.adata = get_hvg_common(
                 self.adata, n_hvg=self.use_hvg, batch_key=self.batch_key
             )

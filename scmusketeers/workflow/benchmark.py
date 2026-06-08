@@ -93,6 +93,7 @@ class Workflow:
         self.data_dir = working_dir + "/data"
         # dataset identifiers
         self.dataset_name = self.run_file.dataset_name
+        self.model = self.run_file.model
         self.class_key = self.run_file.class_key
         self.batch_key = self.run_file.batch_key
         # normalization parameters
@@ -199,7 +200,7 @@ class Workflow:
     def process_dataset(self):
         # Loading dataset
         adata = load_dataset(
-            dataset_dir=self.data_dir, dataset_name=self.dataset_name
+            dataset_dir=self.data_dir, dataset_name=self.dataset_name, model=self.model
         )
 
         self.dataset = Dataset(
@@ -214,6 +215,7 @@ class Workflow:
             use_hvg=self.use_hvg,
             test_split_key=self.test_split_key,
             unlabeled_category=self.unlabeled_category,
+            model=self.model,
         )
 
         # Processing dataset.

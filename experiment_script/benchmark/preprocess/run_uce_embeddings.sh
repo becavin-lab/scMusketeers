@@ -12,7 +12,8 @@ BATCH_SIZE=25
 #module load miniconda && conda activate UCE
 #cd ${UCE_DIR}
 
-for dataset in "CellCards-Lung" "PBMC-Lee" "TS-Blood" "TS-BoneMarrow" "TS-Liver" "TS-Neural" "TS-Skin"; do
+for dataset in "TS-Neural"; do
+#for dataset in "CellCards-Lung" "PBMC-Lee" "TS-Blood" "TS-BoneMarrow" "TS-Liver" "TS-Neural" "TS-Skin"; do
     input_path=${DATA_DIR}/${dataset}_uce_input.h5ad
     python3 -c "
 import anndata as ad
@@ -22,9 +23,9 @@ adata.var.index.name = None
 adata.write_h5ad('${input_path}')
 print('Saved preprocessed:', '${input_path}')
 "
-    python ${UCE_SCRIPT} \
+    cd ${UCE_DIR} && python ${UCE_SCRIPT} \
         --adata_path ${input_path} \
-        --dir ${DATA_DIR} \
+        --dir ${DATA_DIR}/ \
         --species human \
         --model_loc ${MODEL_LOC} \
         --nlayers 33 \
@@ -32,20 +33,20 @@ print('Saved preprocessed:', '${input_path}')
 done
 
 # Ageing-Mouse-All uses mouse species
-dataset="Ageing-Mouse-All"
-input_path=${DATA_DIR}/${dataset}_uce_input.h5ad
-python3 -c "
-import anndata as ad
-adata = ad.read_h5ad('${DATA_DIR}/${dataset}.h5ad')
-adata.var_names = adata.var['feature_name']
-adata.var.index.name = None
-adata.write_h5ad('${input_path}')
-print('Saved preprocessed:', '${input_path}')
-"
-python ${UCE_SCRIPT} \
-    --adata_path ${input_path} \
-    --dir ${DATA_DIR} \
-    --species mouse \
-    --model_loc ${MODEL_LOC} \
-    --nlayers 33 \
-    --batch_size ${BATCH_SIZE}
+# dataset="Ageing-Mouse-All"
+# input_path=${DATA_DIR}/${dataset}_uce_input.h5ad
+# python3 -c "
+# import anndata as ad
+# adata = ad.read_h5ad('${DATA_DIR}/${dataset}.h5ad')
+# adata.var_names = adata.var['feature_name']
+# adata.var.index.name = None
+# adata.write_h5ad('${input_path}')
+# print('Saved preprocessed:', '${input_path}')
+# "
+# python ${UCE_SCRIPT} \
+#     --adata_path ${input_path} \
+#     --dir ${DATA_DIR} \
+#     --species mouse \
+#     --model_loc ${MODEL_LOC} \
+#     --nlayers 33 \
+#     --batch_size ${BATCH_SIZE}

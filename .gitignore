@@ -18,6 +18,7 @@ LCA_scarches_reference/
 results_semi_sup_n_perm_5/
 data/
 *.sif
+Checkatlas*
 results/
 logs
 task*
