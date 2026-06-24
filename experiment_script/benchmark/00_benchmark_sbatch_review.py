@@ -137,12 +137,23 @@ def scan_results(results_dir):
     TASK2_SEEDS = sorted(t2_seeds, key=float)
 
 
-def get_expected_parameters(task, model=None):
-    """Return expected parameter strings for a given task and model."""
+def get_expected_parameters(task, model=None, selected_tests=None):
+    """Return expected parameter strings for a given task and model.
+
+    selected_tests restricts the task1 test folds (used for scMusketeers task1,
+    which only ran the single selected "most detrimental" fold per dataset; see
+    hp_test_obs.json and task1/task1_scMusk_label_transfer_between_batch.py).
+    """
     expected_params = []
     if task in ("1", "1_New"):
         tests = TASK1_NEW_TESTS if task == "1_New" else TASK1_TESTS
         vals = TASK1_NEW_VALS if task == "1_New" else TASK1_VALS
+        # task1 (not task1_New) scMusketeers was run on only one test fold per
+        # dataset: the fold whose test batches match hp_test_obs.json[dataset].
+        # That fold index varies per dataset and can't be recomputed here without
+        # the AnnData, so it is derived from the completed runs via selected_tests.
+        if task == "1" and model == "scMusketeers" and selected_tests is not None:
+            tests = selected_tests
         for test in tests:
             for val in vals:
                 expected_params.append(f"{test}_{val}")
@@ -238,7 +249,17 @@ def find_missing_runs(completed_runs, output_dir, selected_tasks):
         missing_runs = []
         for ds in datasets:
             for model in MODELS:
-                for expected_param in get_expected_parameters(task, model):
+                selected_tests = None
+                if task == "1" and model == "scMusketeers":
+                    # Restrict expected runs to the single selected test fold(s)
+                    # actually run for this dataset (see get_expected_parameters).
+                    done = completed_mapped.get(ds, {}).get(task, {}).get(model, set())
+                    selected_tests = sorted({p.split("_")[0] for p in done})
+                    # If scMusketeers never ran for this dataset we can't know its
+                    # selected fold, so fall back to expecting fold 0.
+                    if not selected_tests:
+                        selected_tests = ["0"]
+                for expected_param in get_expected_parameters(task, model, selected_tests):
                     completed = (ds in completed_mapped
                                  and task in completed_mapped[ds]
                                  and model in completed_mapped[ds][task]

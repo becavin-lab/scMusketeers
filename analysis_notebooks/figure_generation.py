@@ -18,6 +18,7 @@ from figure_scripts.generate_figure_task1 import produce_fig_2
 from figure_scripts.generate_figure_task1_New import produce_fig_task1_New
 from figure_scripts.generate_figure_task2 import produce_fig_3
 from figure_scripts.generate_figure_task2_New import produce_fig_task2_New
+from figure_scripts.generate_heatmap import produce_heatmap
 
 def main():
     working_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -33,6 +34,7 @@ def main():
     parser.add_argument("--task1_new", action="store_true", help="Load the Task 1 New checkpoint CSV and produce Task 1 New figure (new datasets)")
     parser.add_argument("--task2", action="store_true", help="Load the Task 2 checkpoint CSV and produce Task 2 figure")
     parser.add_argument("--task2_new", action="store_true", help="Load the Task 2 New checkpoint CSV and produce Task 2 New figure (new datasets)")
+    parser.add_argument("--heatmap", action="store_true", help="Produce the Task 1 model-rank heatmap (median balanced accuracy)")
     parser.add_argument("--all", action="store_true", help="Run everything from start to finish")
     parser.add_argument("--run_stats", action="store_true", help="Enable Wilcoxon statistical annotations on figures")
 
@@ -43,14 +45,16 @@ def main():
     run_task1_new = args.task1_new or args.all
     run_task2 = args.task2 or args.all
     run_task2_new = args.task2_new or args.all
+    run_heatmap = args.heatmap or args.all
 
-    if not (run_csv or run_task1 or run_task1_new or run_task2 or run_task2_new):
+    if not (run_csv or run_task1 or run_task1_new or run_task2 or run_task2_new or run_heatmap):
         logger.info("No explicit flags passed, defaulting to '--all'.")
         run_csv = True
         run_task1 = True
         run_task1_new = True
         run_task2 = True
         run_task2_new = True
+        run_heatmap = True
 
     if run_csv:
         # task1 group and "all others" (task2_New group) are processed independently
@@ -80,6 +84,12 @@ def main():
     if run_task2_new:
         logger.info("--- Starting Task 2 New Figure Generation ---")
         produce_fig_task2_New(checkpoint_path, working_dir, run_stats=args.run_stats)
+
+    if run_heatmap:
+        logger.info("--- Starting Task 1 New Rank Heatmap Generation ---")
+        produce_heatmap(checkpoint_path, working_dir, task="1_New")
+        logger.info("--- Starting Task 2 New Rank Heatmap Generation ---")
+        produce_heatmap(checkpoint_path, working_dir, task="2_New")
 
 if __name__ == "__main__":
     main()

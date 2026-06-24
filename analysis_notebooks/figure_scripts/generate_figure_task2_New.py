@@ -53,7 +53,6 @@ MODEL_NAMES = {
     "uce":              "3-UCE",
     "harmony_svm":      "4-Harmony",
     "pca_svm":          "5-PCA",
-    "pca_knn":          "5b-PCA-kNN",
     "celltypist":       "6-CellTypist",
     "scmap_cells":      "7-scmap-cells",
     "scmap_cluster":    "8-scmap-cluster",
@@ -65,7 +64,6 @@ MODEL_COLORS = {
     "uce":              "#D3A53C",
     "harmony_svm":      "#5B9DC7",
     "pca_svm":          "#264D74",
-    "pca_knn":          "#3A6A9E",
     "celltypist":       "#75BAD3",
     "scmap_cells":      "#607F6A",
     "scmap_cluster":    "#707C45",
@@ -73,7 +71,7 @@ MODEL_COLORS = {
 
 MODEL_ORDER = list(dict.fromkeys(MODEL_NAMES.values()))
 
-ENTROPY_EXCLUDED_MODELS = {"5b-PCA-kNN", "6-CellTypist", "7-scmap-cells", "8-scmap-cluster"}
+ENTROPY_EXCLUDED_MODELS = {"6-CellTypist", "7-scmap-cells", "8-scmap-cluster"}
 
 MODEL_COLORS_AESTHETIC = {
     aesthetic: MODEL_COLORS[orig]
@@ -82,6 +80,7 @@ MODEL_COLORS_AESTHETIC = {
 }
 
 METRICS = [
+    ("test_acc",                 "Accuracy"),
     ("test_balanced_acc",        "Balanced accuracy"),
     ("full_batch_mixing_entropy", "Batch mixing entropy"),
 ]
@@ -120,6 +119,8 @@ def produce_fig_task2_New(checkpoint_base_path, working_dir, run_stats=False):
                 logger.warning(f"No data found for dataset '{ds}', skipping.")
                 continue
             for model in ds_df["model"].unique():
+                if model == "pca_knn":  # PCA-kNN excluded from all figures
+                    continue
                 sub = ds_df[ds_df["model"] == model].copy()
                 if not sub.empty:
                     sub["aestetic_data_name"] = AESTHETIC_DATA_NAME.get(ds, ds)
@@ -236,9 +237,16 @@ def produce_fig_task2_New(checkpoint_base_path, working_dir, run_stats=False):
 
             plt.tight_layout()
             output_path = os.path.join(figures_dir, f"{output_prefix}_{key}.png")
-            plt.savefig(output_path, bbox_inches="tight")
+            plt.savefig(output_path, bbox_inches="tight", dpi=300)
+            plt.savefig(output_path.replace(".png", ".svg"), bbox_inches="tight")
             logger.info(f"Saved {output_path}")
             plt.close()
+
+    generate_subfigures(
+        metric_col="test_acc",
+        ylabel="Accuracy",
+        output_prefix="Figure_task2_New_Accuracy",
+    )
 
     generate_subfigures(
         metric_col="test_balanced_acc",

@@ -9,6 +9,13 @@ _MODEL_DISPLAY_NAME = {
     "scMusketeers": "scPermut_default",
 }
 
+# Reverse mapping, to write failed runs back in the original CSV naming
+_MODEL_ORIGINAL_NAME = {v: k for k, v in _MODEL_DISPLAY_NAME.items()}
+
+# A run whose test accuracy AND balanced accuracy are both exactly 0 is treated
+# as a failed run: the job crashed / produced no metric, so _read_metrics
+# defaulted it to 0.0. (Low-but-nonzero scores are kept as genuine results.)
+
 
 def _load_completed_entries(paper_review_dir):
     """Read completed_benchmark_runs_taskX.csv files and return list of (dataset, task, model, parameter) tuples."""
@@ -57,10 +64,69 @@ def _extract_test_fold_nb(parameter):
 def _read_metrics(metrics_file):
     metrics = pd.read_csv(metrics_file, index_col=0, header=None).squeeze("columns")
     return {
+        "val_acc": metrics.get("evaluation/val/acc", 0.0),
+        "test_acc": metrics.get("evaluation/test/acc", 0.0),
         "val_balanced_acc": metrics.get("evaluation/val/balanced_acc", 0.0),
         "test_balanced_acc": metrics.get("evaluation/test/balanced_acc", 0.0),
         "full_batch_mixing_entropy": metrics.get("evaluation/full/batch_mixing_entropy", 0.0),
     }
+
+
+def detect_failed_runs(runs_table_df, paper_review_dir):
+    """Flag runs whose test accuracy AND balanced accuracy are both exactly 0.
+
+    These indicate a failed job (crashed, ran out of memory, etc.) whose metric
+    defaulted to 0.0 rather than a genuine, low-but-nonzero result.
+
+    Writes missing_benchmark_runs_task{T}_failed.csv per task in
+    `paper_review_dir`, using the same Dataset/Task/Model/Parameter columns as
+    the missing-runs CSVs so the failed runs can be re-submitted with the
+    complete scripts.
+
+    Returns the failed-runs DataFrame.
+    """
+    if runs_table_df.empty:
+        return pd.DataFrame()
+
+    failed = runs_table_df[
+        (runs_table_df["test_acc"] == 0)
+        & (runs_table_df["test_balanced_acc"] == 0)
+    ].copy()
+
+    if failed.empty:
+        logger.info(
+            "No failed runs detected (no run has both test_acc and "
+            "test_balanced_acc == 0)."
+        )
+        return failed
+
+    logger.warning(
+        f"Detected {len(failed)} failed run(s) with test_acc AND "
+        f"test_balanced_acc both == 0:"
+    )
+    for _, r in failed.iterrows():
+        logger.warning(
+            f"  {r['dataset_name']} | {r['task']} | {r['model']} | "
+            f"{r['parameter']} (acc={r['test_acc']:.3f}, "
+            f"bal_acc={r['test_balanced_acc']:.3f})"
+        )
+
+    # Write per-task CSVs in the missing-runs format so they can be re-submitted.
+    os.makedirs(paper_review_dir, exist_ok=True)
+    out = failed.copy()
+    out["Dataset Name"] = out["dataset_name"]
+    out["Task"] = out["task"].str.replace("task_", "", regex=False)
+    out["Model"] = out["model"].map(_MODEL_ORIGINAL_NAME).fillna(out["model"])
+    out["Missing Parameter"] = out["parameter"]
+    cols = ["Dataset Name", "Task", "Model", "Missing Parameter"]
+    for task_label, g in out.groupby("Task"):
+        path = os.path.join(
+            paper_review_dir, f"missing_benchmark_runs_task{task_label}_failed.csv"
+        )
+        g[cols].to_csv(path, index=False)
+        logger.warning(f"Wrote {len(g)} failed run(s) to {path}")
+
+    return failed
 
 
 def csv_process(results_dir, checkpoint_path, task_filter=None):
@@ -114,6 +180,16 @@ def csv_process(results_dir, checkpoint_path, task_filter=None):
 
     runs_table_df = pd.DataFrame(data)
     logger.info(f"Finished parsing. Extracted {len(runs_table_df)} valid runs.")
+
+    # Flag failed runs (accuracy and balanced accuracy both 0) and drop them so
+    # they don't pollute the checkpoints / figures.
+    failed = detect_failed_runs(runs_table_df, paper_review_dir)
+    if not failed.empty:
+        runs_table_df = runs_table_df.drop(failed.index)
+        logger.info(
+            f"Removed {len(failed)} failed run(s) from the checkpoint "
+            f"({len(runs_table_df)} runs kept)."
+        )
 
     if not runs_table_df.empty:
         for t, group_df in runs_table_df.groupby("task"):

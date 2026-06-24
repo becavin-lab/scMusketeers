@@ -197,13 +197,26 @@ def celltypist_model(
     X_pca = adata.obsm["X_pca"]
 
     logger.debug("Start train model")
-    if adata_train.n_obs > 100000:
+    # The default LBFGS logistic-regression solver does not scale: on large
+    # training sets (e.g. Ageing-Mouse-All at pct 0.5/0.9, ~55k-89k cells) it
+    # runs for >24h and hits the SLURM time limit. CellTypist recommends the
+    # SGD/mini-batch solver above ~20k cells, so switch to it well before the
+    # training set reaches 100k cells.
+    # Only request the GPU SGD path when a GPU is actually present; otherwise
+    # use_GPU=True crashes on CPU-only nodes (jobs are moved to CPU when the GPU
+    # queue is saturated). SGD on CPU is still fine, just a little slower.
+    try:
+        import torch
+        _use_gpu = torch.cuda.is_available()
+    except Exception:
+        _use_gpu = False
+    if adata_train.n_obs > 20000:
         model = celltypist.train(
             adata_train,
             "celltype",
             n_jobs=n_jobs,
             use_SGD=True,
-            use_GPU=True,
+            use_GPU=_use_gpu,
             mini_batch=True,
             check_expression=False,
         )

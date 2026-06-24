@@ -203,6 +203,7 @@ def produce_fig_3(checkpoint_base_path, working_dir, run_stats=False):
 
         plt.tight_layout()
         output_path = os.path.join(figures_dir, f"Figure_task2_{key}.png")
-        plt.savefig(output_path, bbox_inches='tight')
+        plt.savefig(output_path, bbox_inches='tight', dpi=300)
+        plt.savefig(output_path.replace('.png', '.svg'), bbox_inches='tight')
         logger.info(f"Saved {output_path}")
         plt.close()
