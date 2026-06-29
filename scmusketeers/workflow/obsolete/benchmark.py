@@ -71,9 +71,6 @@ from neptune.utils import stringify_unsupported
 from importlib.metadata import version
 
 logger = logging.getLogger("Sc-Musketeers")
-logging.basicConfig(format="|--- %(levelname)-8s    %(message)s")
-logger.info(f"Sc-Musketeers {version('sc-musketeers')} started")
-logger.setLevel(getattr(logging, "DEBUG"))
 
 def train_dummy(X_list, y_list, batch_list, train_plit, **kwargs):
     latent_list = {k: X[:, :2] for k, X in X_list.items()}

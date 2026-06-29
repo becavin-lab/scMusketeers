@@ -1,8 +1,6 @@
 # Get GPU
 # srun -A cell -p gpu -t 10:00:00 --gres=gpu:1 --pty bash -i
 # source ~/.cache/pypoetry/virtualenvs/sc-musketeers-voskaBul-py3.12/bin/activate
-sc-musketeers --version
-
 
 outdir="/workspace/cell/scMusketeers"
 #outdir="/data/analysis/data_becavin/scMusketeers-data"

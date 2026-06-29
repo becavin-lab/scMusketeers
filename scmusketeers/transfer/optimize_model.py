@@ -431,14 +431,15 @@ class Workflow:
 
         adata_pred = adata_list["full"].copy()
 
-        X_scCER = enc
-        adata_pred.obsm[f"{self.run_file.class_key}_pred_proba"] = y_pred_proba
-        adata_pred.obs[f"{self.run_file.class_key}_pred"] = y_pred
-        # adata_pred.obsm['X_scCER'] = X_scCER
+        X_scMusk = np.asarray(enc)
+        adata_pred.obsm[f"{self.run_file.class_key}_scMusk_proba"] = y_pred_proba
+        adata_pred.obs[f"{self.run_file.class_key}_scMusk"] = y_pred
+        # scMusketeers latent embedding (bottleneck of the autoencoder)
+        adata_pred.obsm["X_scMusk"] = X_scMusk
 
-        # query_pred = adata_pred.obs[f'{self.class_key}_pred'][adata_pred.obs['train_split'] == 'test']
+        # query_pred = adata_pred.obs[f'{self.class_key}_scMusk'][adata_pred.obs['train_split'] == 'test']
 
-        return adata_pred, self.dann_ae, history, X_scCER, y_pred
+        return adata_pred, self.dann_ae, history, X_scMusk, y_pred
 
     def train_scheme(self, training_scheme, verbose=True, **loop_params):
         """
@@ -551,9 +552,6 @@ class Workflow:
 
             for epoch in range(1, n_epochs + 1):
                 running_epoch += 1
-                logger.debug(
-                    f"Epoch {running_epoch}/{total_epochs}, Current strategy {strategy}, Epoch {epoch}/{n_epochs}"
-                )
                 history, _, _, _, _ = self.training_loop(
                     history=history,
                     training_strategy=strategy,
@@ -562,22 +560,22 @@ class Workflow:
                     **loop_params,
                 )
 
-                if self.run_file.log_neptune:
-                    for group in history:
-                        for par, value in history[group].items():
-                            if len(value) > 0:
-                                self.run_neptune[
-                                    f"training/{group}/{par}"
-                                ].append(value[-1])
-                            if physical_devices:
-                                self.run_neptune[
-                                    "training/train/tf_GPU_memory"
-                                ].append(
-                                    tf.config.experimental.get_memory_info(
-                                        "GPU:0"
-                                    )["current"]
-                                    / 1e6
-                                )
+                # Per-epoch summary (visible without --debug)
+                train_loss = (
+                    history["train"]["total_loss"][-1]
+                    if history["train"]["total_loss"]
+                    else float("nan")
+                )
+                val_loss = (
+                    history["val"]["total_loss"][-1]
+                    if history["val"]["total_loss"]
+                    else float("nan")
+                )
+                logger.info(
+                    f"Epoch {running_epoch}/{total_epochs} [{strategy}] "
+                    f"(stage epoch {epoch}/{n_epochs}) - "
+                    f"train_loss: {train_loss:.4f} - val_loss: {val_loss:.4f}"
+                )
                 if strategy in [
                     "full_model",
                     "classifier_branch",
@@ -610,8 +608,7 @@ class Workflow:
             if verbose:
                 time_out = time.time()
                 logger.debug(f"Strategy duration : {time_out - time_in} s")
-        if self.run_file.log_neptune:
-            self.run_neptune[f"training/{group}/total_epochs"] = running_epoch
+        logger.debug(f"training/{group}/total_epochs = {running_epoch}")
         return history
 
     def training_loop(
@@ -691,9 +688,6 @@ class Workflow:
             layers_to_freeze = freeze.freeze_block(self.dann_ae, "freeze_dec")
             freeze.freeze_layers(layers_to_freeze)
 
-
-
-        logger.debug(f"Permutation - use_perm = {use_perm}")
         batch_generator = batch_generator_training_permuted(
             X=X_list[group],
             y=pseudo_y_list[
@@ -733,17 +727,6 @@ class Workflow:
                 n_obs,
             )
 
-        print_status_bar(
-            n_samples,
-            n_obs,
-            [
-                self.mean_loss_fn,
-                self.mean_clas_loss_fn,
-                self.mean_dann_loss_fn,
-                self.mean_rec_loss_fn,
-            ],
-            self.metrics,
-        )
         history, _, clas, dann, rec = self.evaluation_pass(
             history,
             ae,
@@ -770,12 +753,6 @@ class Workflow:
         n_samples,
         n_obs,
     ):
-        if self.run_file.log_neptune:
-#            self.run_neptune["training/train/tf_GPU_memory_step"].append(
-#                tf.config.experimental.get_memory_info("GPU:0")["current"]
-#                / 1e6
-#            )
-            self.run_neptune["training/train/step"].append(step)
         # self.tr.print_diff()
         input_batch, output_batch = next(batch_generator)
         # print(f"input {type(input_batch)}")

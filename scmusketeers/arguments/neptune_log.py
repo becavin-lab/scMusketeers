@@ -1,11 +1,17 @@
+import logging
+
 import neptune
 from neptune.utils import stringify_unsupported
 
+logger = logging.getLogger("Sc-Musketeers")
+
 
 def start_neptune_log(workflow):
-    print(f"Use Neptune.ai log : {workflow.run_file.log_neptune}")
+    logger.debug(f"Use Neptune.ai log : {workflow.run_file.log_neptune}")
     if workflow.run_file.log_neptune:
-        print(f"Use Neptune project name = {workflow.run_file.neptune_name}")
+        logger.debug(
+            f"Use Neptune project name = {workflow.run_file.neptune_name}"
+        )
         if workflow.run_file.neptune_name == "benchmark":
             workflow.run = neptune.init_run(
                 project="becavin-lab/benchmark",

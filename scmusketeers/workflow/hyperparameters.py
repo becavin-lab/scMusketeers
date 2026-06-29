@@ -76,9 +76,6 @@ for gpu_instance in physical_devices:
     tf.config.experimental.set_memory_growth(gpu_instance, True)
 
 logger = logging.getLogger("Sc-Musketeers")
-logging.basicConfig(format="|--- %(levelname)-8s    %(message)s")
-logger.info(f"Sc-Musketeers {version('sc-musketeers')} started")
-logger.setLevel(getattr(logging, "DEBUG"))
 
 
 # Reset Keras Session

@@ -236,3 +236,9 @@ LCA_scarches_reference/
 
 .DS_Store
 .github/templates/*
+
+############################
+# SLURM job outputs
+############################
+
+tutorial/sbatch_tutoriel_*.out
