@@ -1,8 +1,22 @@
-# except ImportError:
-#     from dataset import Dataset, load_dataset
-#     from scpermut.tools.utils import scanpy_to_input, default_value, str2bool
-#     from scpermut.tools.clust_compute import nn_overlap, batch_entropy_mixing_score,lisi_avg
-# from dca.utils import str2bool,tuple_to_scalar
+"""Core training workflow for the scMusketeers transfer task.
+
+This module defines the :class:`Workflow` class, which ties together the whole
+transfer pipeline:
+
+1. load and preprocess the dataset (:meth:`Workflow.process_dataset`),
+2. split it into train / validation / test (:meth:`Workflow.train_val_split`),
+3. build the DANN auto-encoder, train it through a sequence of strategies and
+   predict cell types (:meth:`Workflow.make_experiment`).
+
+The model has three branches: an auto-encoder (reconstruction), a classifier
+(cell type) and a DANN discriminator (batch correction). Training proceeds as a
+``training_scheme``: an ordered list of ``(strategy, n_epochs, use_perm)`` steps
+(see :meth:`Workflow.get_scheme`).
+"""
+
+# =============================================================================
+# Imports
+# =============================================================================
 import argparse
 import functools
 import os
@@ -60,12 +74,10 @@ except ImportError:
     from tools.utils import default_value, nan_to_0, scanpy_to_input, str2bool
 
 
+# Use macro-averaged F1 everywhere in this module.
 f1_score = functools.partial(f1_score, average="macro")
 
-# from numba import cuda
-
-# from ax import RangeParameter, SearchSpace, ParameterType, FixedParameter, ChoiceParameter
-
+# Allow TensorFlow to grow GPU memory on demand instead of pre-allocating it.
 physical_devices = tf.config.list_physical_devices("GPU")
 for gpu_instance in physical_devices:
     tf.config.experimental.set_memory_growth(gpu_instance, True)
@@ -73,6 +85,14 @@ for gpu_instance in physical_devices:
 logger = logging.getLogger("Sc-Musketeers")
 
 
+# =============================================================================
+# Evaluation metrics
+#
+# Each dict maps a metric name to the callable used to compute it. They are
+# iterated over in evaluation_pass() to score the predictions.
+# =============================================================================
+
+# Classification metrics computed on the predicted vs. true labels.
 PRED_METRICS_LIST = {
     "acc": accuracy_score,
     "mcc": matthews_corrcoef,
@@ -83,6 +103,7 @@ PRED_METRICS_LIST = {
     "AMI": adjusted_mutual_info_score,
 }
 
+# Class-balanced variants of the classification metrics (robust to imbalance).
 PRED_METRICS_LIST_BALANCED = {
     "balanced_acc": balanced_accuracy_score,
     "balanced_mcc": balanced_matthews_corrcoef,
@@ -90,14 +111,29 @@ PRED_METRICS_LIST_BALANCED = {
     "balanced_KPA": balanced_cohen_kappa_score,
 }
 
+# Metrics evaluating the quality of the latent space clustering.
 CLUSTERING_METRICS_LIST = {
     "db_score": davies_bouldin_score
 }  #'clisi' : lisi_avg
 
+# Metrics evaluating how well batches are mixed (i.e. batch effect removal).
 BATCH_METRICS_LIST = {"batch_mixing_entropy": batch_entropy_mixing_score}
 
 
+# =============================================================================
+# Workflow
+# =============================================================================
 class Workflow:
+    """End-to-end transfer pipeline: preprocess, train and predict.
+
+    A single instance is built from a parsed ``run_file`` (the CLI namespace)
+    and then driven in order: ``process_dataset()`` -> ``train_val_split()`` ->
+    ``make_experiment()``.
+    """
+
+    # -------------------------------------------------------------------------
+    # Construction
+    # -------------------------------------------------------------------------
     def __init__(self, run_file):
         """
         run_file : a dictionary outputed by the function load_runfile
@@ -186,7 +222,11 @@ class Workflow:
         self.mean_rec_loss_fn = keras.metrics.Mean(name="reconstruction loss")
 
     def set_hyperparameters(self, params):
+        """Override the default training hyperparameters with ``params``.
 
+        Used by the hyperparameter-optimisation path to inject a trial's
+        parameter set before building and training the model.
+        """
         logger.debug(f"setting hparams {params}")
         self.use_hvg = params["use_hvg"]
         self.batch_size = params["batch_size"]
@@ -206,7 +246,15 @@ class Workflow:
         self.training_scheme = params["training_scheme"]
         self.hp_params = params
 
+    # -------------------------------------------------------------------------
+    # Dataset loading & preprocessing
+    # -------------------------------------------------------------------------
     def process_dataset(self):
+        """Load the reference (and optional query) data and preprocess it.
+
+        Wraps the raw AnnData in a :class:`Dataset`, ensures a PCA embedding is
+        available (computing one if needed) and normalises the counts.
+        """
         # Loading dataset
         adata = load_dataset(
             ref_path=self.run_file.ref_path,
@@ -239,10 +287,35 @@ class Workflow:
         self.dataset.normalize()
 
     def train_val_split(self):
+        """Split the data into train/validation/test and build model inputs."""
         self.dataset.train_val_split()
         self.dataset.create_inputs()
 
+    # -------------------------------------------------------------------------
+    # Model building, training & prediction
+    # -------------------------------------------------------------------------
     def make_experiment(self):
+        """Build the DANN auto-encoder, train it and predict cell types.
+
+        Returns
+        -------
+        adata_pred : AnnData
+            Copy of the full dataset with predictions added: ``obs[class_key +
+            "_scMusk"]`` (labels), ``obsm[class_key + "_scMusk_proba"]``
+            (per-class probabilities) and ``obsm["X_scMusk"]`` (latent
+            embedding).
+        dann_ae : DANN_AE
+            The trained model.
+        history : dict
+            Per-epoch training/validation losses and metrics.
+        X_scMusk : np.ndarray
+            The latent embedding of every cell.
+        y_pred : np.ndarray
+            The predicted labels for every cell.
+        """
+        # --- Apply architecture overrides coming from the CLI / hparams -------
+        # A single `layer1/layer2/bottleneck` triplet expands to a symmetric
+        # 5-layer auto-encoder; a single `dropout` is applied to every branch.
         if self.layer1:
             self.ae_param.ae_hidden_size = [
                 self.layer1,
@@ -259,6 +332,9 @@ class Workflow:
                 self.ae_param.ae_hidden_dropout,
             ) = (self.dropout, self.dropout, self.dropout)
 
+        # --- Gather the data of every split into parallel dictionaries -------
+        # Every dict is keyed by split ("full"/"train"/"val"/"test") so the
+        # training loop can address the same split across all inputs.
         adata_list = {
             "full": self.dataset.adata,
             "train": self.dataset.adata_train,
@@ -384,16 +460,17 @@ class Workflow:
             dann_output_activation=self.dann_param.dann_output_activation,
         )
 
-        self.optimizer = self.get_optimizer(
-            self.learning_rate, self.weight_decay, self.optimizer_type
-        )
+        # --- Losses and training schedule ------------------------------------
+        # NB: the optimizer is intentionally not built here. train_scheme()
+        # creates a fresh optimizer for every strategy (its state must reset
+        # between strategies), so building one now would be dead work.
         self.rec_loss_fn, self.clas_loss_fn, self.dann_loss_fn = (
             self.get_losses(y_list)
-        )  # redundant
+        )
         training_scheme = self.get_scheme()
         start_time = time.time()
 
-        # Training
+        # --- Train the model through the full training scheme ----------------
         history = self.train_scheme(
             training_scheme=training_scheme,
             verbose=False,
@@ -409,7 +486,9 @@ class Workflow:
             rec_loss_fn=self.rec_loss_fn,
         )
 
-        # predicting
+        # --- Predict on every cell with the trained model --------------------
+        # Run a forward pass to get the latent code (enc) and the class
+        # probabilities (clas); dann/rec outputs are unused at prediction time.
         input_tensor = {
             k: tf.convert_to_tensor(v)
             for k, v in scanpy_to_input(
@@ -419,16 +498,19 @@ class Workflow:
         enc, clas, dann, rec = self.dann_ae(
             input_tensor, training=False
         ).values()
+        # Per-class probabilities, indexed by cell and named by cell type.
         y_pred_proba = pd.DataFrame(
             np.asarray(clas),
             index=adata_list["full"].obs_names,
             columns=self.dataset.ohe_celltype.categories_[0],
         )
+        # Hard labels = argmax of the probabilities, decoded back to strings.
         clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
         y_pred = self.dataset.ohe_celltype.inverse_transform(clas).reshape(
             -1,
         )
 
+        # --- Assemble the output AnnData with predictions + embedding --------
         adata_pred = adata_list["full"].copy()
 
         X_scMusk = np.asarray(enc)
@@ -441,11 +523,20 @@ class Workflow:
 
         return adata_pred, self.dann_ae, history, X_scMusk, y_pred
 
+    # -------------------------------------------------------------------------
+    # Training loops
+    # -------------------------------------------------------------------------
     def train_scheme(self, training_scheme, verbose=True, **loop_params):
-        """
+        """Run the full training schedule, one strategy after another.
+
+        For every ``(strategy, n_epochs, use_perm)`` step the optimizer is reset
+        and the model trained for ``n_epochs`` epochs. Strategies that monitor a
+        validation metric also apply early stopping.
+
         training scheme : dictionary explaining the succession of strategies to use as keys with the corresponding number of epochs and use_perm as values.
                         ex :  training_scheme_3 = {"warmup_dann" : (10, False), "full_model":(10, False)}
         """
+        # --- Initialise the per-split history of losses and metrics ----------
         history = {"train": {}, "val": {}}  # initialize history
         for group in history.keys():
             history[group] = {
@@ -609,6 +700,27 @@ class Workflow:
                 time_out = time.time()
                 logger.debug(f"Strategy duration : {time_out - time_in} s")
         logger.debug(f"training/{group}/total_epochs = {running_epoch}")
+
+        # Final full evaluation: the complete metric suite is computed only once,
+        # here, then the headline numbers are reported.
+        history, _, _, _, _ = self.evaluation_pass(
+            history,
+            loop_params["ae"],
+            loop_params["adata_list"],
+            loop_params["X_list"],
+            loop_params["y_list"],
+            loop_params["batch_list"],
+            loop_params["clas_loss_fn"],
+            loop_params["dann_loss_fn"],
+            loop_params["rec_loss_fn"],
+            full_metrics=True,
+        )
+        logger.info("Final metrics:")
+        for group in ["train", "val"]:
+            logger.info(
+                f"  {group:>5} - accuracy: {history[group]['acc'][-1]:.4f}"
+                f" - balanced_accuracy: {history[group]['balanced_acc'][-1]:.4f}"
+            )
         return history
 
     def training_loop(
@@ -753,6 +865,12 @@ class Workflow:
         n_samples,
         n_obs,
     ):
+        """Run a single gradient-descent step on one mini-batch.
+
+        Pulls the next batch from ``batch_generator``, computes the weighted sum
+        of the active losses under a gradient tape and applies the optimizer
+        update. Which losses are active depends on ``training_strategy``.
+        """
         # self.tr.print_diff()
         input_batch, output_batch = next(batch_generator)
         # print(f"input {type(input_batch)}")
@@ -850,12 +968,31 @@ class Workflow:
         clas_loss_fn,
         dann_loss_fn,
         rec_loss_fn,
+        full_metrics=False,
     ):
-        """
-        evaluate model and logs metrics. Depending on "on parameter, computes it on train and val or train,val and test.
+        """Evaluate the model on train/val and append losses & metrics to history.
 
-        on : "epoch_end" to evaluate on train and val, "training_end" to evaluate on train, val and "test".
+        The three losses (and their weighted total) are always computed. The
+        classification metrics are expensive on large datasets, so by default
+        only the metric monitored for early stopping (derived from
+        ``self.opt_metric``) is computed each epoch. Pass ``full_metrics=True``
+        (done once at the end of training) to compute the complete metric suite.
         """
+        # Select which classification metrics to compute on this pass: the full
+        # suite only when explicitly requested, otherwise just the metric needed
+        # for early stopping (computing all of them every epoch is wasteful).
+        if full_metrics:
+            pred_metrics = list(PRED_METRICS_LIST)
+            balanced_metrics = list(PRED_METRICS_LIST_BALANCED)
+        else:
+            _, monitored = self.opt_metric.split("-")
+            pred_metrics = (
+                [monitored] if monitored in PRED_METRICS_LIST else []
+            )
+            balanced_metrics = (
+                [monitored] if monitored in PRED_METRICS_LIST_BALANCED else []
+            )
+
         for group in ["train", "val"]:  # evaluation round
             inp = scanpy_to_input(adata_list[group], ["size_factors"])
             with tf.device("CPU"):
@@ -884,9 +1021,7 @@ class Workflow:
                 # history[group]['total_loss'] += [tf.add_n([self.clas_w * clas_loss] + [self.dann_w * dann_loss] + [self.rec_w * rec_loss] + ae.losses).numpy()]
 
                 clas = np.eye(clas.shape[1])[np.argmax(clas, axis=1)]
-                for (
-                    metric
-                ) in PRED_METRICS_LIST:  # only classification metrics ATM
+                for metric in pred_metrics:  # classification metrics
                     history[group][metric] += [
                         PRED_METRICS_LIST[metric](
                             np.asarray(y_list[group].argmax(axis=1)).reshape(
@@ -895,11 +1030,7 @@ class Workflow:
                             clas.argmax(axis=1),
                         )
                     ]  # y_list are onehot encoded
-                for (
-                    metric
-                ) in (
-                    PRED_METRICS_LIST_BALANCED
-                ):  # only classification metrics ATM
+                for metric in balanced_metrics:  # balanced classification metrics
                     history[group][metric] += [
                         PRED_METRICS_LIST_BALANCED[metric](
                             np.asarray(y_list[group].argmax(axis=1)).reshape(
@@ -911,7 +1042,16 @@ class Workflow:
         del inp
         return history, _, clas, dann, rec
 
+    # -------------------------------------------------------------------------
+    # Configuration helpers (training schedule, losses, optimizer)
+    # -------------------------------------------------------------------------
     def get_scheme(self):
+        """Return the ordered training schedule for ``self.training_scheme``.
+
+        Each named scheme maps to a list of ``(strategy, n_epochs, use_perm)``
+        steps consumed by :meth:`train_scheme`. Epoch counts are taken from the
+        ``run_file`` (``warmup_epoch``, ``fullmodel_epoch``, ...).
+        """
         logger.debug(
             f"Training scheme : {self.training_scheme}, warmup {self.run_file.warmup_epoch}"
         )
@@ -1120,6 +1260,11 @@ class Workflow:
         return training_scheme
 
     def get_losses(self, y_list):
+        """Build the three loss functions (reconstruction, classifier, DANN).
+
+        When ``balance_classes`` is set, the classifier focal loss is weighted
+        by inverse class frequency to better handle rare cell types.
+        """
         if self.rec_loss_name == "MSE":
             self.rec_loss_fn = tf.keras.losses.MSE
         else:
@@ -1192,7 +1337,11 @@ class Workflow:
         return optimizer
 
 
+# =============================================================================
+# Module-level helpers
+# =============================================================================
 def print_status_bar(iteration, total, loss, metrics=None):
+    """Print a carriage-return progress bar with current losses and metrics."""
     metrics = " - ".join(
         [
             "{}: {:.4f}".format(m.name, m.result())
