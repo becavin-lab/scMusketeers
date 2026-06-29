@@ -559,6 +559,18 @@ class Workflow:
         total_epochs = np.sum([n_epochs for _, n_epochs, _ in training_scheme])
         running_epoch = 0
         scheme_index = 0
+
+        # Up-front summary of the training schedule.
+        logger.info(
+            f"Running {self.training_scheme}: {len(training_scheme)} stages, "
+            f"{total_epochs} epochs total"
+        )
+        for stage_strategy, stage_epochs, stage_perm in training_scheme:
+            logger.info(
+                f"  - {stage_strategy} : {stage_epochs} epochs "
+                f"(permutation={stage_perm})"
+            )
+
         for strategy, n_epochs, use_perm in training_scheme:
             optimizer = self.get_optimizer(
                 self.learning_rate, self.weight_decay, self.optimizer_type
@@ -651,21 +663,18 @@ class Workflow:
                     **loop_params,
                 )
 
-                # Per-epoch summary (visible without --debug)
-                train_loss = (
-                    history["train"]["total_loss"][-1]
-                    if history["train"]["total_loss"]
-                    else float("nan")
-                )
-                val_loss = (
-                    history["val"]["total_loss"][-1]
-                    if history["val"]["total_loss"]
-                    else float("nan")
-                )
+                # Per-epoch summary (visible without --debug). The emoji shows
+                # whether each loss decreased (🟢) or increased (🔴) vs. the
+                # previous epoch.
+                train_hist = history["train"]["total_loss"]
+                val_hist = history["val"]["total_loss"]
+                train_loss = train_hist[-1] if train_hist else float("nan")
+                val_loss = val_hist[-1] if val_hist else float("nan")
                 logger.info(
-                    f"Epoch {running_epoch}/{total_epochs} [{strategy}] "
-                    f"(stage epoch {epoch}/{n_epochs}) - "
-                    f"train_loss: {train_loss:.4f} - val_loss: {val_loss:.4f}"
+                    f"Epoch {running_epoch}/{total_epochs} - "
+                    f"[{strategy}] epoch {epoch}/{n_epochs} - "
+                    f"train_loss: {train_loss:.4f} {loss_trend_emoji(train_hist)} - "
+                    f"val_loss: {val_loss:.4f} {loss_trend_emoji(val_hist)}"
                 )
                 if strategy in [
                     "full_model",
@@ -689,8 +698,10 @@ class Workflow:
                             wait = 0
                             best_model = self.dann_ae.get_weights()
                     if wait >= patience:
-                        logger.debug(
-                            f"Early stopping at epoch {best_epoch}, restoring model parameters from this epoch"
+                        logger.info(
+                            f"Early stopping [{strategy}]: no improvement for "
+                            f"{patience} epochs, restoring best model from "
+                            f"epoch {best_epoch}"
                         )
                         self.dann_ae.set_weights(best_model)
                         break
@@ -1340,6 +1351,20 @@ class Workflow:
 # =============================================================================
 # Module-level helpers
 # =============================================================================
+def loss_trend_emoji(values):
+    """Return a trend arrow comparing the last value to the previous one.
+
+    ``🟢➘`` when the loss decreased (good), ``🔴➚`` when it increased: a green
+    circle with a heavy diagonal-down arrow, or a red circle with a heavy
+    diagonal-up arrow. The heavy dingbat arrows (➘/➚) are bigger and bolder than
+    the thin ``↘``/``↗`` and render in the normal text colour. Returns an empty
+    string when there is no previous value to compare against (first epoch).
+    """
+    if len(values) < 2:
+        return ""
+    return "🟢 ➘" if values[-1] < values[-2] else "🔴 ➚"
+
+
 def print_status_bar(iteration, total, loss, metrics=None):
     """Print a carriage-return progress bar with current losses and metrics."""
     metrics = " - ".join(
