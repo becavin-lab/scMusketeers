@@ -8,20 +8,13 @@ import functools
 import os
 import sys
 from unittest import TestResult
+import logging
+import time
 
-try:
-    from ae_param import AE_PARAM
-    from class_param import CLASS_PARAM
-    from dann_param import DANN_PARAM
-    from dataset import Dataset, load_dataset
-
-    from . import freeze
-except ImportError:
-    from ..arguments.ae_param import AE_PARAM
-    from ..arguments.class_param import CLASS_PARAM
-    from ..arguments.dann_param import DANN_PARAM
-    from ..transfer.dataset_tf import Dataset, load_dataset
-    from . import freeze
+import numpy as np
+import pandas as pd
+import scanpy as sc
+import tensorflow as tf
 
 import keras
 from sklearn.metrics import (accuracy_score, adjusted_mutual_info_score,
@@ -32,20 +25,15 @@ from sklearn.metrics import (accuracy_score, adjusted_mutual_info_score,
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.utils import compute_class_weight
 
-# try :
-#     from .dataset import Dataset, load_dataset
-#     from ..tools.utils import scanpy_to_input, default_value, str2bool
-#     from ..tools.clust_compute import nn_overlap, batch_entropy_mixing_score,lisi_avg
-
-
+# Import scmusketeers library
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
 try:
-    from .dataset_tf import Dataset, load_dataset
-except ImportError:
-    from transfer.dataset_tf import Dataset, load_dataset
-
-try:
+    from ..arguments.ae_param import AE_PARAM
+    from ..arguments.class_param import CLASS_PARAM
+    from ..arguments.dann_param import DANN_PARAM
+    from ..transfer.dataset_tf import Dataset, load_dataset
+    from ..tools import freeze
     from ..tools.clust_compute import (balanced_cohen_kappa_score,
                                        balanced_f1_score,
                                        balanced_matthews_corrcoef,
@@ -57,6 +45,11 @@ try:
                                str2bool)
 
 except ImportError:
+    from scmusketeers.arguments.ae_param import AE_PARAM
+    from scmusketeers.arguments.class_param import CLASS_PARAM
+    from scmusketeers.arguments.dann_param import DANN_PARAM
+    from scmusketeers.transfer.dataset_tf import Dataset, load_dataset
+    from scmusketeers.tools import freeze
     from tools.clust_compute import (balanced_cohen_kappa_score,
                                      balanced_f1_score,
                                      balanced_matthews_corrcoef,
@@ -68,20 +61,6 @@ except ImportError:
 
 
 f1_score = functools.partial(f1_score, average="macro")
-import gc
-import json
-import os
-import subprocess
-import sys
-import time
-
-import matplotlib.pyplot as plt
-import neptune
-import numpy as np
-import pandas as pd
-import scanpy as sc
-import seaborn as sns
-import tensorflow as tf
 
 # from numba import cuda
 
@@ -90,6 +69,9 @@ import tensorflow as tf
 physical_devices = tf.config.list_physical_devices("GPU")
 for gpu_instance in physical_devices:
     tf.config.experimental.set_memory_growth(gpu_instance, True)
+
+logger = logging.getLogger("Sc-Musketeers")
+
 
 PRED_METRICS_LIST = {
     "acc": accuracy_score,
@@ -205,7 +187,7 @@ class Workflow:
 
     def set_hyperparameters(self, params):
 
-        print(f"setting hparams {params}")
+        logger.debug(f"setting hparams {params}")
         self.use_hvg = params["use_hvg"]
         self.batch_size = params["batch_size"]
         self.clas_w = params["clas_w"]
@@ -248,7 +230,7 @@ class Workflow:
         )
 
         if not "X_pca" in self.dataset.adata.obsm:
-            print("Did not find existing PCA, computing it")
+            logger.debug("Did not find existing PCA, computing it")
             sc.tl.pca(self.dataset.adata)
             self.dataset.adata.obsm["X_pca"] = np.asarray(
                 self.dataset.adata.obsm["X_pca"]
@@ -484,18 +466,18 @@ class Workflow:
 
         total_epochs = np.sum([n_epochs for _, n_epochs, _ in training_scheme])
         running_epoch = 0
-
+        scheme_index = 0
         for strategy, n_epochs, use_perm in training_scheme:
             optimizer = self.get_optimizer(
                 self.learning_rate, self.weight_decay, self.optimizer_type
             )  # resetting optimizer state when switching strategy
-            if verbose:
-                print(
-                    f"Step number {i}, running {strategy} strategy with permutation = {use_perm} for {n_epochs} epochs"
-                )
-                time_in = time.time()
 
-                # Early stopping for those strategies only
+            logger.info(
+            f"##-- {strategy.upper()} - Step {scheme_index}, running {strategy} strategy with permutation = {use_perm} for {n_epochs} epochs"
+            )
+            time_in = time.time()
+            scheme_index += 1
+            # Early stopping for those strategies only
             if strategy in [
                 "full_model",
                 "classifier_branch",
@@ -569,8 +551,8 @@ class Workflow:
 
             for epoch in range(1, n_epochs + 1):
                 running_epoch += 1
-                print(
-                    f"Epoch {running_epoch}/{total_epochs}, Current strat Epoch {epoch}/{n_epochs}"
+                logger.debug(
+                    f"Epoch {running_epoch}/{total_epochs}, Current strategy {strategy}, Epoch {epoch}/{n_epochs}"
                 )
                 history, _, _, _, _ = self.training_loop(
                     history=history,
@@ -618,7 +600,7 @@ class Workflow:
                             wait = 0
                             best_model = self.dann_ae.get_weights()
                     if wait >= patience:
-                        print(
+                        logger.debug(
                             f"Early stopping at epoch {best_epoch}, restoring model parameters from this epoch"
                         )
                         self.dann_ae.set_weights(best_model)
@@ -627,7 +609,7 @@ class Workflow:
 
             if verbose:
                 time_out = time.time()
-                print(f"Strategy duration : {time_out - time_in} s")
+                logger.debug(f"Strategy duration : {time_out - time_in} s")
         if self.run_file.log_neptune:
             self.run_neptune[f"training/{group}/total_epochs"] = running_epoch
         return history
@@ -667,43 +649,51 @@ class Workflow:
             group = "train"
         elif training_strategy == "full_model_pseudolabels":
             group = "full"
+        elif training_strategy == "encoder_classifier":
+            group = "train"
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_classifier")
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy in [
             "warmup_dann",
             "warmup_dann_pseudolabels",
             "warmup_dann_semisup",
         ]:
             group = "full"  # semi-supervised setting
-            ae.classifier.trainable = False  # Freezing classifier just to be sure but should not be necessary since gradient won't be propagating in this branch
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "warmup_dann")
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "warmup_dann_train":
             group = "train"  # semi-supervised setting
-            ae.classifier.trainable = False  # Freezing classifier just to be sure but should not be necessary since gradient won't be propagating in this branch
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "warmup_dann")
+            freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "warmup_dann_no_rec":
             group = "full"
-            layers_to_freeze = freeze.freeze_block(ae, "all_but_dann")
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_dann")
             freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "dann_with_ae":
             group = "train"
-            ae.classifier.trainable = False
+            self.dann_ae.classifier.trainable = False
         elif training_strategy == "classifier_branch":
             group = "train"
             layers_to_freeze = freeze.freeze_block(
-                ae, "all_but_classifier_branch"
+                self.dann_ae, "all_but_classifier_branch"
             )  # training only classifier branch
             freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "permutation_only":
             group = "train"
-            layers_to_freeze = freeze.freeze_block(ae, "all_but_autoencoder")
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "all_but_autoencoder")
             freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "no_dann":
             group = "train"
-            layers_to_freeze = freeze.freeze_block(ae, "freeze_dann")
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "freeze_dann")
             freeze.freeze_layers(layers_to_freeze)
         elif training_strategy == "no_decoder":
             group = "train"
-            layers_to_freeze = freeze.freeze_block(ae, "freeze_dec")
+            layers_to_freeze = freeze.freeze_block(self.dann_ae, "freeze_dec")
             freeze.freeze_layers(layers_to_freeze)
 
-        print(f"use_perm = {use_perm}")
+
+
+        logger.debug(f"Permutation - use_perm = {use_perm}")
         batch_generator = batch_generator_training_permuted(
             X=X_list[group],
             y=pseudo_y_list[
@@ -859,18 +849,18 @@ class Workflow:
         self.mean_dann_loss_fn(dann_loss.__float__())
         self.mean_rec_loss_fn(rec_loss.__float__())
 
-        if self.run_file.verbose:
-            print_status_bar(
-                n_samples,
-                n_obs,
-                [
-                    self.mean_loss_fn,
-                    self.mean_clas_loss_fn,
-                    self.mean_dann_loss_fn,
-                    self.mean_rec_loss_fn,
-                ],
-                self.metrics,
-            )
+        # if self.run_file.verbose:
+        #     print_status_bar(
+        #         n_samples,
+        #         n_obs,
+        #         [
+        #             self.mean_loss_fn,
+        #             self.mean_clas_loss_fn,
+        #             self.mean_dann_loss_fn,
+        #             self.mean_rec_loss_fn,
+        #         ],
+        #         self.metrics,
+        #     )
 
     def evaluation_pass(
         self,
@@ -945,7 +935,7 @@ class Workflow:
         return history, _, clas, dann, rec
 
     def get_scheme(self):
-        print(
+        logger.debug(
             f"Training scheme : {self.training_scheme}, warmup {self.run_file.warmup_epoch}"
         )
         if self.training_scheme == "training_scheme_1":
@@ -1156,7 +1146,7 @@ class Workflow:
         if self.rec_loss_name == "MSE":
             self.rec_loss_fn = tf.keras.losses.MSE
         else:
-            print(self.rec_loss_name + " loss not supported for rec")
+            logger.debug(self.rec_loss_name + " loss not supported for rec")
 
         if self.balance_classes:
             y_integers = np.argmax(np.asarray(y_list["train"]), axis=1)
@@ -1174,12 +1164,12 @@ class Workflow:
                 alpha=class_weights, gamma=3
             )
         else:
-            print(self.clas_loss_name + " loss not supported for classif")
+            logger.debug(self.clas_loss_name + " loss not supported for classif")
 
         if self.dann_loss_name == "categorical_crossentropy":
             self.dann_loss_fn = tf.keras.losses.categorical_crossentropy
         else:
-            print(self.dann_loss_name + " loss not supported for dann")
+            logger.debug(self.dann_loss_name + " loss not supported for dann")
         return self.rec_loss_fn, self.clas_loss_fn, self.dann_loss_fn
 
     def get_optimizer(
@@ -1195,8 +1185,7 @@ class Workflow:
         Returns:
             an optimizer object
         """
-        # TODO Add more optimizers
-        print(optimizer_type)
+        logger.debug(f"Set optimizer to {optimizer_type}")
         if optimizer_type == "adam":
             optimizer = tf.keras.optimizers.Adam(
                 learning_rate=learning_rate,
