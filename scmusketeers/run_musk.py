@@ -3,9 +3,7 @@ import logging
 
 from scmusketeers.arguments.runfile import (PROCESS_TYPE, create_argparser,
                                             get_default_param, get_runfile)
-from scmusketeers.transfer.experiment import MakeExperiment
 from scmusketeers.transfer.optimize_model import Workflow
-from scmusketeers.workflow.run_workflow import run_workflow
 
 logger = logging.getLogger("Sc-Musketeers")
 
@@ -58,6 +56,11 @@ def run_sc_musketeers(run_file):
 
     # Run hyperparameters optimization
     elif run_file.process == PROCESS_TYPE[1]:
+        # Imported lazily: the optim/benchmark workflow needs the optional
+        # "workflow" dependency group (ax, scvi, celltypist, matplotlib, ...),
+        # which the core transfer path does not require.
+        from scmusketeers.workflow.run_workflow import run_workflow
+
         run_workflow(run_file)
     else:
         # No process

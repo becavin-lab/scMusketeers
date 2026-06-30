@@ -160,20 +160,6 @@ def create_argparser():
         "(default: %(default)s).",
     )
     workflow_group.add_argument(
-        "--log_neptune",
-        type=bool,
-        nargs="?",
-        const=True,
-        default=False,
-        help="Log the run to Neptune.ai (requires --neptune_name).",
-    )
-    workflow_group.add_argument(
-        "--neptune_name",
-        type=str,
-        nargs="?",
-        help="Name of the neptune project : Example: sc-permut-packaging",
-    )
-    workflow_group.add_argument(
         "--hparam_path", type=str, nargs="?", default=None, help=""
     )
     workflow_group.add_argument(
@@ -181,7 +167,7 @@ def create_argparser():
         type=str,
         nargs="?",
         default="val-balanced_mcc",
-        help="The metric to optimize in hyperparameter search as it appears in neptune (split-metricname)",
+        help="The metric to optimize in hyperparameter search, as 'split-metricname'",
     )
     workflow_group.add_argument(
         "--verbose", type=bool, default=True, help=""

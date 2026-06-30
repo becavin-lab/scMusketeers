@@ -9,8 +9,9 @@
 #SBATCH --output=tutorial/sbatch_tutoriel_%j.out
 #SBATCH --error=tutorial/sbatch_tutoriel_%j.out
 
-# Activate the sc-musketeers virtual environment
-source ~/.cache/pypoetry/virtualenvs/sc-musketeers-voskaBul-py3.12/bin/activate
+# Activate the sc-musketeers conda environment
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate scmusk-new
 
 # Run the tutorial
 bash tutorial/tutorial.sh
